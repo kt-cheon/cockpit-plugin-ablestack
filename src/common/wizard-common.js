@@ -24,36 +24,51 @@ $(".tab-available").keydown(function (e) {
  * History  : 2021.03.16 최초 작성
  * History  : 2021.03.18 wizard ui 공통 함수로 분리
  */
- function setNicBridge(select_box_id){
+ function setNicBridge(select_box_id, excute_host){
     var cmd = ["python3",pluginpath + "/python/nic/network_action.py","list"];
 
-    cockpit.spawn(cmd).then(function(data){
-        
-        // 초기화
-        $('#'+select_box_id).empty();
+    if(excute_host == undefined || excute_host == null || excute_host == ""){
+        cockpit.spawn(cmd).then(function(data){
 
-        var el ='';
-        var result = JSON.parse(data);
-        var bridge_list = result.val.bridges;
-        var bridge_others_list = result.val.others;
+            setNicSelectBox(select_box_id, data)
 
-        el += '<option value="" selected>선택하십시오</option>';
-        for(var i = 0 ; i < bridge_list.length ; i ++ ){
-            el += '<option value="'+bridge_list[i].DEVICE+'">'+bridge_list[i].DEVICE+' ('+bridge_list[i].STATE+')</option>';
-        }
+        }).catch(function(){
+            createLoggerInfo("setNicBridge error");
+            //alert("setNicBridge error");
+        });
+    }else{
+        cockpit.spawn(cmd,{ host: excute_host}).then(function(data){
 
-        for(var i = 0 ; i < bridge_others_list.length ; i ++ ){
-            el += '<option value="'+bridge_others_list[i].DEVICE+'">'+bridge_others_list[i].DEVICE+' ('+bridge_others_list[i].STATE+')</option>';
-        }
+            setNicSelectBox(select_box_id, data)
 
-        $('#'+select_box_id).append(el);
+        }).catch(function(){
+            createLoggerInfo("setNicBridge error");
+            //alert("setNicBridge error");
+        });
+    }
+}
 
-        createLoggerInfo("setNicBridge success");
+function setNicSelectBox(select_box_id, data){
+    // 초기화
+    $('#'+select_box_id).empty();
 
-    }).catch(function(){
-        createLoggerInfo("setNicBridge error");
-        alert("setNicBridge error");
-    });
+    var el ='';
+    var result = JSON.parse(data);
+    var bridge_list = result.val.bridges;
+    var bridge_others_list = result.val.others;
+
+    el += '<option value="" selected>선택하십시오.</option>';
+    for(var i = 0 ; i < bridge_list.length ; i ++ ){
+        el += '<option value="'+bridge_list[i].DEVICE+'">'+bridge_list[i].DEVICE+' ('+bridge_list[i].STATE+')</option>';
+    }
+
+    for(var i = 0 ; i < bridge_others_list.length ; i ++ ){
+        el += '<option value="'+bridge_others_list[i].DEVICE+'">'+bridge_others_list[i].DEVICE+' ('+bridge_others_list[i].STATE+')</option>';
+    }
+
+    $('#'+select_box_id).append(el);
+
+    createLoggerInfo("setNicBridge success");
 }
 
 /**
@@ -66,7 +81,7 @@ $(".tab-available").keydown(function (e) {
  * History  : 2021.03.18 최초 작성
 **/
 function setHostsFileReader(input, file_name, callBackFunction) {
-    input.on("change", function(event) { 
+    input.on("change", function(event) {
         // FileList
         let file_list = input.files || event.target.files;
         // File
@@ -90,7 +105,7 @@ function setHostsFileReader(input, file_name, callBackFunction) {
                 }
             } else {
                 input.val("");
-            }            
+            }
         } else {
             alert(file_name+" 파일만 업로드할 수 있습니다.");
             input.val("");
@@ -114,7 +129,7 @@ function setHostsFileReader(input, file_name, callBackFunction) {
 
     // hosts 내용 text를 한줄 단위로 나눔
     var text_array = text.split("\n");
-    
+
     for(var i = 0; i < text_array.length; i++){
         if(text_array[i] != "" && text_array[i] != " " && text_array[i].substr(0,1) != "#" ){ // 라인 내용이 없거나 첫 단어가 주석 #가 아닌 경우
             // 문자열의 모든 tab 문자열을 공백으로 치환
@@ -128,27 +143,27 @@ function setHostsFileReader(input, file_name, callBackFunction) {
                 if(j>0){ // 첫번째 값은 항상 ip
                     var ip = split_text[0]
                     var host_name = split_text[j];
-                    
+
                     // 리스트에 생성된 객체 삽입 , 예상결과 ex : "10.10.0.1,hostname1"
                     result_array.push(ip+","+host_name);
                 }
             }
         }
     }
-    
+
     var uniq_result = Array.from(new Set(result_array));
     var result_json_array = new Array();
 
     for(var i = 0 ; i < uniq_result.length ; i++){
         var json_obj = new Object();
-    
+
         var val = uniq_result[i].split(",");
         json_obj.ip = val[0]
         json_obj.hostName = val[1];
-    
+
         result_json_array.push(json_obj);
     }
-    
+
     //json 형식의 문자열 반환
     return JSON.stringify(result_json_array);
  }
@@ -163,7 +178,7 @@ function setHostsFileReader(input, file_name, callBackFunction) {
  * History  : 2021.03.18 최초 작성
 **/
 function setSshKeyFileReader(input, file_name, callBackFunction) {
-    input.on("change", function(event) { 
+    input.on("change", function(event) {
         // FileList
         let file_list = input.files || event.target.files;
         // File
@@ -172,7 +187,7 @@ function setSshKeyFileReader(input, file_name, callBackFunction) {
             if(checkFileSize(file) != false){
                 if(input.val() != ""){
                     try {
-    
+
                         let reader = new FileReader();
                         reader.onload = function (e) {
                             var text = e.target.result
@@ -205,15 +220,15 @@ function setSshKeyFileReader(input, file_name, callBackFunction) {
  * History  : 2021.03.22 최초 작성
  */
  function setProgressStep(span_id, status){
-    //proceeding or 1: 진행중, completed or 2: 완료됨, aborted or 3: 중단됨
-    if(status=="proceeding" || status=="completed" || status=="aborted" || status==1 || status==2 || status==3){
+    //proceeding or 1: 진행중, completed or 2: 완료됨, aborted or 3: 중단됨 or 4: formatting, 포맷중
+    if(status=="proceeding" || status=="completed" || status=="aborted" || status=="formatting"|| status==1 || status==2 || status==3 || status==4){
         var span = $('#'+span_id);
         var icon = $('#'+span_id).children('span').children('span').children("i");
         var progress_text = $('#'+span_id).children('span').children('p');
 
         // 초기화
-        span.removeClass('pf-m-blue pf-m-green pf-m-orange pf-m-red');
-        icon.removeClass('fa-info-circle fa-check-circle fa-play fa-exclamation-circle');
+        span.removeClass('pf-m-blue pf-m-green pf-m-orange pf-m-red pf-m-purple');
+        icon.removeClass('fa-info-circle fa-check-circle fa-play fa-exclamation-circle fa-hourglass-half');
 
         if(status == "proceeding" || status==1){
             if(span.attr('id') == "span-ccvm-progress-step1"){
@@ -240,10 +255,14 @@ function setSshKeyFileReader(input, file_name, callBackFunction) {
             span.addClass('pf-m-red');
             icon.addClass('fa-exclamation-circle');
             progress_text.text('중단됨');
+        } else if(status=="formatting" || status==4){
+            span.addClass('pf-m-purple');
+            icon.addClass('fa-hourglass-half');
+            progress_text.text('포맷중');
         }
     }else{
         alert("진행 상태를 잘못 입력했습니다.");
-    }    
+    }
 }
 
 /**
@@ -291,9 +310,54 @@ function setSshKeyFileReader(input, file_name, callBackFunction) {
         }
     }else{
         alert("진행 상태를 잘못 입력했습니다.");
-    }    
+    }
 }
+/**
+ * Meathod Name : setPfmpProgressStep
+ * Date Created : 2024.09.04
+ * Writer  : 정민철
+ * Description : span id와 status 입력받아 해당하는 span의 진행상태를 입력받은 status 변경
+ * Parameter : String, String
+ * Return  : 없음
+ * History  : 2024.09.04 최초 작성
+ */
+function setPfmpProgressStep(span_id, status){
+    //proceeding or 1: 진행중, completed or 2: 완료됨, aborted or 3: 중단됨
+    if(status=="proceeding" || status=="completed" || status=="aborted" || status==1 || status==2 || status==3){
+        var span = $('#'+span_id);
+        var icon = $('#'+span_id).children('span').children('span').children("i");
+        var progress_text = $('#'+span_id).children('span').children('p');
 
+        // 초기화
+        span.removeClass('pf-m-blue pf-m-green pf-m-orange pf-m-red');
+        icon.removeClass('fa-info-circle fa-check-circle fa-play fa-exclamation-circle');
+
+        if(status == "proceeding" || status==1){
+            if(span.attr('id') == "span-pfmp-progress-step1"){
+                $('#progress-step-text').text('PFMP 가상머신을 배포 중입니다. 전체 4단계 중 1단계 진행 중입니다.');
+            } else if(span.attr('id') == "span-pfmp-progress-step2"){
+                $('#progress-step-text').text('PFMP 가상머신을 배포 중입니다. 전체 4단계 중 2단계 진행 중입니다.');
+            } else if(span.attr('id') == "span-pfmp-progress-step3"){
+                $('#progress-step-text').text('PFMP 가상머신을 배포 중입니다. 전체 4단계 중 3단계 진행 중입니다.');
+            } else if(span.attr('id') == "span-pfmp-progress-step4"){
+                $('#progress-step-text').text('PFMP 가상머신을 배포 중입니다. 전체 4단계 중 4단계 진행 중입니다.');
+            }
+            span.addClass('pf-m-orange');
+            icon.addClass('fa-play');
+            progress_text.text('진행중');
+        } else if(status=="completed" || status==2){
+            span.addClass('pf-m-green');
+            icon.addClass('fa-check-circle');
+            progress_text.text('완료됨');
+        } else if(status=="aborted" || status==3){
+            span.addClass('pf-m-red');
+            icon.addClass('fa-exclamation-circle');
+            progress_text.text('중단됨');
+        }
+    }else{
+        alert("진행 상태를 잘못 입력했습니다.");
+    }
+}
 /**
  * Meathod Name : setWallProgressStep
  * Date Created : 2021.09.03
@@ -323,7 +387,7 @@ function setSshKeyFileReader(input, file_name, callBackFunction) {
                 } else if(span.attr('id') == "span-wall-progress-step2"){
                     $('#wall-progress-step-text').text('Wall 모니터링센터를 구성 중입니다. 전체 2단계 중 2단계 진행 중입니다.');
                 }
-    
+
                 span.addClass('pf-m-orange');
                 icon.addClass('fa-play');
                 progress_text.text('진행중');
@@ -345,7 +409,7 @@ function setSshKeyFileReader(input, file_name, callBackFunction) {
                 } else if(span.attr('id') == "span-wall-progress-step3"){
                     $('#wall-progress-step-text').text('Wall 모니터링센터를 구성 중입니다. 전체 3단계 중 3단계 진행 중입니다.');
                 }
-    
+
                 span.addClass('pf-m-orange');
                 icon.addClass('fa-play');
                 progress_text.text('진행중');
@@ -358,7 +422,7 @@ function setSshKeyFileReader(input, file_name, callBackFunction) {
                 icon.addClass('fa-exclamation-circle');
                 progress_text.text('중단됨');
             }
-        }        
+        }
     }else{
         alert("진행 상태를 잘못 입력했습니다.");
     }
@@ -407,11 +471,11 @@ function setSshKeyFileReader(input, file_name, callBackFunction) {
         }
     }else{
         alert("진행 상태를 잘못 입력했습니다.");
-    }    
+    }
 }
 
 
-/** 
+/**
  * Meathod Name : setClusterProgressFail
  * Date Created : 2022.09.08
  * Writer  : 배태주
@@ -464,7 +528,7 @@ function checkHostName(option) {
  * History  : 2021.10.19 최초 작성
  **/
 
- async function fileReaderIntoTableFunc(input, file_type, option) {
+ async function fileReaderIntoTableFunc(input, file_type, option,os_type) {
     input.addEventListener('change', function (event) {
         let file_list = input.files || event.target.files;
         let file = file_list[0];
@@ -487,7 +551,7 @@ function checkHostName(option) {
                     reader.onload = function (progressEvent) {
                         let result = progressEvent.target.result;
                         var clusterJsonConf = JSON.parse(result);
-                        settingProfile(clusterJsonConf, option)                        
+                        settingProfile(clusterJsonConf, option, os_type)
                     };
                     reader.readAsText(file);
                 } catch (err) {
@@ -511,7 +575,7 @@ function checkHostName(option) {
  * Return  : 없음
  * History  : 2022.10.05 수정
  **/
-function settingProfile(clusterJsonConf, option){
+function settingProfile(clusterJsonConf, option, os_type){
     let hostsJson = clusterJsonConf.clusterConfig.hosts;
     let hostCnt = clusterJsonConf.clusterConfig.hosts.length; // 설정파일에서 읽어온 node 수
     let c_mngt_cidr = clusterJsonConf.clusterConfig.mngtNic.cidr;
@@ -522,143 +586,232 @@ function settingProfile(clusterJsonConf, option){
     let max_index = 0;
     let current_host_name = $("#form-input-current-host-name").val();
     let add_tr_yn = true;
-    for (let i = 0 ; i < hostCnt ; i++){
-        insert_tr += "<tr style='border-bottom: solid 1px #dcdcdc'>";
-        insert_tr += "  <td contenteditable='false'>"+hostsJson[i].index+"</td>";
-        insert_tr += "  <td contenteditable='false'>"+hostsJson[i].hostname+"</td>";
-        insert_tr += "  <td contenteditable='false'>"+hostsJson[i].ablecube+"</td>";
-        insert_tr += "  <td contenteditable='false'>"+hostsJson[i].scvmMngt+"</td>";
-        insert_tr += "  <td contenteditable='false'>"+hostsJson[i].ablecubePn+"</td>";
-        insert_tr += "  <td contenteditable='false'>"+hostsJson[i].scvm+"</td>";
-        insert_tr += "  <td contenteditable='false'>"+hostsJson[i].scvmCn+"</td>";
-        insert_tr += "</tr>";
-
-        if(Number(hostsJson[i].index) >= max_index) {
-            max_index = Number(hostsJson[i].index)+1;
-        }
-        if(current_host_name == hostsJson[i].hostname){
-            add_tr_yn = false;
-        }
-    }
-
-    // cluster_host_yn은 신규 클러스터 호스트 = new, 추가 호스트 = add / hostsJson에 현재 호스트명과 동일한 호스트명이 존재하면 추가하지 않음
-    // cluster_host_yn = $('input[name=radio-cluster-host]:checked').val()
-    // if(cluster_host_yn=="add" && option == "") {
-    if(option == "") {
-        if(add_tr_yn){
+    if(os_type == "general-virtualization"){
+        for (let i = 0 ; i < hostCnt ; i++){
             insert_tr += "<tr style='border-bottom: solid 1px #dcdcdc'>";
-            insert_tr += "  <td contenteditable='true'>"+max_index+"</td>";
-            insert_tr += "  <td contenteditable='true'></td>";
-            insert_tr += "  <td contenteditable='true'></td>";
-            insert_tr += "  <td contenteditable='true'></td>";
-            insert_tr += "  <td contenteditable='true'></td>";
-            insert_tr += "  <td contenteditable='true'></td>";
-            insert_tr += "  <td contenteditable='true'></td>";
+            insert_tr += "  <td contenteditable='false'>"+hostsJson[i].index+"</td>";
+            insert_tr += "  <td contenteditable='false'>"+hostsJson[i].hostname+"</td>";
+            insert_tr += "  <td contenteditable='false'>"+hostsJson[i].ablecube+"</td>";
+            // insert_tr += "  <td contenteditable='false'>"+hostsJson[i].ablecubePn+"</td>";
             insert_tr += "</tr>";
 
-            hostCnt = hostCnt+1;
+            if(Number(hostsJson[i].index) >= max_index) {
+                max_index = Number(hostsJson[i].index)+1;
+            }
+            if(current_host_name == hostsJson[i].hostname){
+                add_tr_yn = false;
+            }
         }
-        
-        $("#form-input-cluster-ccvm-mngt-ip").val(clusterJsonConf.clusterConfig.ccvm.ip);
-        $("#form-input-cluster-mngt-nic-cidr").val(clusterJsonConf.clusterConfig.mngtNic.cidr);
-        $("#form-input-cluster-mngt-nic-gateway").val(clusterJsonConf.clusterConfig.mngtNic.gw);
-        $("#form-input-cluster-mngt-nic-dns").val(clusterJsonConf.clusterConfig.mngtNic.dns);
-        $("#form-input-cluster-pcs-hostname1").val(clusterJsonConf.clusterConfig.pcsCluster.hostname1);
-        $("#form-input-cluster-pcs-hostname2").val(clusterJsonConf.clusterConfig.pcsCluster.hostname2);
-        $("#form-input-cluster-pcs-hostname3").val(clusterJsonConf.clusterConfig.pcsCluster.hostname3);
-    }
 
-    $('#form-input-cluster-config-host-number'+option+'').val(hostCnt);
-    $('#form-table-tbody-cluster-config-existing-host-profile'+option+' tr').remove();
-    $(insert_tr).appendTo('#form-table-tbody-cluster-config-existing-host-profile'+option+'');
+        // cluster_host_yn은 신규 클러스터 호스트 = new, 추가 호스트 = add / hostsJson에 현재 호스트명과 동일한 호스트명이 존재하면 추가하지 않음
+        // cluster_host_yn = $('input[name=radio-cluster-host]:checked').val()
+        // if(cluster_host_yn=="add" && option == "") {
+        if(option == "") {
+            if(add_tr_yn){
+                insert_tr += "<tr style='border-bottom: solid 1px #dcdcdc'>";
+                insert_tr += "  <td contenteditable='true'>"+max_index+"</td>";
+                insert_tr += "  <td contenteditable='true'></td>";
+                insert_tr += "  <td contenteditable='true'></td>";
+                insert_tr += "</tr>";
 
-    //option이 -scvm 일 경우 스토리지센터 가상머신 배포 마법사 네트워크 자동 세팅
-    if(option == "-scvm"){
-        let current_host_name_scvm = $("#form-input-current-host-name-scvm").val();
+                hostCnt = hostCnt+1;
+            }
 
-        // 세팅 값 초기화
-        $("#form-input-storage-vm-hostname").val("");
-        $("#form-input-storage-vm-mgmt-ip").val("");
-        $("#form-input-storage-vm-mgmt-gw").val("");
-        $("#form-input-storage-vm-dns").val("");
-        $("#form-input-storage-vm-public-ip").val("");
-        $("#form-input-storage-vm-cluster-ip").val("");
-        $("#form-input-ccvm-mngt-ip").val("");
+            $("#form-input-cluster-ccvm-mngt-ip").val(clusterJsonConf.clusterConfig.ccvm.ip);
+            $("#form-input-cluster-mngt-nic-cidr").val(clusterJsonConf.clusterConfig.mngtNic.cidr);
+            $("#form-input-cluster-mngt-nic-gateway").val(clusterJsonConf.clusterConfig.mngtNic.gw);
+            $("#form-input-cluster-mngt-nic-dns").val(clusterJsonConf.clusterConfig.mngtNic.dns);
+            $("#form-input-cluster-pcs-hostname1").val(clusterJsonConf.clusterConfig.pcsCluster.hostname1);
+            $("#form-input-cluster-pcs-hostname2").val(clusterJsonConf.clusterConfig.pcsCluster.hostname2);
+            $("#form-input-cluster-pcs-hostname3").val(clusterJsonConf.clusterConfig.pcsCluster.hostname3);
+        }
 
-        //ccvm 관리 ip 세팅
-        $("#form-input-ccvm-mngt-ip").val(clusterJsonConf.clusterConfig.ccvm.ip);
+        $('#form-input-cluster-config-host-number'+option+'').val(hostCnt);
+        $('#form-table-tbody-cluster-config-existing-host-profile'+option+' tr').remove();
+        $(insert_tr).appendTo('#form-table-tbody-cluster-config-existing-host-profile'+option+'');
 
-        $('#form-table-tbody-cluster-config-existing-host-profile-scvm tr').each(function(){
-            let host_name = $(this).find('td').eq(1).text().trim();
-            if(current_host_name_scvm == host_name && host_name != null){
-                let host_index = $(this).find('td').eq(0).text().trim();
-                
-                // 호스트명을 세팅
-                $("#form-input-storage-vm-hostname").val("scvm"+host_index);
-                // 관리 NIC IP 및 CIDR 기본 입력
+        if(option == "-ccvm"){
+            // 세팅 값 초기화
+            $("#form-input-cloud-vm-mngt-nic-ip").val("");
+            $("#form-input-cloud-vm-mngt-gw").val("");
+            $("#form-input-cloud-vm-dns").val("");
+            $("#form-input-cloud-vm-failover-cluster-host1-name").val("");
+            $("#form-input-cloud-vm-failover-cluster-host2-name").val("");
+            $("#form-input-cloud-vm-failover-cluster-host3-name").val("");
+
+            // 값 세팅
+            if(clusterJsonConf.clusterConfig.ccvm.ip != "" && clusterJsonConf.clusterConfig.ccvm.ip != null){
                 if(c_mngt_cidr != ""){
-                    $("#form-input-storage-vm-mgmt-ip").val($(this).find('td').eq(3).text().trim()+"/"+c_mngt_cidr);
+                    $("#form-input-cloud-vm-mngt-nic-ip").val(clusterJsonConf.clusterConfig.ccvm.ip+"/"+c_mngt_cidr);
                 }else{
-                    $("#form-input-storage-vm-mgmt-ip").val($(this).find('td').eq(3).text().trim()+"/");
+                    $("#form-input-cloud-vm-mngt-nic-ip").val(clusterJsonConf.clusterConfig.ccvm.ip+"/");
                 }
-                if(c_mngt_gw != ""){
-                    $("#form-input-storage-vm-mgmt-gw").val(c_mngt_gw);
-                }
-                if(c_mngt_dns != ""){
-                    $("#form-input-storage-vm-dns").val(c_mngt_dns);
-                }
-                // 스토리지 서버 NIC IP
-                $("#form-input-storage-vm-public-ip").val($(this).find('td').eq(5).text().trim()+"/24");
-                // 스토리지 복제 NIC IP
-                $("#form-input-storage-vm-cluster-ip").val($(this).find('td').eq(6).text().trim()+"/24");
-
-                return false;
             }
-        });
-    }
+            if(c_mngt_gw != ""){
+                $("#form-input-cloud-vm-mngt-gw").val(c_mngt_gw);
+            }
+            if(c_mngt_dns != ""){
+                $("#form-input-cloud-vm-dns").val(c_mngt_dns);
+            }
 
-    if(option == "-ccvm"){
-        // 세팅 값 초기화
-        $("#form-input-cloud-vm-mngt-nic-ip").val("");
-        $("#form-input-cloud-vm-mngt-gw").val("");
-        $("#form-input-cloud-vm-dns").val("");
-        $("#form-input-cloud-vm-failover-cluster-host1-name").val("");
-        $("#form-input-cloud-vm-failover-cluster-host2-name").val("");
-        $("#form-input-cloud-vm-failover-cluster-host3-name").val("");
+            if(clusterJsonConf.clusterConfig.pcsCluster.hostname1 != "" && clusterJsonConf.clusterConfig.pcsCluster.hostname1 != null){
+                $("#form-input-cloud-vm-failover-cluster-host1-name").val(clusterJsonConf.clusterConfig.pcsCluster.hostname1);
+            }else if(clusterJsonConf.clusterConfig.hosts.length > 0 && clusterJsonConf.clusterConfig.hosts[0].hostname != "" && clusterJsonConf.clusterConfig.hosts[0].hostname != null){
+                $("#form-input-cloud-vm-failover-cluster-host1-name").val(clusterJsonConf.clusterConfig.hosts[0].hostname);
+            }
 
-        // 값 세팅
-        if(clusterJsonConf.clusterConfig.ccvm.ip != "" && clusterJsonConf.clusterConfig.ccvm.ip != null){
-            if(c_mngt_cidr != ""){
-                $("#form-input-cloud-vm-mngt-nic-ip").val(clusterJsonConf.clusterConfig.ccvm.ip+"/"+c_mngt_cidr);
-            }else{
-                $("#form-input-cloud-vm-mngt-nic-ip").val(clusterJsonConf.clusterConfig.ccvm.ip+"/");
+            if(clusterJsonConf.clusterConfig.pcsCluster.hostname2 != "" && clusterJsonConf.clusterConfig.pcsCluster.hostname2 != null){
+                $("#form-input-cloud-vm-failover-cluster-host2-name").val(clusterJsonConf.clusterConfig.pcsCluster.hostname2);
+            }else if(clusterJsonConf.clusterConfig.hosts.length > 1 && clusterJsonConf.clusterConfig.hosts[1].hostname != "" && clusterJsonConf.clusterConfig.hosts[1].hostname != null){
+                $("#form-input-cloud-vm-failover-cluster-host2-name").val(clusterJsonConf.clusterConfig.hosts[1].hostname);
+            }
+
+            if(clusterJsonConf.clusterConfig.pcsCluster.hostname3 != "" && clusterJsonConf.clusterConfig.pcsCluster.hostname3 != null){
+                $("#form-input-cloud-vm-failover-cluster-host3-name").val(clusterJsonConf.clusterConfig.pcsCluster.hostname3);
+            }else if(clusterJsonConf.clusterConfig.hosts.length > 2 && clusterJsonConf.clusterConfig.hosts[2].hostname != "" && clusterJsonConf.clusterConfig.hosts[2].hostname != null){
+                $("#form-input-cloud-vm-failover-cluster-host3-name").val(clusterJsonConf.clusterConfig.hosts[2].hostname);
             }
         }
-        if(c_mngt_gw != ""){
-            $("#form-input-cloud-vm-mngt-gw").val(c_mngt_gw);
-        }
-        if(c_mngt_dns != ""){
-            $("#form-input-cloud-vm-dns").val(c_mngt_dns);
+    }else{
+        for (let i = 0 ; i < hostCnt ; i++){
+            insert_tr += "<tr style='border-bottom: solid 1px #dcdcdc'>";
+            insert_tr += "  <td contenteditable='false'>"+hostsJson[i].index+"</td>";
+            insert_tr += "  <td contenteditable='false'>"+hostsJson[i].hostname+"</td>";
+            insert_tr += "  <td contenteditable='false'>"+hostsJson[i].ablecube+"</td>";
+            insert_tr += "  <td contenteditable='false'>"+hostsJson[i].scvmMngt+"</td>";
+            insert_tr += "  <td contenteditable='false'>"+hostsJson[i].ablecubePn+"</td>";
+            insert_tr += "  <td contenteditable='false'>"+hostsJson[i].scvm+"</td>";
+            insert_tr += "  <td contenteditable='false'>"+hostsJson[i].scvmCn+"</td>";
+            insert_tr += "</tr>";
+
+            if(Number(hostsJson[i].index) >= max_index) {
+                max_index = Number(hostsJson[i].index)+1;
+            }
+            if(current_host_name == hostsJson[i].hostname){
+                add_tr_yn = false;
+            }
         }
 
-        if(clusterJsonConf.clusterConfig.pcsCluster.hostname1 != "" && clusterJsonConf.clusterConfig.pcsCluster.hostname1 != null){
-            $("#form-input-cloud-vm-failover-cluster-host1-name").val(clusterJsonConf.clusterConfig.pcsCluster.hostname1);
-        }else if(clusterJsonConf.clusterConfig.hosts.length > 0 && clusterJsonConf.clusterConfig.hosts[0].hostname != "" && clusterJsonConf.clusterConfig.hosts[0].hostname != null){
-            $("#form-input-cloud-vm-failover-cluster-host1-name").val(clusterJsonConf.clusterConfig.hosts[0].hostname);
+        // cluster_host_yn은 신규 클러스터 호스트 = new, 추가 호스트 = add / hostsJson에 현재 호스트명과 동일한 호스트명이 존재하면 추가하지 않음
+        // cluster_host_yn = $('input[name=radio-cluster-host]:checked').val()
+        // if(cluster_host_yn=="add" && option == "") {
+        if(option == "") {
+            if(add_tr_yn){
+                insert_tr += "<tr style='border-bottom: solid 1px #dcdcdc'>";
+                insert_tr += "  <td contenteditable='true'>"+max_index+"</td>";
+                insert_tr += "  <td contenteditable='true'></td>";
+                insert_tr += "  <td contenteditable='true'></td>";
+                insert_tr += "  <td contenteditable='true'></td>";
+                insert_tr += "  <td contenteditable='true'></td>";
+                insert_tr += "  <td contenteditable='true'></td>";
+                insert_tr += "  <td contenteditable='true'></td>";
+                insert_tr += "</tr>";
+
+                hostCnt = hostCnt+1;
+            }
+
+            $("#form-input-cluster-ccvm-mngt-ip").val(clusterJsonConf.clusterConfig.ccvm.ip);
+            $("#form-input-cluster-mngt-nic-cidr").val(clusterJsonConf.clusterConfig.mngtNic.cidr);
+            $("#form-input-cluster-mngt-nic-gateway").val(clusterJsonConf.clusterConfig.mngtNic.gw);
+            $("#form-input-cluster-mngt-nic-dns").val(clusterJsonConf.clusterConfig.mngtNic.dns);
+            $("#form-input-cluster-pcs-hostname1").val(clusterJsonConf.clusterConfig.pcsCluster.hostname1);
+            $("#form-input-cluster-pcs-hostname2").val(clusterJsonConf.clusterConfig.pcsCluster.hostname2);
+            $("#form-input-cluster-pcs-hostname3").val(clusterJsonConf.clusterConfig.pcsCluster.hostname3);
         }
 
-        if(clusterJsonConf.clusterConfig.pcsCluster.hostname2 != "" && clusterJsonConf.clusterConfig.pcsCluster.hostname2 != null){
-            $("#form-input-cloud-vm-failover-cluster-host2-name").val(clusterJsonConf.clusterConfig.pcsCluster.hostname2);
-        }else if(clusterJsonConf.clusterConfig.hosts.length > 1 && clusterJsonConf.clusterConfig.hosts[1].hostname != "" && clusterJsonConf.clusterConfig.hosts[1].hostname != null){
-            $("#form-input-cloud-vm-failover-cluster-host2-name").val(clusterJsonConf.clusterConfig.hosts[1].hostname);
+        $('#form-input-cluster-config-host-number'+option+'').val(hostCnt);
+        $('#form-table-tbody-cluster-config-existing-host-profile'+option+' tr').remove();
+        $(insert_tr).appendTo('#form-table-tbody-cluster-config-existing-host-profile'+option+'');
+
+        //option이 -scvm 일 경우 스토리지센터 가상머신 배포 마법사 네트워크 자동 세팅
+        if(option == "-scvm"){
+            let current_host_name_scvm = $("#form-input-current-host-name-scvm").val();
+
+            // 세팅 값 초기화
+            $("#form-input-storage-vm-hostname").val("");
+            $("#form-input-storage-vm-mgmt-ip").val("");
+            $("#form-input-storage-vm-mgmt-gw").val("");
+            $("#form-input-storage-vm-dns").val("");
+            $("#form-input-storage-vm-public-ip").val("");
+            $("#form-input-storage-vm-cluster-ip").val("");
+            $("#form-input-ccvm-mngt-ip").val("");
+
+            //ccvm 관리 ip 세팅
+            $("#form-input-ccvm-mngt-ip").val(clusterJsonConf.clusterConfig.ccvm.ip);
+
+            $('#form-table-tbody-cluster-config-existing-host-profile-scvm tr').each(function(){
+                let host_name = $(this).find('td').eq(1).text().trim();
+                if(current_host_name_scvm == host_name && host_name != null){
+                    let host_index = $(this).find('td').eq(0).text().trim();
+
+                    // 호스트명을 세팅
+                    $("#form-input-storage-vm-hostname").val("scvm"+host_index);
+                    // 관리 NIC IP 및 CIDR 기본 입력
+                    if(c_mngt_cidr != ""){
+                        $("#form-input-storage-vm-mgmt-ip").val($(this).find('td').eq(3).text().trim()+"/"+c_mngt_cidr);
+                    }else{
+                        $("#form-input-storage-vm-mgmt-ip").val($(this).find('td').eq(3).text().trim()+"/");
+                    }
+                    if(c_mngt_gw != ""){
+                        $("#form-input-storage-vm-mgmt-gw").val(c_mngt_gw);
+                    }
+                    if(c_mngt_dns != ""){
+                        $("#form-input-storage-vm-dns").val(c_mngt_dns);
+                    }
+                    // 스토리지 서버 NIC IP
+                    $("#form-input-storage-vm-public-ip").val($(this).find('td').eq(5).text().trim()+"/24");
+                    // 스토리지 복제 NIC IP
+                    $("#form-input-storage-vm-cluster-ip").val($(this).find('td').eq(6).text().trim()+"/24");
+
+                    return false;
+                }
+            });
         }
 
-        if(clusterJsonConf.clusterConfig.pcsCluster.hostname3 != "" && clusterJsonConf.clusterConfig.pcsCluster.hostname3 != null){
-            $("#form-input-cloud-vm-failover-cluster-host3-name").val(clusterJsonConf.clusterConfig.pcsCluster.hostname3);
-        }else if(clusterJsonConf.clusterConfig.hosts.length > 2 && clusterJsonConf.clusterConfig.hosts[2].hostname != "" && clusterJsonConf.clusterConfig.hosts[2].hostname != null){
-            $("#form-input-cloud-vm-failover-cluster-host3-name").val(clusterJsonConf.clusterConfig.hosts[2].hostname);
+        if(option == "-ccvm"){
+            // 세팅 값 초기화
+            $("#form-input-cloud-vm-mngt-nic-ip").val("");
+            $("#form-input-cloud-vm-mngt-gw").val("");
+            $("#form-input-cloud-vm-dns").val("");
+            $("#form-input-cloud-vm-failover-cluster-host1-name").val("");
+            $("#form-input-cloud-vm-failover-cluster-host2-name").val("");
+            $("#form-input-cloud-vm-failover-cluster-host3-name").val("");
+
+            // 값 세팅
+            if(clusterJsonConf.clusterConfig.ccvm.ip != "" && clusterJsonConf.clusterConfig.ccvm.ip != null){
+                if(c_mngt_cidr != ""){
+                    $("#form-input-cloud-vm-mngt-nic-ip").val(clusterJsonConf.clusterConfig.ccvm.ip+"/"+c_mngt_cidr);
+                }else{
+                    $("#form-input-cloud-vm-mngt-nic-ip").val(clusterJsonConf.clusterConfig.ccvm.ip+"/");
+                }
+            }
+            if(c_mngt_gw != ""){
+                $("#form-input-cloud-vm-mngt-gw").val(c_mngt_gw);
+            }
+            if(c_mngt_dns != ""){
+                $("#form-input-cloud-vm-dns").val(c_mngt_dns);
+            }
+
+            if(clusterJsonConf.clusterConfig.pcsCluster.hostname1 != "" && clusterJsonConf.clusterConfig.pcsCluster.hostname1 != null){
+                $("#form-input-cloud-vm-failover-cluster-host1-name").val(clusterJsonConf.clusterConfig.pcsCluster.hostname1);
+            }else if(clusterJsonConf.clusterConfig.hosts.length > 0 && clusterJsonConf.clusterConfig.hosts[0].hostname != "" && clusterJsonConf.clusterConfig.hosts[0].hostname != null){
+                $("#form-input-cloud-vm-failover-cluster-host1-name").val(clusterJsonConf.clusterConfig.hosts[0].hostname);
+            }
+
+            if(clusterJsonConf.clusterConfig.pcsCluster.hostname2 != "" && clusterJsonConf.clusterConfig.pcsCluster.hostname2 != null){
+                $("#form-input-cloud-vm-failover-cluster-host2-name").val(clusterJsonConf.clusterConfig.pcsCluster.hostname2);
+            }else if(clusterJsonConf.clusterConfig.hosts.length > 1 && clusterJsonConf.clusterConfig.hosts[1].hostname != "" && clusterJsonConf.clusterConfig.hosts[1].hostname != null){
+                $("#form-input-cloud-vm-failover-cluster-host2-name").val(clusterJsonConf.clusterConfig.hosts[1].hostname);
+            }
+
+            if(clusterJsonConf.clusterConfig.pcsCluster.hostname3 != "" && clusterJsonConf.clusterConfig.pcsCluster.hostname3 != null){
+                $("#form-input-cloud-vm-failover-cluster-host3-name").val(clusterJsonConf.clusterConfig.pcsCluster.hostname3);
+            }else if(clusterJsonConf.clusterConfig.hosts.length > 2 && clusterJsonConf.clusterConfig.hosts[2].hostname != "" && clusterJsonConf.clusterConfig.hosts[2].hostname != null){
+                $("#form-input-cloud-vm-failover-cluster-host3-name").val(clusterJsonConf.clusterConfig.hosts[2].hostname);
+            }
         }
     }
+
 }
 
 /**
@@ -676,6 +829,8 @@ function settingProfile(clusterJsonConf, option){
             $('#form-textarea-storage-vm-ssh-private-key-file').val(data);
         }else if(option == "-ccvm"){
             $('#form-textarea-cloud-vm-ssh-private-key-file').val(data);
+        }else if(option == "-pfmp"){
+            $('#form-textarea-pfmp-vm-ssh-private-key-file').val(data);
         }
     }).catch(function(err){
          createLoggerInfo("호스트의 id_rsa 파일 읽기 실패" + err);
@@ -688,6 +843,8 @@ function settingProfile(clusterJsonConf, option){
             $('#form-textarea-storage-vm-ssh-public-key-file').val(data);
         }else if(option == "-ccvm"){
             $('#form-textarea-cloud-vm-ssh-public-key-file').val(data);
+        }else if(option == "-pfmp"){
+            $('#form-textarea-pfmp-vm-ssh-public-key-file').val(data);
         }
     }).catch(function(err){
          createLoggerInfo("호스트의 id_rsa.pub 파일 읽기 실패" + err);
@@ -734,11 +891,10 @@ function settingProfile(clusterJsonConf, option){
 //             $('#form-table-tbody-cluster-config-existing-host-profile'+option+'').find("td:eq("+(scvm+(pre_td*gap_num)*-1)+")").text("scvm");
 //             $('#form-table-tbody-cluster-config-existing-host-profile'+option+'').find("td:eq("+(scvm_cn+(pre_td*gap_num)*-1)+")").text("scvm-cn");
 //         }
-//     }else if ($('input[name="radio-hosts-file'+option+'"]:checked').val() == "existing"){
+//     }else if ($('input[name="0'+option+'"]:checked').val() == "existing"){
 //         console.log("There are no data");
 //     }
 // }
-
 /**
  * Meathod Name : putHostsValueIntoTextarea
  * Date Created : 2021.03.22
@@ -749,19 +905,19 @@ function settingProfile(clusterJsonConf, option){
  * History  : 2021.10.21 수정
  **/
 
- function putHostsValueIntoTextarea(radio_value, option) {
+function putHostsValueIntoTextarea(radio_value, option, os_type) {
     if (radio_value == "new") {
         // hosts file 준비 방법 표시 및 값 설정
         $('#span-hosts-file'+option+'').text("신규 생성");
-        
-        let result = tableToHostsText($('#form-table-tbody-cluster-config-new-host-profile'+option+' tr'), option);
+
+        let result = tableToHostsText($('#form-table-tbody-cluster-config-new-host-profile'+option+' tr'), option, os_type);
         $('#div-textarea-cluster-config-confirm-hosts-file'+option+'').val(result.trim());
 
     } else if (radio_value == "existing") {
         // hosts file 준비 방법 표시 및 값 설정
         $('#span-hosts-file'+option+'').text("기존 파일 사용");
-        
-        let result = tableToHostsText($('#form-table-tbody-cluster-config-existing-host-profile'+option+' tr'), option);
+
+        let result = tableToHostsText($('#form-table-tbody-cluster-config-existing-host-profile'+option+' tr'), option, os_type);
         $('#div-textarea-cluster-config-confirm-hosts-file'+option+'').val(result.trim());
     }
 }
@@ -769,19 +925,19 @@ function settingProfile(clusterJsonConf, option){
 /**
  * Meathod Name : tableToHostsText()
  * Date Created : 2022.08.24
- * Writer  : 배태주 
+ * Writer  : 배태주
  * Description : 입력 받은 클러스터 구성 정보를 통해 ablecube host에서 사용할 hosts 파일 텍스트 생성
  * Parameter : table_tr_obj
  * Return  : hosts text
  * History  : 2022.08.24 최초 작성
  **/
-function tableToHostsText(table_tr_obj, option){
+function tableToHostsText(table_tr_obj, option, os_type){
 
     // 신규로 생성할 경우 테이블의 내용을 table에 넣는 코드
     let hsots_text = "";
     // 현재 ablecube 호스트의 이름
     let current_host_name = $("#form-input-current-host-name"+option).val();
-    
+
     if(option == ""){
         if($("#form-input-cluster-ccvm-mngt-ip").val() != ""){
             hsots_text += $("#form-input-cluster-ccvm-mngt-ip").val() + "\t" + "ccvm-mngt" + "\t" + "ccvm" + "\n";
@@ -806,71 +962,116 @@ function tableToHostsText(table_tr_obj, option){
         // eq(4) : 호스트 PN IP (ablecube-pn)
         // eq(5) : SCVM PN IP
         // eq(6) : SCVM CN IP
-        
-        let idx = $(this).find('td').eq(0).text().trim();
-        let host_name = $(this).find('td').eq(1).text().trim();
-        let host_ip = $(this).find('td').eq(2).text().trim();
-        let scvm_mngt_ip = $(this).find('td').eq(3).text().trim();
-        let host_pn_ip = $(this).find('td').eq(4).text().trim();
-        let scvm_pn_ip = $(this).find('td').eq(5).text().trim();
-        let scvm_cn_ip = $(this).find('td').eq(6).text().trim();
-        
-        // 10.10.3.1	ablecloud1	ablecube
-        // 10.10.3.11	scvm1-mngt	scvm-mngt
-        // 100.100.3.1	ablecube1-pn	ablecube-pn
-        // 100.100.3.11	scvm1	scvm
-        // 100.200.3.11	scvm1-cn	scvm-cn
+
 
         let temp_text = "";
-        if(current_host_name == host_name){
-            temp_text = host_ip + "\t" + host_name + "\t" + "ablecube" + "\n";
-            temp_text += scvm_mngt_ip + "\t"  + "scvm"+idx+"-mngt" + "\t" + "scvm-mngt" + "\n";
-            temp_text += host_pn_ip + "\t"  + "ablecube"+idx+"-pn" + "\t" + "ablecube-pn" + "\n";
-            temp_text += scvm_pn_ip + "\t"  + "scvm"+idx+ "\t" + "scvm" + "\n";
-            temp_text += scvm_cn_ip + "\t"  + "scvm"+idx+"-cn" + "\t" + "scvm-cn" + "\n";
-        } else {
-            temp_text = host_ip + "\t" + host_name + "\n";
-            temp_text += scvm_mngt_ip + "\t"  + "scvm"+idx+"-mngt" + "\n";
-            temp_text += host_pn_ip + "\t"  + "ablecube"+idx+"-pn" + "\n";
-            temp_text += scvm_pn_ip + "\t"  + "scvm"+idx+ "\n";
-            temp_text += scvm_cn_ip + "\t"  + "scvm"+idx+"-cn" + "\n";
+        if (os_type == "PowerFlex"){
+            let idx = $(this).find('td').eq(0).text().trim();
+            let host_name = $(this).find('td').eq(1).text().trim();
+            let host_ip = $(this).find('td').eq(2).text().trim();
+            let scvm_mngt_ip = $(this).find('td').eq(3).text().trim();
+            let host_pn_ip = $(this).find('td').eq(4).text().trim();
+            let scvm_pn_ip = $(this).find('td').eq(5).text().trim();
+            let scvm_cn_ip = $(this).find('td').eq(6).text().trim();
+
+            if(current_host_name == host_name){
+                temp_text = host_ip + "\t" + host_name + "\t" + "ablecube" + "\n";
+                temp_text += scvm_mngt_ip + "\t"  + "scvm"+idx+"-mngt" + "\t" + "scvm-mngt" + "\n";
+                temp_text += host_pn_ip + "\t"  + "ablecube"+idx+"-pn" + "\t" + "ablecube-pn" + "\n";
+                temp_text += scvm_pn_ip + "\t"  + "scvm"+idx+"-pn" + "\t" + "scvm-pn" + "\n";
+                temp_text += scvm_cn_ip + "\t"  + "scvm"+idx+"-cn" + "\t" + "scvm-cn" + "\n";
+            } else {
+                temp_text = host_ip + "\t" + host_name + "\n";
+                temp_text += scvm_mngt_ip + "\t"  + "scvm"+idx+"-mngt" + "\n";
+                temp_text += host_pn_ip + "\t"  + "ablecube"+idx+"-pn" + "\n";
+                temp_text += scvm_pn_ip + "\t"  + "scvm"+idx+"-pn" + "\n";
+                temp_text += scvm_cn_ip + "\t"  + "scvm"+idx+"-cn" + "\n";
+            }
+        }else if(os_type == "general-virtualization"){
+            let host_name = $(this).find('td').eq(1).text().trim();
+            let host_ip = $(this).find('td').eq(2).text().trim();
+
+            if(current_host_name == host_name){
+                temp_text = host_ip + "\t" + host_name + "\t" + "ablecube" + "\n";
+            }else{
+                temp_text = host_ip + "\t" + host_name + "\t" + "ablecube" + "\n";
+            }
+        }else{
+            let idx = $(this).find('td').eq(0).text().trim();
+            let host_name = $(this).find('td').eq(1).text().trim();
+            let host_ip = $(this).find('td').eq(2).text().trim();
+            let scvm_mngt_ip = $(this).find('td').eq(3).text().trim();
+            let host_pn_ip = $(this).find('td').eq(4).text().trim();
+            let scvm_pn_ip = $(this).find('td').eq(5).text().trim();
+            let scvm_cn_ip = $(this).find('td').eq(6).text().trim();
+
+            if(current_host_name == host_name){
+                temp_text = host_ip + "\t" + host_name + "\t" + "ablecube" + "\n";
+                temp_text += scvm_mngt_ip + "\t"  + "scvm"+idx+"-mngt" + "\t" + "scvm-mngt" + "\n";
+                temp_text += host_pn_ip + "\t"  + "ablecube"+idx+"-pn" + "\t" + "ablecube-pn" + "\n";
+                temp_text += scvm_pn_ip + "\t"  + "scvm"+idx+ "\t" + "scvm" + "\n";
+                temp_text += scvm_cn_ip + "\t"  + "scvm"+idx+"-cn" + "\t" + "scvm-cn" + "\n";
+            } else {
+                temp_text = host_ip + "\t" + host_name + "\n";
+                temp_text += scvm_mngt_ip + "\t"  + "scvm"+idx+"-mngt" + "\n";
+                temp_text += host_pn_ip + "\t"  + "ablecube"+idx+"-pn" + "\n";
+                temp_text += scvm_pn_ip + "\t"  + "scvm"+idx+ "\n";
+                temp_text += scvm_cn_ip + "\t"  + "scvm"+idx+"-cn" + "\n";
+            }
         }
         hsots_text += temp_text;
     });
-    return hsots_text;    
+    return hsots_text;
 }
-
 /**
  * Meathod Name : clusterConfigTableChange()
  * Date Created : 2022.08.23
- * Writer  : 배태주 
+ * Writer  : 배태주
  * Description : 클러스터 구성할 호스트 대수에 따라 클러스터 구성 프로파일 입력항목을 추가하거나 제거하는 함수
  * Parameter : number_input, table_tbody
  * Return  : 없음
  * History  : 2022.08.23 최초 작성
  **/
- function clusterConfigTableChange(number_input, table_tbody) {
-    
+ function clusterConfigTableChange(number_input, table_tbody, os_type) {
+
     let input_num = $("#"+number_input).val();
     let tr_cnt = $("#"+table_tbody+ " > tr").length;
 
-    if(input_num > tr_cnt){ // <tr> 증가 경우 6 > 5
-        for(let i = 0 ; i < input_num-tr_cnt ; i++){
-            let insert_tr = "";
-            insert_tr += "<tr style='border-bottom: solid 1px #dcdcdc'>";
-            insert_tr += "  <td contenteditable='false'>"+(tr_cnt+i+1)+"</td>";
-            insert_tr += "  <td contenteditable='true'></td>";
-            insert_tr += "  <td contenteditable='true'></td>";
-            insert_tr += "  <td contenteditable='true'></td>";
-            insert_tr += "  <td contenteditable='true'></td>";
-            insert_tr += "  <td contenteditable='true'></td>";
-            insert_tr += "  <td contenteditable='true'></td>";
-            insert_tr += "</tr>";
-            $("#" + table_tbody + ":last").append(insert_tr);
+    if (os_type == "general-virtualization"){
+        if(input_num > tr_cnt){ // <tr> 증가 경우 6 > 5
+            for(let i = 0 ; i < input_num-tr_cnt ; i++){
+                let insert_tr = "";
+                insert_tr += "<tr style='border-bottom: solid 1px #dcdcdc'>";
+                insert_tr += "  <td contenteditable='false'>"+(tr_cnt+i+1)+"</td>";
+                insert_tr += "  <td contenteditable='true'></td>";
+                insert_tr += "  <td contenteditable='true'></td>";
+                insert_tr += "</tr>";
+                $("#" + table_tbody + ":last").append(insert_tr);
+            }
+        } else if (input_num < tr_cnt){ // <tr> 감소 경우
+            for(let i = 0 ; i > input_num-tr_cnt ; i--){
+                $("#" + table_tbody + " > tr:last").remove();
+            }
         }
-    } else if (input_num < tr_cnt){ // <tr> 감소 경우
-        for(let i = 0 ; i > input_num-tr_cnt ; i--){
-            $("#" + table_tbody + " > tr:last").remove();
+    }else{
+        if(input_num > tr_cnt){ // <tr> 증가 경우 6 > 5
+            for(let i = 0 ; i < input_num-tr_cnt ; i++){
+                let insert_tr = "";
+                insert_tr += "<tr style='border-bottom: solid 1px #dcdcdc'>";
+                insert_tr += "  <td contenteditable='false'>"+(tr_cnt+i+1)+"</td>";
+                insert_tr += "  <td contenteditable='true'></td>";
+                insert_tr += "  <td contenteditable='true'></td>";
+                insert_tr += "  <td contenteditable='true'></td>";
+                insert_tr += "  <td contenteditable='true'></td>";
+                insert_tr += "  <td contenteditable='true'></td>";
+                insert_tr += "  <td contenteditable='true'></td>";
+                insert_tr += "</tr>";
+                $("#" + table_tbody + ":last").append(insert_tr);
+            }
+        } else if (input_num < tr_cnt){ // <tr> 감소 경우
+            for(let i = 0 ; i > input_num-tr_cnt ; i--){
+                $("#" + table_tbody + " > tr:last").remove();
+            }
         }
     }
 }
@@ -878,13 +1079,13 @@ function tableToHostsText(table_tr_obj, option){
 /**
  * Meathod Name : tableToClusterConfigJsonObj()
  * Date Created : 2022.08.24
- * Writer  : 배태주 
+ * Writer  : 배태주
  * Description : table에 입력된 json 데이터를 json string으로 변환하는 함수
  * Parameter : radio_value, option
  * Return  : json string
  * History  : 2022.08.25 최초 작성
  **/
-function tableToClusterConfigJsonString(radio_value, option){
+function tableToClusterConfigJsonString(radio_value, option, os_type){
 
     var resultArrList = new Array();
     let table_tr_obj;
@@ -895,7 +1096,7 @@ function tableToClusterConfigJsonString(radio_value, option){
     } else if (radio_value == "existing") {
         table_tr_obj = $('#form-table-tbody-cluster-config-existing-host-profile'+option+' tr');
     }
-    
+
     table_tr_obj.each(function(){
         // $(this).find('td').eq(0) 순서는 아래와 같습니다.
         // eq(0) : index
@@ -909,27 +1110,42 @@ function tableToClusterConfigJsonString(radio_value, option){
         // 객체 생성
 		var data = new Object() ;
 
-        let idx = $(this).find('td').eq(0).text().trim();
-        let host_name = $(this).find('td').eq(1).text().trim();
-        let host_ip = $(this).find('td').eq(2).text().trim();
-        let scvm_mngt_ip = $(this).find('td').eq(3).text().trim();
-        let host_pn_ip = $(this).find('td').eq(4).text().trim();
-        let scvm_pn_ip = $(this).find('td').eq(5).text().trim();
-        let scvm_cn_ip = $(this).find('td').eq(6).text().trim();
+        if (os_type == "general-virtualization"){
+            let idx = $(this).find('td').eq(0).text().trim();
+            let host_name = $(this).find('td').eq(1).text().trim();
+            let host_ip = $(this).find('td').eq(2).text().trim();
+            // let host_pn_ip = $(this).find('td').eq(3).text().trim();
 
-        data.index = idx;
-        data.hostname = host_name;
-        data.ablecube = host_ip;
-        data.scvmMngt = scvm_mngt_ip;
-        data.ablecubePn = host_pn_ip;
-        data.scvm = scvm_pn_ip;
-        data.scvmCn = scvm_cn_ip;
+            data.index = idx;
+            data.hostname = host_name;
+            data.ablecube = host_ip;
+            // data.ablecubePn = host_pn_ip;
 
-		// 리스트에 생성된 객체 삽입
-        resultArrList.push(data) ;
+            // 리스트에 생성된 객체 삽입
+            resultArrList.push(data) ;
+        }else{
+            let idx = $(this).find('td').eq(0).text().trim();
+            let host_name = $(this).find('td').eq(1).text().trim();
+            let host_ip = $(this).find('td').eq(2).text().trim();
+            let scvm_mngt_ip = $(this).find('td').eq(3).text().trim();
+            let host_pn_ip = $(this).find('td').eq(4).text().trim();
+            let scvm_pn_ip = $(this).find('td').eq(5).text().trim();
+            let scvm_cn_ip = $(this).find('td').eq(6).text().trim();
+
+            data.index = idx;
+            data.hostname = host_name;
+            data.ablecube = host_ip;
+            data.scvmMngt = scvm_mngt_ip;
+            data.ablecubePn = host_pn_ip;
+            data.scvm = scvm_pn_ip;
+            data.scvmCn = scvm_cn_ip;
+
+            // 리스트에 생성된 객체 삽입
+            resultArrList.push(data) ;
+        }
 
     });
-    
+
     return JSON.stringify(resultArrList);
 }
 
@@ -939,11 +1155,10 @@ function tableToClusterConfigJsonString(radio_value, option){
  * Writer  : 배태주
  * Description : table에 입력된 json 데이터 값을 검증하는 기능
  * Parameter : radio_value, option
- * Return  : 
+ * Return  :
  * History  : 2022.08.25 최초 작성
  **/
- function validateClusterConfigProfile(radio_value, option){
-
+ function validateClusterConfigProfile(radio_value, option, os_type){
     let table_tr_obj;
     let validate_check = false;
 
@@ -953,7 +1168,7 @@ function tableToClusterConfigJsonString(radio_value, option){
     } else if (radio_value == "existing") {
         table_tr_obj = $('#form-table-tbody-cluster-config-existing-host-profile'+option+' tr');
     }
-    
+
     table_tr_obj.each(function(index_num){
         // $(this).find('td').eq(0) 순서는 아래와 같습니다.
         // eq(0) : index
@@ -964,143 +1179,239 @@ function tableToClusterConfigJsonString(radio_value, option){
         // eq(5) : SCVM PN IP
         // eq(6) : SCVM CN IP
 
-        let idx = $(this).find('td').eq(0).text().trim();
-        let host_name = $(this).find('td').eq(1).text().trim();
-        let host_ip = $(this).find('td').eq(2).text().trim();
-        let scvm_mngt_ip = $(this).find('td').eq(3).text().trim();
-        let host_pn_ip = $(this).find('td').eq(4).text().trim();
-        let scvm_pn_ip = $(this).find('td').eq(5).text().trim();
-        let scvm_cn_ip = $(this).find('td').eq(6).text().trim();
+        if (os_type == "general-virtualization"){
+            let idx = $(this).find('td').eq(0).text().trim();
+            let host_name = $(this).find('td').eq(1).text().trim();
+            let host_ip = $(this).find('td').eq(2).text().trim();
+            // let host_pn_ip = $(this).find('td').eq(3).text().trim();
 
-        let idx_cnt = 0;
-        table_tr_obj.each(function(){
-            if (idx == $(this).find('td').eq(0).text().trim()){
-                idx_cnt = idx_cnt+1;
+            let idx_cnt = 0;
+            table_tr_obj.each(function(){
+                if (idx == $(this).find('td').eq(0).text().trim()){
+                    idx_cnt = idx_cnt+1;
+                }
+            });
+
+            let host_name_cnt = 0;
+            let current_host_name_cnt = 0;
+            // 현재 ablecube 호스트의 이름
+            let current_host_name = $("#form-input-current-host-name"+option).val();
+
+            table_tr_obj.each(function(){
+                if (host_name == $(this).find('td').eq(1).text().trim()){
+                    host_name_cnt = host_name_cnt+1;
+                }
+
+                if (current_host_name == $(this).find('td').eq(1).text().trim()){
+                    current_host_name_cnt = current_host_name_cnt+1;
+                }
+            });
+
+            let host_ip_cnt = checkDupIpCnt(host_ip, index_num, table_tr_obj);
+
+            // 점검항목 1 : 빈 값이 있으면 안됨
+            if (idx == "" || idx == undefined || idx == null){
+                alert("idx " + idx + " 번의 값이 존재하지 않습니다.");
+                validate_check = true;
+                return false;
+            } else if (host_name == "" || host_name == undefined || host_name == null){
+                alert("idx " + idx + "번의 호스트 명 값이 존재하지 않습니다.");
+                validate_check = true;
+                return false;
+            } else if (host_ip == "" || host_ip == undefined || host_ip == null){
+                alert("idx " + idx + "번의 호스트 IP 값이 존재하지 않습니다.");
+                validate_check = true;
+                return false;
             }
-        });
-        
-        let host_name_cnt = 0;
-        let current_host_name_cnt = 0;
-        // 현재 ablecube 호스트의 이름
-        let current_host_name = $("#form-input-current-host-name"+option).val();
-        
-        table_tr_obj.each(function(){
-            if (host_name == $(this).find('td').eq(1).text().trim()){
-                host_name_cnt = host_name_cnt+1;
+            // else if (host_pn_ip == "" || host_pn_ip == undefined || host_pn_ip == null){
+            //     alert("idx " + idx + "번의 호스트 PN IP 값이 존재하지 않습니다.");
+            //     validate_check = true;
+            //     return false;
+            // }
+
+            // 점검항목 2 : index가 중복되면 안됨
+            else if (idx_cnt >= 2) { // 동일한 idx가 2개 이상 중복되는 경우 에러
+                alert("중복된 idx가 존재합니다.");
+                validate_check = true;
+                return false;
             }
 
-            if (current_host_name == $(this).find('td').eq(1).text().trim()){
-                current_host_name_cnt = current_host_name_cnt+1;
+            // 점검항목 3 : 호스트명이 중복되면 안됨
+            else if (host_name_cnt >= 2) { // 동일한 호스트 명이 2개 이상 중복되는 경우 에러
+                alert("중복된 호스트 명이 존재합니다.");
+                validate_check = true;
+                return false;
             }
-        });
 
-        let host_ip_cnt = checkDupIpCnt(host_ip, index_num, table_tr_obj);
-        let scvm_mngt_ip_cnt = checkDupIpCnt(scvm_mngt_ip, index_num, table_tr_obj);
-        let host_pn_ip_cnt = checkDupIpCnt(host_pn_ip, index_num, table_tr_obj);
-        let scvm_pn_ip_cnt = checkDupIpCnt(scvm_pn_ip, index_num, table_tr_obj);
-        let scvm_cn_ip_cnt = checkDupIpCnt(scvm_cn_ip, index_num, table_tr_obj);
+            // 점검항목 4 : 다른 inx의 IP와 중복되면 안됨 (동일 idx내에서는 중복 허용)
+            else if (host_ip_cnt >= 2) { // 다른 idx에 동일 ip가 존재하면 중복으로 처리
+                alert("중복된 호스트 IP가 존재합니다.");
+                validate_check = true;
+                return false;
+            }
+            // else if (host_pn_ip_cnt >= 2) { // 다른 idx에 동일 ip가 존재하면 중복으로 처리
+            //     alert("중복된 호스트 PN IP가 존재합니다.");
+            //     validate_check = true;
+            //     return false;
+            // }
 
-        // 점검항목 1 : 빈 값이 있으면 안됨
-        if (idx == "" || idx == undefined || idx == null){
-            alert("idx " + idx + " 번의 값이 존재하지 않습니다.");
-            validate_check = true;
-            return false;
-        } else if (host_name == "" || host_name == undefined || host_name == null){
-            alert("idx " + idx + "번의 호스트 명 값이 존재하지 않습니다.");
-            validate_check = true;
-            return false;
-        } else if (host_ip == "" || host_ip == undefined || host_ip == null){
-            alert("idx " + idx + "번의 호스트 IP 값이 존재하지 않습니다.");
-            validate_check = true;
-            return false;
-        } else if (scvm_mngt_ip == "" || scvm_mngt_ip == undefined || scvm_mngt_ip == null){
-            alert("idx " + idx + "번의 SCVM MNGT IP 값이 존재하지 않습니다.");
-            validate_check = true;
-            return false;
-        } else if (host_pn_ip == "" || host_pn_ip == undefined || host_pn_ip == null){
-            alert("idx " + idx + "번의 호스트 PN IP 값이 존재하지 않습니다.");
-            validate_check = true;
-            return false;
-        } else if (scvm_pn_ip == "" || scvm_pn_ip == undefined || scvm_pn_ip == null){
-            alert("idx " + idx + "번의 SCVM PN IP 값이 존재하지 않습니다.");
-            validate_check = true;
-            return false;
-        } else if (scvm_cn_ip == "" || scvm_cn_ip == undefined || scvm_cn_ip == null){
-            alert("idx " + idx + "번의 SCVM CN IP 값이 존재하지 않습니다.");
-            validate_check = true;
-            return false;
-        }
+            // 점검항목 5 : 모든 IP는 IP 유형 체크
+            else if (!checkIp(host_ip)){
+                alert("idx " + idx + "번의 호스트 IP 유형이 올바르지 않습니다.");
+                validate_check = true;
+                return false;
+            }
+            // else if (!checkIp(host_pn_ip)){
+            //     alert("idx " + idx + "번의 호스트 PN IP 유형이 올바르지 않습니다.");
+            //     validate_check = true;
+            //     return false;
+            // }
 
-        // 점검항목 2 : index가 중복되면 안됨        
-        else if (idx_cnt >= 2) { // 동일한 idx가 2개 이상 중복되는 경우 에러
-            alert("중복된 idx가 존재합니다.");
-            validate_check = true;
-            return false;
-        }
+            // 점검항목 6 : 현재 호스트명으로 된 항목이 존재하지 않으면 에러
+            else if (current_host_name_cnt == 0 ){
+                alert("클러스터 구성 프로파일 호스트 명과 현재 호스트 명과 동일한 항목이 없습니다.");
+                validate_check = true;
+                return false;
+            }
+        }else{
+            let idx = $(this).find('td').eq(0).text().trim();
+            let host_name = $(this).find('td').eq(1).text().trim();
+            let host_ip = $(this).find('td').eq(2).text().trim();
+            let scvm_mngt_ip = $(this).find('td').eq(3).text().trim();
+            let host_pn_ip = $(this).find('td').eq(4).text().trim();
+            let scvm_pn_ip = $(this).find('td').eq(5).text().trim();
+            let scvm_cn_ip = $(this).find('td').eq(6).text().trim();
 
-        // 점검항목 3 : 호스트명이 중복되면 안됨
-        else if (host_name_cnt >= 2) { // 동일한 호스트 명이 2개 이상 중복되는 경우 에러
-            alert("중복된 호스트 명이 존재합니다.");
-            validate_check = true;
-            return false;
-        }
-        
-        // 점검항목 4 : 다른 inx의 IP와 중복되면 안됨 (동일 idx내에서는 중복 허용)
-        else if (host_ip_cnt >= 2) { // 다른 idx에 동일 ip가 존재하면 중복으로 처리
-            alert("중복된 호스트 IP가 존재합니다.");
-            validate_check = true;
-            return false;
-        }
-        else if (scvm_mngt_ip_cnt >= 2) { // 다른 idx에 동일 ip가 존재하면 중복으로 처리
-            alert("중복된 SCVM MNGT IP가 존재합니다.");
-            validate_check = true;
-            return false;
-        }
-        else if (host_pn_ip_cnt >= 2) { // 다른 idx에 동일 ip가 존재하면 중복으로 처리
-            alert("중복된 호스트 PN IP가 존재합니다.");
-            validate_check = true;
-            return false;
-        }
-        else if (scvm_pn_ip_cnt >= 2) { // 다른 idx에 동일 ip가 존재하면 중복으로 처리
-            alert("중복된 SCVM PN IP가 존재합니다.");
-            validate_check = true;
-            return false;
-        }
-        else if (scvm_cn_ip_cnt >= 2) { // 다른 idx에 동일 ip가 존재하면 중복으로 처리
-            alert("중복된 SCVM CN IP가 존재합니다.");
-            validate_check = true;
-            return false;
-        }
+            let idx_cnt = 0;
+            table_tr_obj.each(function(){
+                if (idx == $(this).find('td').eq(0).text().trim()){
+                    idx_cnt = idx_cnt+1;
+                }
+            });
 
-        // 점검항목 5 : 모든 IP는 IP 유형 체크
-        else if (!checkIp(host_ip)){
-            alert("idx " + idx + "번의 호스트 IP 유형이 올바르지 않습니다.");
-            validate_check = true;
-            return false;
-        } else if (!checkIp(scvm_mngt_ip)){
-            alert("idx " + idx + "번의 SCVM MNGT IP 유형이 올바르지 않습니다.");
-            validate_check = true;
-            return false;
-        } else if (!checkIp(host_pn_ip)){
-            alert("idx " + idx + "번의 호스트 PN IP 유형이 올바르지 않습니다.");
-            validate_check = true;
-            return false;
-        } else if (!checkIp(scvm_pn_ip)){
-            alert("idx " + idx + "번의 SCVM PN IP 유형이 올바르지 않습니다.");
-            validate_check = true;
-            return false;
-        } else if (!checkIp(scvm_cn_ip)){
-            alert("idx " + idx + "번의 SCVM CN IP 유형이 올바르지 않습니다.");
-            validate_check = true;
-            return false;
+            let host_name_cnt = 0;
+            let current_host_name_cnt = 0;
+            // 현재 ablecube 호스트의 이름
+            let current_host_name = $("#form-input-current-host-name"+option).val();
+
+            table_tr_obj.each(function(){
+                if (host_name == $(this).find('td').eq(1).text().trim()){
+                    host_name_cnt = host_name_cnt+1;
+                }
+
+                if (current_host_name == $(this).find('td').eq(1).text().trim()){
+                    current_host_name_cnt = current_host_name_cnt+1;
+                }
+            });
+
+            let host_ip_cnt = checkDupIpCnt(host_ip, index_num, table_tr_obj);
+            let scvm_mngt_ip_cnt = checkDupIpCnt(scvm_mngt_ip, index_num, table_tr_obj);
+            let host_pn_ip_cnt = checkDupIpCnt(host_pn_ip, index_num, table_tr_obj);
+            let scvm_pn_ip_cnt = checkDupIpCnt(scvm_pn_ip, index_num, table_tr_obj);
+            let scvm_cn_ip_cnt = checkDupIpCnt(scvm_cn_ip, index_num, table_tr_obj);
+
+            // 점검항목 1 : 빈 값이 있으면 안됨
+            if (idx == "" || idx == undefined || idx == null){
+                alert("idx " + idx + " 번의 값이 존재하지 않습니다.");
+                validate_check = true;
+                return false;
+            } else if (host_name == "" || host_name == undefined || host_name == null){
+                alert("idx " + idx + "번의 호스트 명 값이 존재하지 않습니다.");
+                validate_check = true;
+                return false;
+            } else if (host_ip == "" || host_ip == undefined || host_ip == null){
+                alert("idx " + idx + "번의 호스트 IP 값이 존재하지 않습니다.");
+                validate_check = true;
+                return false;
+            } else if (scvm_mngt_ip == "" || scvm_mngt_ip == undefined || scvm_mngt_ip == null){
+                alert("idx " + idx + "번의 SCVM MNGT IP 값이 존재하지 않습니다.");
+                validate_check = true;
+                return false;
+            } else if (host_pn_ip == "" || host_pn_ip == undefined || host_pn_ip == null){
+                alert("idx " + idx + "번의 호스트 PN IP 값이 존재하지 않습니다.");
+                validate_check = true;
+                return false;
+            } else if (scvm_pn_ip == "" || scvm_pn_ip == undefined || scvm_pn_ip == null){
+                alert("idx " + idx + "번의 SCVM PN IP 값이 존재하지 않습니다.");
+                validate_check = true;
+                return false;
+            } else if (scvm_cn_ip == "" || scvm_cn_ip == undefined || scvm_cn_ip == null){
+                alert("idx " + idx + "번의 SCVM CN IP 값이 존재하지 않습니다.");
+                validate_check = true;
+                return false;
+            }
+
+            // 점검항목 2 : index가 중복되면 안됨
+            else if (idx_cnt >= 2) { // 동일한 idx가 2개 이상 중복되는 경우 에러
+                alert("중복된 idx가 존재합니다.");
+                validate_check = true;
+                return false;
+            }
+
+            // 점검항목 3 : 호스트명이 중복되면 안됨
+            else if (host_name_cnt >= 2) { // 동일한 호스트 명이 2개 이상 중복되는 경우 에러
+                alert("중복된 호스트 명이 존재합니다.");
+                validate_check = true;
+                return false;
+            }
+
+            // 점검항목 4 : 다른 inx의 IP와 중복되면 안됨 (동일 idx내에서는 중복 허용)
+            else if (host_ip_cnt >= 2) { // 다른 idx에 동일 ip가 존재하면 중복으로 처리
+                alert("중복된 호스트 IP가 존재합니다.");
+                validate_check = true;
+                return false;
+            }
+            else if (scvm_mngt_ip_cnt >= 2) { // 다른 idx에 동일 ip가 존재하면 중복으로 처리
+                alert("중복된 SCVM MNGT IP가 존재합니다.");
+                validate_check = true;
+                return false;
+            }
+            else if (host_pn_ip_cnt >= 2) { // 다른 idx에 동일 ip가 존재하면 중복으로 처리
+                alert("중복된 호스트 PN IP가 존재합니다.");
+                validate_check = true;
+                return false;
+            }
+            else if (scvm_pn_ip_cnt >= 2) { // 다른 idx에 동일 ip가 존재하면 중복으로 처리
+                alert("중복된 SCVM PN IP가 존재합니다.");
+                validate_check = true;
+                return false;
+            }
+            else if (scvm_cn_ip_cnt >= 2) { // 다른 idx에 동일 ip가 존재하면 중복으로 처리
+                alert("중복된 SCVM CN IP가 존재합니다.");
+                validate_check = true;
+                return false;
+            }
+
+            // 점검항목 5 : 모든 IP는 IP 유형 체크
+            else if (!checkIp(host_ip)){
+                alert("idx " + idx + "번의 호스트 IP 유형이 올바르지 않습니다.");
+                validate_check = true;
+                return false;
+            } else if (!checkIp(scvm_mngt_ip)){
+                alert("idx " + idx + "번의 SCVM MNGT IP 유형이 올바르지 않습니다.");
+                validate_check = true;
+                return false;
+            } else if (!checkIp(host_pn_ip)){
+                alert("idx " + idx + "번의 호스트 PN IP 유형이 올바르지 않습니다.");
+                validate_check = true;
+                return false;
+            } else if (!checkIp(scvm_pn_ip)){
+                alert("idx " + idx + "번의 SCVM PN IP 유형이 올바르지 않습니다.");
+                validate_check = true;
+                return false;
+            } else if (!checkIp(scvm_cn_ip)){
+                alert("idx " + idx + "번의 SCVM CN IP 유형이 올바르지 않습니다.");
+                validate_check = true;
+                return false;
+            }
+
+            // 점검항목 6 : 현재 호스트명으로 된 항목이 존재하지 않으면 에러
+            else if (current_host_name_cnt == 0 ){
+                alert("클러스터 구성 프로파일 호스트 명과 현재 호스트 명과 동일한 항목이 없습니다.");
+                validate_check = true;
+                return false;
+            }
         }
-        
-        // 점검항목 6 : 현재 호스트명으로 된 항목이 존재하지 않으면 에러
-        else if (current_host_name_cnt == 0 ){
-            alert("클러스터 구성 프로파일 호스트 명과 현재 호스트 명과 동일한 항목이 없습니다.");
-            validate_check = true;
-            return false;
-        } 
     });
     return validate_check;
 }
@@ -1111,10 +1422,10 @@ function tableToClusterConfigJsonString(radio_value, option){
  * Writer  : 배태주
  * Description : table에 입력된 ip값에 중복된 ccvm-mngt-ip가 존재하는지 확인
  * Parameter : ip, radio_value, option
- * Return  : 
+ * Return  :
  * History  : 2022.09.14 최초 작성
  **/
- function checkDuplicateCcvmIp(ip, radio_value, option){
+ function checkDuplicateCcvmIp(ip, radio_value, option, os_type){
 
     let table_tr_obj;
     let validate_check = false;
@@ -1125,7 +1436,7 @@ function tableToClusterConfigJsonString(radio_value, option){
     } else if (radio_value == "existing") {
         table_tr_obj = $('#form-table-tbody-cluster-config-existing-host-profile'+option+' tr');
     }
-    
+
     table_tr_obj.each(function(index_num){
         // $(this).find('td').eq(0) 순서는 아래와 같습니다.
         // eq(0) : index
@@ -1136,16 +1447,28 @@ function tableToClusterConfigJsonString(radio_value, option){
         // eq(5) : SCVM PN IP
         // eq(6) : SCVM CN IP
 
-        let host_ip = $(this).find('td').eq(2).text().trim();
-        let scvm_mngt_ip = $(this).find('td').eq(3).text().trim();
-        let host_pn_ip = $(this).find('td').eq(4).text().trim();
-        let scvm_pn_ip = $(this).find('td').eq(5).text().trim();
-        let scvm_cn_ip = $(this).find('td').eq(6).text().trim();
 
-        if (ip == host_ip || ip == scvm_mngt_ip || ip == host_pn_ip || ip == scvm_pn_ip || ip == scvm_cn_ip) {
-            alert((index_num+1)+"번 idx에 CCVM 관리 IP와 중복된 IP가 존재합니다.");
-            validate_check = true;
-            return false;
+        if (os_type == "general-virtualization"){
+            let host_ip = $(this).find('td').eq(2).text().trim();
+            // let host_pn_ip = $(this).find('td').eq(3).text().trim();
+
+            if (ip == host_ip) {
+                alert((index_num+1)+"번 idx에 CCVM 관리 IP와 중복된 IP가 존재합니다.");
+                validate_check = true;
+                return false;
+            }
+        }else{
+            let host_ip = $(this).find('td').eq(2).text().trim();
+            let scvm_mngt_ip = $(this).find('td').eq(3).text().trim();
+            let host_pn_ip = $(this).find('td').eq(4).text().trim();
+            let scvm_pn_ip = $(this).find('td').eq(5).text().trim();
+            let scvm_cn_ip = $(this).find('td').eq(6).text().trim();
+
+            if (ip == host_ip || ip == scvm_mngt_ip || ip == host_pn_ip || ip == scvm_pn_ip || ip == scvm_cn_ip) {
+                alert((index_num+1)+"번 idx에 CCVM 관리 IP와 중복된 IP가 존재합니다.");
+                validate_check = true;
+                return false;
+            }
         }
     });
     return validate_check;
@@ -1231,7 +1554,6 @@ function pcsHostPnIpCheck(host_file_type, pcs_host_pn_ip, option){
         // eq(6) : SCVM CN IP
 
         host_pn_ip = $(this).find('td').eq(4).text().trim();
-        
         // 점검항목 1 : 빈 값이 있으면 안됨
         if (pcs_host_pn_ip == host_pn_ip){
             check_cnt += 1;
@@ -1244,4 +1566,77 @@ function pcsHostPnIpCheck(host_file_type, pcs_host_pn_ip, option){
     }
 
     return validate_check;
+}
+/**
+ * Meathod Name : clusterConfigProfile
+ * Date Created : 2024.11.11
+ * Writer  : 정민철
+ * Description : 클러스터 구성 파일 유동 변화
+ * History  : 2024.11.11 최초 작성
+ **/
+function clusterConfigProfile(operating_system,setting) {
+    // 열 정보 설정
+    let columns = [];
+    if (operating_system == "general-virtualization") {
+        columns = [
+            { name: "idx", width: "5%" },
+            { name: "호스트 명", width: "15%" },
+            { name: "호스트 IP", width: "16%" }
+        ];
+    } else {
+        columns = [
+            { name: "idx", width: "5%" },
+            { name: "호스트 명", width: "15%" },
+            { name: "호스트 IP", width: "16%" },
+            { name: "SCVM<br/>MNGT IP", width: "16%" },
+            { name: "호스트 PN IP", width: "16%" },
+            { name: "SCVM PN IP", width: "16%" },
+            { name: "SCVM CN IP", width: "16%" }
+        ];
+    }
+    // 테이블 헤더 생성 함수
+    function createTableHeader() {
+        const theads = document.querySelectorAll("#cluster-prepare-table-head tr, #cluster-prepare-table-head-existing tr, #cloud-vm-wizard-table-head tr, #cloud-vm-wizard-table-head-existing tr");
+
+        if(setting != "reset"){
+            if (theads.length > 0 && theads[0].children.length > 0) return;
+        }
+        theads.forEach(thead => {
+            thead.innerHTML = ""; // 기존 내용 초기화
+            columns.forEach(col => {
+                const th = document.createElement("th");
+                th.style.width = col.width;
+                th.innerHTML = col.name;
+                thead.appendChild(th);
+            });
+        });
+    }
+
+    // 테이블 본문 생성 함수
+    function createTableBody(rows) {
+        const tbodies = document.querySelectorAll("#form-table-tbody-cluster-config-new-host-profile, #form-table-tbody-cluster-config-existing-host-profile, #form-table-tbody-cluster-config-new-host-profile-ccvm, #form-table-tbody-cluster-config-existing-host-profile-ccvm");
+
+        if(setting != "reset"){
+            if (tbodies.length > 0 && tbodies[0].children.length > 0) return;
+        }
+
+        tbodies.forEach(tbody => {
+            tbody.innerHTML = ""; // 기존 내용 초기화
+            for (let i = 0; i < rows; i++) {
+                const tr = document.createElement("tr");
+                tr.style.borderBottom = "solid 1px #dcdcdc";
+                columns.forEach((col, index) => {
+                    const td = document.createElement("td");
+                    td.contentEditable = index === 0 ? "false" : "true"; // 첫 번째 열은 읽기 전용
+                    td.textContent = index === 0 ? i + 1 : ""; // 첫 번째 열에 인덱스 표시
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            }
+        });
+    }
+    // 테이블 생성 호출
+    createTableHeader();
+    const rows = operating_system === "general-virtualization" ? 1 : 3;
+    createTableBody(rows);
 }
