@@ -1560,29 +1560,10 @@ function deployCloudCenterVM() {
                                                             //결과 값 json으로 return
                                                             var ccvm_result = JSON.parse(data);
                                                             if(ccvm_result.code=="200"){
-                                                                var cluster_sync_mechanism_cmd = ['python3', pluginpath + '/python/pcs/main.py', 'sync', '--time', cluster_sync_mechanism];
-                                                                if(console_log){console.log(cluster_sync_mechanism_cmd);}
-                                                                cockpit.spawn(cluster_sync_mechanism_cmd)
-                                                                .then(function(data){
-                                                                    var cluster_sync_mechanism_result = JSON.parse(data);
-                                                                    if (cluster_sync_mechanism_result.code == "200"){
-                                                                        createLoggerInfo("deployCloudCenterVM success");
-                                                                        setProgressStep("span-ccvm-progress-step5",2);
-                                                                        //최종 화면 호출
-                                                                        showDivisionCloudVMConfigFinish();
-                                                                    }
-                                                                    else{
-                                                                         setProgressFail(5);
-                                                                         createLoggerInfo(cluster_sync_mechanism_result.val);
-                                                                         alert(cluster_sync_mechanism_result.val);
-
-                                                                    }
-                                                                })
-                                                                .catch(function(data){
-                                                                    setProgressFail(5);
-                                                                    createLoggerInfo("Cluster configuration and cloud center virtual machine deployment failed");
-                                                                    alert("클러스터 구성 및 클라우드센터 가상머신 배포 및 클러스터 민감도 설정 실패 : "+data);
-                                                                });
+                                                                createLoggerInfo("deployCloudCenterVM success");
+                                                                setProgressStep("span-ccvm-progress-step5",2);
+                                                                //최종 화면 호출
+                                                                showDivisionCloudVMConfigFinish();
                                                             } else {
                                                                 setProgressFail(5);
                                                                 createLoggerInfo(ccvm_result.val);
