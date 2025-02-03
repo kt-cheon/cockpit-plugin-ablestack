@@ -2954,7 +2954,6 @@ function setTypeByChange(){
         $('#gfs-li').text("일반 가상화를 위한 각 호스트의 IPMI 정보");
         // 클러스터 민감도 화면 처리
         $('#nav-button-cloud-vm-cluster-sync-mechanism').show();
-        $('#div-modal-wizard-cloud-vm-cluster-sync-mechanism').show();
     }else if (os_type == "general-virtualization"){
         // gfs용 디스크
         $('#nav-button-cloud-vm-disk').show();
@@ -2970,7 +2969,6 @@ function setTypeByChange(){
         $('#gfs-li').text("일반 가상화를 위한 각 호스트의 IPMI 정보");
         // 클러스터 민감도 화면 처리
         $('#nav-button-cloud-vm-cluster-sync-mechanism').show();
-        $('#div-modal-wizard-cloud-vm-cluster-sync-mechanism').show();
     }
 }
 

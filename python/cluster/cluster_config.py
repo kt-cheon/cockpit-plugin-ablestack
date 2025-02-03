@@ -45,6 +45,7 @@ def createArgumentParser():
     parser.add_argument('-co', '--copy-option', choices=['hostOnly','withScvm','withCcvm'], metavar='[hosts file copy option]', default="hostOnly", type=str, help='choose one of the actions')
     parser.add_argument('-eh', '--exclude-hostname', metavar='[Hostnames to exclude from copying the hosts file to scvm and checking the network]', type=str, help='input Value to exclude hostname')
     parser.add_argument('-rh', '--remove-hostname', metavar='[Hostnames to remove configuration in cluster]', type=str, help='input Value to remove hostname')
+    parser.add_argument('-ets', '--extenal-timeserver', metavar='[Extenal Timeserver]', type=str, help='input Value to Extenal Timeserver')
 
     # output 민감도 추가(v갯수에 따라 output및 log가 많아짐):
     parser.add_argument('-v', '--verbose', action='count', default=0, help='increase output verbosity')
@@ -79,6 +80,8 @@ def insert(args):
             json_data["clusterConfig"]["type"] = args.type
         if args.ccvm_mngt_ip is not None:
             json_data["clusterConfig"]["ccvm"]["ip"] = args.ccvm_mngt_ip
+        if args.extenal_timeserver is not None:
+            json_data["clusterConfig"]["extenal_timeserver"] = args.extenal_timeserver
 
         if args.type == "general-virtualization":
             if args.pcs_cluster_list is not None:
@@ -371,6 +374,7 @@ def reset_cluster_config():
     clusterConfig["mngtNic"]["cidr"] = ""
     clusterConfig["mngtNic"]["gw"] = ""
     clusterConfig["mngtNic"]["dns"] = ""
+    clusterConfig["extenal_timeserver"] = ""
     for i in range(len(clusterConfig["pcsCluster"])):
         clusterConfig["pcsCluster"]["hostname"+str(i+1)] = ""
     clusterConfig["hosts"] = []
