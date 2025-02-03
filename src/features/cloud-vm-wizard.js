@@ -1454,7 +1454,7 @@ function deployCloudCenterVM() {
     var mngt_gw = $('#form-input-cloud-vm-mngt-gw').val();
 
     var cluster_sync_mechanism = String(Number($('#form-input-cloud-vm-cluster-sync-mechanism').val()) * 1000);
-    console.log(cluster_sync_mechanism);
+
     // pcs 클러스터 구성할 호스트 1~3번 정보
     var all_host_name = "";
     var host_names = [];
