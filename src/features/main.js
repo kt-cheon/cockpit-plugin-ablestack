@@ -104,6 +104,159 @@ $(document).ready(function(){
         createLoggerInfo("pcsExeHost err");
         console.log("pcsExeHost err : " + err);
     });
+
+    // 라이센스 등록 관련 이벤트 처리
+    $('#button-open-modal-license-register').on('click', function(){
+        $('#div-modal-license-register').show();
+    });
+
+    // 닫기 버튼 클릭 이벤트
+    $('#button-close-modal-license-register, #button-cancel-modal-license-register').on('click', function(){
+        $('#div-modal-license-register').hide();
+        $('#input-license-file').val("");
+    });
+
+    // 실행 버튼 클릭 이벤트
+    $('#button-execution-modal-license-register').on('click', function(){
+        const licenseFile = $('#input-license-file')[0].files[0];
+
+        // 필수 입력값 검증
+        if (!licenseFile) {
+            alert("라이센스 파일을 선택해주세요.");
+            return;
+        }
+
+        // 로딩 스피너 표시
+        $('#div-modal-spinner-header-txt').text('라이센스 등록중입니다...');
+        $('#div-modal-spinner-body-txt').text('라이센스를 등록하는 중입니다. 잠시만 기다려주세요.');
+        $('#div-modal-spinner').show();
+
+        // 파일 읽기
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const fileContent = e.target.result;
+            
+            // 라이센스 파일명 생성 (타임스탬프.dat)
+            const timestamp = Date.now();
+            const fileName = `license_${timestamp}.dat`;
+            const filePath = `/root/${fileName}`;
+            
+            // root에 파일 저장
+            cockpit.file(filePath).replace(fileContent)
+            .then(() => {
+                // 파일 권한 설정 (600)
+                return cockpit.spawn(['chmod', '600', filePath], { superuser: true });
+            })
+            .then(() => {
+                // 라이센스 등록 Python 스크립트 실행
+                return cockpit.spawn(['python3', pluginpath + '/python/license/register_license.py', 
+                    '--license-file', filePath
+                ], { superuser: true });
+            })
+            .then(function(data) {
+                $('#div-modal-spinner').hide();
+                const result = JSON.parse(data);
+                if(result.code == "200") {
+                    // 등록 성공 - 성공 메시지 표시 후 새로고침
+                    $('#div-modal-license-register').hide();
+                    alert("라이센스가 등록되었습니다.");
+                    location.reload();
+                } else {
+                    // 실패 알림 표시
+                    alert("라이센스 등록 실패 : " + result.val);
+                }
+            })
+            .catch(function(error) {
+                $('#div-modal-spinner').hide();
+                console.error("Error:", error);
+                alert("라이센스 등록 중 오류가 발생했습니다: " + error);
+            });
+        };
+
+        // 파일 읽기 시작
+        reader.readAsBinaryString(licenseFile);
+    });
+
+    // 파일 선택 시 버튼 활성화
+    $('#input-license-file').on('change', function(){
+        $('#button-execution-modal-license-register').prop('disabled', !this.files.length);
+    });
+
+    // 초기 버튼 비활성화
+    $('#button-execution-modal-license-register').prop('disabled', true);
+
+    // 상태 알림 모달 닫기
+    $('#modal-status-alert-button-close1, #modal-status-alert-button-close2').on('click', function(){
+        $('#div-modal-status-alert').hide();
+    });
+
+    // 라이센스 키 입력 필드 유효성 검사
+    $('#input-license-key').on('input', function(){
+        validateLicenseInputs();
+    });
+
+    // 라이센스 파일 선택 필드 유효성 검사
+    $('#input-license-file').on('change', function(){
+        validateLicenseInputs();
+    });
+
+    // 입력값 유효성 검사 함수 수정
+    function validateLicenseInputs() {
+        const licenseFile = $('#input-license-file')[0].files[0];
+        $('#button-execution-modal-license-register').prop('disabled', !licenseFile);
+    }
+
+    // 추가 입력 필드에 대한 유효성 검사 이벤트 리스너
+    $('#input-license-type').on('change', function(){
+        validateLicenseInputs();
+    });
+
+    $('#input-product-id').on('input', function(){
+        validateLicenseInputs();
+    });
+
+    $('#input-license-start-date').on('change', function(){
+        validateLicenseInputs();
+    });
+
+    $('#input-license-end-date').on('change', function(){
+        validateLicenseInputs();
+    });
+
+    // 라이센스 상태 확인 함수
+    function checkLicenseStatus() {
+        cockpit.spawn(['python3', pluginpath + '/python/license/register_license.py'])
+        .then(function(data){
+            const result = JSON.parse(data);
+            if(result.code == "200") {
+                const licenses = result.val;
+                let hasValidLicense = false;
+                
+                licenses.forEach(license => {
+                    if(license.status === 'active') {
+                        hasValidLicense = true;
+                        // 여기에 라이센스 상태에 따른 UI 업데이트 로직 추가
+                    }
+                });
+
+                if(!hasValidLicense) {
+                    // 유효한 라이센스가 없는 경우 처리
+                    $('#button-open-modal-license-register').show();
+                }
+            } else {
+                // 라이센스 확인 실패 시 처리
+                console.error("라이센스 상태 확인 실패:", result.val);
+                $('#button-open-modal-license-register').show();
+            }
+        })
+        .catch(function(error){
+            console.error("라이센스 상태 확인 중 오류 발생:", error);
+            $('#button-open-modal-license-register').show();
+        });
+    }
+
+    // 페이지 로드 시 라이센스 상태 확인
+    checkLicenseStatus();
 });
 // document.ready 영역 끝
 
@@ -1642,7 +1795,7 @@ function ribbonWorker() {
             $('#div-db-backup').show();
             $('#div-db-backup').text("클라우드센터 가상머신의 데이터베이스 백업이 실패하었습니다.");
             $('#dbdump-prepare-status').html("")
-            $('#div-modal-wizard-cluster-config-finish-db-dump-file-download').hide()
+            $('#div-modal-wizard-cluster-config-finish-db-dump-file-download-empty-state').hide()
             $('#button-execution-modal-cloud-vm-db-dump').show();
             $('#button-cancel-modal-cloud-vm-db-dump').show();
             $('#button-close-modal-cloud-vm-db-dump').show();

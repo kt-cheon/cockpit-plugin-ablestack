@@ -35,6 +35,8 @@
                     <button style="display:none;font-size: 0.83rem;" class="pf-c-button pf-m-primary pf-m-inline"
                         id="button-config-file-download" aria-disabled="false" type="button" data-ouia-safe="true">설정파일
                         다운로드</button>
+                    <button style="display:none" class="pf-c-button pf-m-link pf-m-inline" type="button" 
+                        id="button-open-modal-license-register">라이센스 등록</button>
                 </div>
             </div>
         </section>
@@ -1857,6 +1859,136 @@
 <script src="./src/features/card-cloud-cluster-status.js"></script>
 <script src="./src/common/logger.js"></script>
 <!-- 해당 페이지에 필요한 javascript 파일 추가 영역 끝 -->
+
+<!-- 모달 영역 끝 부분에 추가 -->
+<!-- 라이센스 등록 : Modal 영역 시작 -->
+<div id="div-modal-license-register" class="pf-c-backdrop" style="display:none">
+    <div class="pf-l-bullseye">
+        <div class="pf-c-modal-box pf-m-sm" role="dialog" aria-modal="true" aria-label="License Registration">
+            <button id="button-close-modal-license-register" aria-disabled="false" aria-label="Close"
+                class="pf-c-button pf-m-plain" type="button">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <header class="pf-c-modal-box__header">
+                <h1 class="pf-c-modal-box__title"><span class="pf-c-modal-box__title-text">라이센스 등록</span></h1>
+            </header>
+            <div class="pf-c-modal-box__body">
+                <form novalidate class="pf-c-form pf-m-horizontal">
+                    <div class="pf-c-form__group">
+                        <div class="pf-c-form__group-label">
+                            <label class="pf-c-form__label" for="input-license-file">
+                                <span class="pf-c-form__label-text">라이센스 파일</span>
+                                <span class="pf-c-form__label-required" aria-hidden="true">&#42;</span>
+                            </label>
+                        </div>
+                        <div class="pf-c-form__group-control">
+                            <input class="pf-c-form-control" type="file" id="input-license-file" name="input-license-file" accept=".lic" required />
+                        </div>
+                    </div>
+                </form>
+                <div id="div-license-description" class="pf-c-content" style="margin-top:20px">
+                    <p><i class="fas fa-info-circle"></i> 라이센스 파일을 선택해주세요.</p>
+                </div>
+            </div>
+            <footer class="pf-c-modal-box__footer">
+                <button id="button-execution-modal-license-register" aria-disabled="false"
+                    class="pf-c-button pf-m-primary" type="button" data-ouia-safe="true">등록</button>
+                <button id="button-cancel-modal-license-register" aria-disabled="false" class="pf-c-button pf-m-link"
+                    type="button" data-ouia-safe="true">취소</button>
+            </footer>
+        </div>
+    </div>
+</div>
+<!-- 라이센스 등록 : Modal 영역 끝 -->
+
+<!-- 실행 버튼 클릭 이벤트 -->
+<script>
+$('#button-execution-modal-license-register').on('click', function(){
+    const licenseType = $('#input-license-type').val();
+    const productId = $('#input-product-id').val();
+    const licenseKey = $('#input-license-key').val();
+    const licenseFile = $('#input-license-file')[0].files[0];
+    const licenseStatus = $('#input-license-status').val();
+    const startDate = $('#input-license-start-date').val();
+    const endDate = $('#input-license-end-date').val();
+
+    // 필수 입력값 검증
+    if (!licenseFile) {
+        alert("모든 필수 항목을 입력해주세요.");
+        return;
+    }
+
+    // 날짜 유효성 검사
+    if (new Date(startDate) > new Date(endDate)) {
+        alert("만료일은 시작일보다 이후여야 합니다.");
+        return;
+    }
+
+    // 로딩 스피너 표시
+    $('#div-modal-spinner-header-txt').text('라이센스 등록중입니다...');
+    $('#div-modal-spinner-body-txt').text('라이센스를 등록하는 중입니다. 잠시만 기다려주세요.');
+    $('#div-modal-spinner').show();
+
+    // 파일 읽기
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const fileContent = e.target.result;
+        
+        // 라이센스 파일명 생성 (타입_제품ID_타임스탬프.dat)
+        const timestamp = Date.now();
+        const fileName = `license_${licenseType}_${productId}_${timestamp}.dat`;
+        const filePath = `/root/${fileName}`;
+        
+        // root에 파일 저장
+        cockpit.file(filePath).replace(fileContent)
+        .then(() => {
+            // 파일 권한 설정 (600)
+            return cockpit.spawn(['chmod', '600', filePath], { superuser: true });
+        })
+        .then(() => {
+            // 라이센스 등록 Python 스크립트 실행
+            return cockpit.spawn(['python3', pluginpath + '/python/license/register_license.py', 
+                '--type', licenseType,
+                '--product-id', productId,
+                '--license-key', licenseKey,
+                '--license-file', filePath,
+                '--status', licenseStatus,
+                '--start-date', startDate,
+                '--end-date', endDate
+            ], { superuser: true });
+        })
+        .then(function(data) {
+            $('#div-modal-spinner').hide();
+            const result = JSON.parse(data);
+            if(result.code == "200") {
+                // 등록 성공
+                $('#div-modal-license-register').hide();
+                $('#div-modal-status-alert-body').text("라이센스가 정상적으로 등록되었습니다.");
+                $('#div-modal-status-alert').show();
+                
+                // 입력값 초기화
+                $('#input-license-type').val("");
+                $('#input-product-id').val("");
+                $('#input-license-key').val("");
+                $('#input-license-start-date').val("");
+                $('#input-license-end-date').val("");
+                $('#input-license-status').val("active");
+            } else {
+                // 실패 알림 표시
+                alert("라이센스 등록 실패 : " + result.val);
+            }
+        })
+        .catch(function(error) {
+            $('#div-modal-spinner').hide();
+            console.error("Error:", error);
+            alert("라이센스 등록 중 오류가 발생했습니다: " + error);
+        });
+    };
+
+    // 파일 읽기 시작
+    reader.readAsBinaryString(licenseFile);
+});
+</script>
 
 </body>
 
