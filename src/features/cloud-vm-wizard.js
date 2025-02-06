@@ -1454,7 +1454,7 @@ function deployCloudCenterVM() {
     var mngt_gw = $('#form-input-cloud-vm-mngt-gw').val();
 
     var cluster_sync_mechanism = String(Number($('#form-input-cloud-vm-cluster-sync-mechanism').val()) * 1000);
-    console.log(cluster_sync_mechanism);
+
     // pcs 클러스터 구성할 호스트 1~3번 정보
     var all_host_name = "";
     var host_names = [];
@@ -2954,7 +2954,6 @@ function setTypeByChange(){
         $('#gfs-li').text("일반 가상화를 위한 각 호스트의 IPMI 정보");
         // 클러스터 민감도 화면 처리
         $('#nav-button-cloud-vm-cluster-sync-mechanism').show();
-        $('#div-modal-wizard-cloud-vm-cluster-sync-mechanism').show();
     }else if (os_type == "general-virtualization"){
         // gfs용 디스크
         $('#nav-button-cloud-vm-disk').show();
@@ -2970,7 +2969,6 @@ function setTypeByChange(){
         $('#gfs-li').text("일반 가상화를 위한 각 호스트의 IPMI 정보");
         // 클러스터 민감도 화면 처리
         $('#nav-button-cloud-vm-cluster-sync-mechanism').show();
-        $('#div-modal-wizard-cloud-vm-cluster-sync-mechanism').show();
     }
 }
 

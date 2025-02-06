@@ -383,6 +383,7 @@ $('#button-next-step-modal-wizard-cluster-config-prepare').on('click', function 
             var mngt_nic_cidr =  $("#form-input-cluster-mngt-nic-cidr").val();
             var mngt_nic_gateway = $("#form-input-cluster-mngt-nic-gateway").val();
             var mngt_nic_dns = $("#form-input-cluster-mngt-nic-dns").val();
+            var extenal_timeserver = $("#form-input-cluster-config-external-time-server-ip").val();
 
             let host_names = [];
             // pcs 클러스터 구성할 호스트 1~3번 정보
@@ -415,7 +416,7 @@ $('#button-next-step-modal-wizard-cluster-config-prepare').on('click', function 
                 // writeConfigFile(ret_json_string);
                 let cluster_host_yn = $('input[name=radio-cluster-host]:checked').val()
                 if(cluster_host_yn == "new"){
-                    var cluster_config_cmd = ["python3", pluginpath+"/python/cluster/cluster_config.py", "insert", "-t", os_type, "-js", ret_json_string, '-cmi', ccvm_mgmt_ip, '-pcl', ...host_names];
+                    var cluster_config_cmd = ["python3", pluginpath+"/python/cluster/cluster_config.py", "insert", "-t", os_type, "-js", ret_json_string, '-cmi', ccvm_mgmt_ip, '-ets', extenal_timeserver, '-pcl', ...host_names];
                     if(mngt_nic_cidr != ""){
                         cluster_config_cmd.push("-mnc",mngt_nic_cidr)
                     }
@@ -465,7 +466,7 @@ $('#button-next-step-modal-wizard-cluster-config-prepare').on('click', function 
 
                         var ipmi_config = `${ipmi_ip},${ipmi_port},${ipmi_user},${ipmi_password}`;
 
-                        var host_ping_test_and_cluster_config_cmd = ['python3', pluginpath + '/python/cluster/cluster_config.py', 'insertAllHost', '-t' , os_type, '-js', ret_json_string, '-cmi', ccvm_mgmt_ip, '-pcl', ...host_names, '-eh', exclude_hostname];
+                        var host_ping_test_and_cluster_config_cmd = ['python3', pluginpath + '/python/cluster/cluster_config.py', 'insertAllHost', '-t' , os_type, '-js', ret_json_string, '-cmi', ccvm_mgmt_ip, '-ets', extenal_timeserver, '-pcl', ...host_names, '-eh', exclude_hostname];
                         if(mngt_nic_cidr != ""){
                             host_ping_test_and_cluster_config_cmd.push("-mnc",mngt_nic_cidr)
                         }
@@ -536,7 +537,7 @@ $('#button-next-step-modal-wizard-cluster-config-prepare').on('click', function 
                             console.log(":::Please check the cluster.json file.::: "+ data);
                         });
                     }else{
-                        var host_ping_test_and_cluster_config_cmd = ['python3', pluginpath + '/python/cluster/cluster_config.py', 'insertAllHost', '-t' , os_type,'-js', ret_json_string, '-cmi', ccvm_mgmt_ip, '-pcl', ...host_names, '-eh', exclude_hostname];
+                        var host_ping_test_and_cluster_config_cmd = ['python3', pluginpath + '/python/cluster/cluster_config.py', 'insertAllHost', '-t' , os_type,'-js', ret_json_string, '-cmi', ccvm_mgmt_ip, '-ets', extenal_timeserver, '-pcl', ...host_names, '-eh', exclude_hostname];
                         if(mngt_nic_cidr != ""){
                             host_ping_test_and_cluster_config_cmd.push("-mnc",mngt_nic_cidr)
                         }
@@ -1497,10 +1498,10 @@ function inputPnIntoTimeServer(os_type) {
                 if(idx_num == 1){
                     $('#form-radio-timeserver-host-num-1').prop('checked', true);
                 }else if(idx_num == 2){
-                    $('#form-input-cluster-config-int-to-ext').hide();
+                    // $('#form-input-cluster-config-int-to-ext').hide();
                     $('#form-radio-timeserver-host-num-2').prop('checked', true);
                 }else{
-                    $('#form-input-cluster-config-int-to-ext').hide();
+                    // $('#form-input-cluster-config-int-to-ext').hide();
                     $('#form-radio-timeserver-host-num-3').prop('checked', true);
                 }
             }
@@ -1519,10 +1520,10 @@ function inputPnIntoTimeServer(os_type) {
                 if(idx_num == 1){
                     $('#form-radio-timeserver-host-num-1').prop('checked', true);
                 }else if(idx_num == 2){
-                    $('#form-input-cluster-config-int-to-ext').hide();
+                    // $('#form-input-cluster-config-int-to-ext').hide();
                     $('#form-radio-timeserver-host-num-2').prop('checked', true);
                 }else{
-                    $('#form-input-cluster-config-int-to-ext').hide();
+                    // $('#form-input-cluster-config-int-to-ext').hide();
                     $('#form-radio-timeserver-host-num-3').prop('checked', true);
                 }
             }
@@ -1566,8 +1567,21 @@ async function modifyTimeServer(timeserver_confirm_ip_text, file_type, timeserve
                 }
 
             } else if (timeserver_current_host_num == 2) {
+                if (external_time_server == "true"){
+                    chrony_text +="server " + timeserver_confirm_ip_text.slice(-1) + " iburst"+"\n";
+                }
                 chrony_text +="server " + timeserver_confirm_ip_text[0] + " iburst minpoll 0 maxpoll 0"+"\n";
             } else if (timeserver_current_host_num == 3) {
+                if (external_time_server == "true"){
+                    chrony_text +="server " + timeserver_confirm_ip_text.slice(-1) + " iburst"+"\n";
+                }
+                chrony_text +="server " + timeserver_confirm_ip_text[0] + " iburst minpoll 0 maxpoll 0"+"\n";
+                chrony_text +="server " + timeserver_confirm_ip_text[1] + " prefer iburst minpoll 0 maxpoll 0"+"\n";
+            } else {
+                // 서버가 4대 이상일 경우 시간 서버 어떻게 해야할 지? 일단 외부시간 서버와 1번 2번 호스트를 바라보게 해놓음
+                if (external_time_server == "true"){
+                    chrony_text +="server " + timeserver_confirm_ip_text.slice(-1) + " iburst"+"\n";
+                }
                 chrony_text +="server " + timeserver_confirm_ip_text[0] + " iburst minpoll 0 maxpoll 0"+"\n";
                 chrony_text +="server " + timeserver_confirm_ip_text[1] + " prefer iburst minpoll 0 maxpoll 0"+"\n";
             }

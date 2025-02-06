@@ -624,6 +624,7 @@ function settingProfile(clusterJsonConf, option, os_type){
             $("#form-input-cluster-pcs-hostname1").val(clusterJsonConf.clusterConfig.pcsCluster.hostname1);
             $("#form-input-cluster-pcs-hostname2").val(clusterJsonConf.clusterConfig.pcsCluster.hostname2);
             $("#form-input-cluster-pcs-hostname3").val(clusterJsonConf.clusterConfig.pcsCluster.hostname3);
+            $("#form-input-cluster-config-external-time-server-ip").val(clusterJsonConf.clusterConfig.extenal_timeserver);
         }
 
         $('#form-input-cluster-config-host-number'+option+'').val(hostCnt);
@@ -717,6 +718,7 @@ function settingProfile(clusterJsonConf, option, os_type){
             $("#form-input-cluster-pcs-hostname1").val(clusterJsonConf.clusterConfig.pcsCluster.hostname1);
             $("#form-input-cluster-pcs-hostname2").val(clusterJsonConf.clusterConfig.pcsCluster.hostname2);
             $("#form-input-cluster-pcs-hostname3").val(clusterJsonConf.clusterConfig.pcsCluster.hostname3);
+            $("#form-input-cluster-config-external-time-server-ip").val(clusterJsonConf.clusterConfig.extenal_timeserver);
         }
 
         $('#form-input-cluster-config-host-number'+option+'').val(hostCnt);
