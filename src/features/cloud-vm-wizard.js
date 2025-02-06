@@ -215,7 +215,7 @@ $('#nav-button-cloud-vm-additional').on('click',function(){
     $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
     $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
 
-    if (os_type == "general-virtualization"){
+    if (os_type == "ablestack-vm"){
         cur_step_wizard_cloud_vm = "6";
     }else{
         cur_step_wizard_cloud_vm = "5";
@@ -232,7 +232,7 @@ $('#nav-button-cloud-vm-ipmi').on('click',function(){
     $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
     $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
 
-    if (os_type == "general-virtualization"){
+    if (os_type == "ablestack-vm"){
         cur_step_wizard_cloud_vm = "7";
     }else{
         cur_step_wizard_cloud_vm = "6";
@@ -251,7 +251,7 @@ $('#nav-button-cloud-vm-ssh-key').on('click',function(){
 
     if (os_type == "PowerFlex"){
         cur_step_wizard_cloud_vm = "7";
-    }else if(os_type == "general-virtualization"){
+    }else if(os_type == "ablestack-vm"){
         cur_step_wizard_cloud_vm = "8";
     }else{
         cur_step_wizard_cloud_vm = "6";
@@ -270,7 +270,7 @@ $('#nav-button-cloud-vm-cluster').on('click',function(){
 
     if (os_type == "PowerFlex"){
         cur_step_wizard_cloud_vm = "8";
-    }else if(os_type == "general-virtualization"){
+    }else if(os_type == "ablestack-vm"){
         cur_step_wizard_cloud_vm = "9";
     }else{
         cur_step_wizard_cloud_vm = "7";
@@ -294,7 +294,7 @@ $('#nav-button-cloud-vm-review').on('click',function(){
 
     if (os_type == "PowerFlex"){
         cur_step_wizard_cloud_vm = "9";
-    }else if(os_type == "general-virtualization"){
+    }else if(os_type == "ablestack-vm"){
         cur_step_wizard_cloud_vm = "10";
     }else{
         cur_step_wizard_cloud_vm = "8";
@@ -314,7 +314,7 @@ $('#nav-button-cloud-vm-finish').on('click',function(){
 
     if (os_type == "PowerFlex"){
         cur_step_wizard_cloud_vm = "10";
-    }else if(os_type == "general-virtualization"){
+    }else if(os_type == "ablestack-vm"){
         cur_step_wizard_cloud_vm = "11";
     }else{
         cur_step_wizard_cloud_vm = "9";
@@ -502,7 +502,7 @@ $('#button-next-step-modal-wizard-cloud-vm').on('click', function(){
         else if (cur_step_wizard_cloud_vm == "10") {
             $('#div-modal-wizard-cloud-vm').hide();
         }
-    }else if(os_type == "general-virtualization"){ // OS Type이 general-virtualization 일 경우의 다음버튼의 행동 처리
+    }else if(os_type == "ablestack-vm"){ // OS Type이 ablestack-vm 일 경우의 다음버튼의 행동 처리
         if (cur_step_wizard_cloud_vm == "1") {
             resetCloudVMWizard();
 
@@ -897,7 +897,7 @@ $('#button-before-step-modal-wizard-cloud-vm').on('click', function(){
 
             cur_step_wizard_cloud_vm = "9";
         }
-    }else if (os_type == "general-virtualization") {  // OS Type이 general-virtualization 경우의 이전버튼의 행동 처리
+    }else if (os_type == "ablestack-vm") {  // OS Type이 ablestack-vm 경우의 이전버튼의 행동 처리
         if (cur_step_wizard_cloud_vm == "1") {
             // 이벤트 처리 없음
         }
@@ -1334,7 +1334,7 @@ $('#button-execution-modal-cloud-wizard-confirm').on('click', function () {
         deployCloudCenterVM();
         if(os_type == "PowerFlex"){
             cur_step_wizard_cloud_vm = "10";
-        }else if(os_type == "general-virtualization"){
+        }else if(os_type == "ablestack-vm"){
             cur_step_wizard_cloud_vm = "11";
         }else{
             cur_step_wizard_cloud_vm = "9";
@@ -1444,7 +1444,7 @@ function deployCloudCenterVM() {
     $('#nav-button-cloud-vm-ssh-key').addClass('pf-m-disabled');
     $('#nav-button-cloud-vm-review').addClass('pf-m-disabled');
 
-    // 일반 가상화 GFS용 일 때
+    // 서버 가상화 GFS용 일 때
     $('#nav-button-cloud-vm-ipmi').addClass('pf-m-disabled');
 
     // ccvm 정보
@@ -1622,7 +1622,7 @@ function deployCloudCenterVM() {
             alert("클러스터 구성할 host 연결 상태 확인 및 cluster.json config 실패 : "+data);
         });
     }else if(os_type == "PowerFlex"){
-            // PowerFlex 일반 가상화 GFS용 일 때
+            // PowerFlex 서버 가상화 GFS용 일 때
     var all_host_name = "";
     var host_names = [];
     for (let i = 1; i <= $('#form-table-tbody-cluster-config-existing-host-profile-ccvm tr').length ; i++) {
@@ -1947,7 +1947,7 @@ function deployCloudCenterVM() {
             createLoggerInfo("Failed to check connection status of host to configure cluster");
             alert("클러스터 구성할 host 연결 상태 확인 및 cluster.json config 실패 : "+data);
         });
-    }else if (os_type == "general-virtualization"){
+    }else if (os_type == "ablestack-vm"){
         var all_host_name = "";
         var host_names = [];
         for (let i = 1; i <= $('#form-table-tbody-cluster-config-existing-host-profile-ccvm tr').length ; i++) {
@@ -2832,7 +2832,7 @@ function validateCloudCenterVm(){
                 validate_check = false;
             }
         }
-    } else if (os_type == "general-virtualization"){
+    } else if (os_type == "ablestack-vm"){
         if (ipmi_check_value === "individual") {
             for (let i = 1; i <= host_names.length; i++) {
                 if (!validateIpmiCredentials(i, "individual")) {
@@ -2909,7 +2909,7 @@ function validateIpmiCredentials(index, type) {
  * Meathod Name : resetIpmiValues
  * Date Created : 2024.09.10
  * Writer  : 정민철
- * Description : 일반 가상화를 사용할 시 ccvm에서 바뀌는 화면 처리
+ * Description : 서버 가상화를 사용할 시 ccvm에서 바뀌는 화면 처리
  * History  : 2024.09.10 최초 작성
  */
 function resetIpmiValues() {
@@ -2951,10 +2951,10 @@ function setTypeByChange(){
         $('#span-ccvm-progress-step2-text').text("GFS 구성 설정 및 Pcs 설정");
         $('#span-ccvm-progress-step1-text').text("클러스터 구성 HOST 네트워크 연결 및 초기화 작업");
         $('#gfs-li').show();
-        $('#gfs-li').text("일반 가상화를 위한 각 호스트의 IPMI 정보");
+        $('#gfs-li').text("서버 가상화를 위한 각 호스트의 IPMI 정보");
         // 클러스터 민감도 화면 처리
         $('#nav-button-cloud-vm-cluster-sync-mechanism').show();
-    }else if (os_type == "general-virtualization"){
+    }else if (os_type == "ablestack-vm"){
         // gfs용 디스크
         $('#nav-button-cloud-vm-disk').show();
         // 루트 디스크
@@ -2966,7 +2966,7 @@ function setTypeByChange(){
         $('#span-ccvm-progress-step2-text').text("GFS 구성 설정 및 Pcs 설정");
         $('#span-ccvm-progress-step1-text').text("클러스터 구성 HOST 네트워크 연결 및 초기화 작업");
         $('#gfs-li').show();
-        $('#gfs-li').text("일반 가상화를 위한 각 호스트의 IPMI 정보");
+        $('#gfs-li').text("서버 가상화를 위한 각 호스트의 IPMI 정보");
         // 클러스터 민감도 화면 처리
         $('#nav-button-cloud-vm-cluster-sync-mechanism').show();
     }
@@ -3076,7 +3076,7 @@ function updateHostFields(count) {
 
     for (let i = 1; i <= hostCount; i++) {
         // 각 호스트 정보를 위한 HTML 생성
-        if (os_type == "general-virtualization"){
+        if (os_type == "ablestack-vm"){
             var hostFieldHTML = `
             <div class="pf-c-form__field-group">
                 <div class="pf-c-form__field-group-header" style="padding-bottom:8px;">

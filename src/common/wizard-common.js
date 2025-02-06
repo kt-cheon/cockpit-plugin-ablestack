@@ -586,7 +586,7 @@ function settingProfile(clusterJsonConf, option, os_type){
     let max_index = 0;
     let current_host_name = $("#form-input-current-host-name").val();
     let add_tr_yn = true;
-    if(os_type == "general-virtualization"){
+    if(os_type == "ablestack-vm"){
         for (let i = 0 ; i < hostCnt ; i++){
             insert_tr += "<tr style='border-bottom: solid 1px #dcdcdc'>";
             insert_tr += "  <td contenteditable='false'>"+hostsJson[i].index+"</td>";
@@ -946,7 +946,7 @@ function tableToHostsText(table_tr_obj, option, os_type){
                 temp_text += scvm_pn_ip + "\t"  + "pn-"+"scvm"+idx + "\n";
                 temp_text += scvm_cn_ip + "\t"  + "cn-"+"scvm"+idx + "\n";
             }
-        }else if(os_type == "general-virtualization"){
+        }else if(os_type == "ablestack-vm"){
             let host_name = $(this).find('td').eq(1).text().trim();
             let host_ip = $(this).find('td').eq(2).text().trim();
 
@@ -996,7 +996,7 @@ function tableToHostsText(table_tr_obj, option, os_type){
     let input_num = $("#"+number_input).val();
     let tr_cnt = $("#"+table_tbody+ " > tr").length;
 
-    if (os_type == "general-virtualization"){
+    if (os_type == "ablestack-vm"){
         if(input_num > tr_cnt){ // <tr> 증가 경우 6 > 5
             for(let i = 0 ; i < input_num-tr_cnt ; i++){
                 let insert_tr = "";
@@ -1069,7 +1069,7 @@ function tableToClusterConfigJsonString(radio_value, option, os_type){
         // 객체 생성
 		var data = new Object() ;
 
-        if (os_type == "general-virtualization"){
+        if (os_type == "ablestack-vm"){
             let idx = $(this).find('td').eq(0).text().trim();
             let host_name = $(this).find('td').eq(1).text().trim();
             let host_ip = $(this).find('td').eq(2).text().trim();
@@ -1138,7 +1138,7 @@ function tableToClusterConfigJsonString(radio_value, option, os_type){
         // eq(5) : SCVM PN IP
         // eq(6) : SCVM CN IP
 
-        if (os_type == "general-virtualization"){
+        if (os_type == "ablestack-vm"){
             let idx = $(this).find('td').eq(0).text().trim();
             let host_name = $(this).find('td').eq(1).text().trim();
             let host_ip = $(this).find('td').eq(2).text().trim();
@@ -1407,7 +1407,7 @@ function tableToClusterConfigJsonString(radio_value, option, os_type){
         // eq(6) : SCVM CN IP
 
 
-        if (os_type == "general-virtualization"){
+        if (os_type == "ablestack-vm"){
             let host_ip = $(this).find('td').eq(2).text().trim();
             // let host_pn_ip = $(this).find('td').eq(3).text().trim();
 
@@ -1536,7 +1536,7 @@ function pcsHostPnIpCheck(host_file_type, pcs_host_pn_ip, option){
 function clusterConfigProfile(operating_system,setting) {
     // 열 정보 설정
     let columns = [];
-    if (operating_system == "general-virtualization") {
+    if (operating_system == "ablestack-vm") {
         columns = [
             { name: "idx", width: "5%" },
             { name: "호스트 명", width: "15%" },
@@ -1596,6 +1596,6 @@ function clusterConfigProfile(operating_system,setting) {
     }
     // 테이블 생성 호출
     createTableHeader();
-    const rows = operating_system === "general-virtualization" ? 1 : 3;
+    const rows = operating_system === "ablestack-vm" ? 1 : 3;
     createTableBody(rows);
 }

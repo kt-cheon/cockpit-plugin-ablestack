@@ -343,7 +343,7 @@ def genUserFromFile(pubkeyfile: str, privkeyfile: str, hostsfile: str):
                     }
                 ]
         }
-    elif os_type == 'PowerFlex' or os_type == 'general-virtualization':
+    elif os_type == 'PowerFlex' or os_type == 'ablestack-vm':
                 yam = {
             'disable_root': False,
             'ssh_pwauth': True,
