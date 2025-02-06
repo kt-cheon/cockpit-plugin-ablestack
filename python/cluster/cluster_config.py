@@ -83,7 +83,7 @@ def insert(args):
         if args.extenal_timeserver is not None:
             json_data["clusterConfig"]["extenal_timeserver"] = args.extenal_timeserver
 
-        if args.type == "general-virtualization":
+        if args.type == "ablestack-vm":
             if args.pcs_cluster_list is not None:
                     for i in range(len(args.pcs_cluster_list)):
                         if args.pcs_cluster_list[i] is not None:
@@ -251,7 +251,7 @@ def insertAllHost(args):
             ping_check_list = []
             for p_val1 in param_json:
                 ping_check_list.append(p_val1["ablecube"])
-                if args.type != "general-virtualization":
+                if args.type != "ablestack-vm":
                     if args.exclude_hostname != p_val1["hostname"]:
                         ping_check_list.append(p_val1["scvmMngt"])
 
@@ -268,7 +268,7 @@ def insertAllHost(args):
                         return createReturn(code=500, val=return_val + " : " + p_val2["ablecube"])
 
                     # 호스트 추가시 클러스터 구성단계에서는 scvm이 배포되기 전이므로 해당 scvm에 echo 테스트 명령을 수행할 수 없음
-                    if args.type != "general-virtualization":
+                    if args.type != "ablestack-vm":
                         if args.exclude_hostname != p_val2["hostname"]:
                             ret = ssh('-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=5', p_val2["scvmMngt"], "echo ok").strip()
                             if ret != "ok":
@@ -293,7 +293,7 @@ def insertAllHost(args):
                     if args.mngt_nic_dns is not None:
                         cmd_str += " -mnd "+args.mngt_nic_dns
 
-                    if args.type != "general-virtualization":
+                    if args.type != "ablestack-vm":
                         if args.exclude_hostname != p_val3["hostname"]:
                             cmd_str += " -co withScvm"
                         else:
@@ -452,7 +452,7 @@ if __name__ == '__main__':
 
     # 실제 로직 부분 호출 및 결과 출력
     if args.action == 'insert':
-        if os_type == "general-virtualization":
+        if os_type == "ablestack-vm":
             reset_cluster_config()
         ret = insert(args)
         print(ret)

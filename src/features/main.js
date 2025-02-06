@@ -78,7 +78,7 @@ $(document).ready(function(){
     $('#div-modal-db-backup-cloud-vm-first').load("./src/features/cloud-vm-dbbackup.html");
     $('#div-modal-db-backup-cloud-vm-first').hide();
 
-    // 일반 가상화일 경우 화면 변환
+    // 서버 가상화일 경우 화면 변환
     screenConversion();
 
     cockpit.spawn(['python3', pluginpath + '/python/pcs/pcsExehost.py'])
@@ -1369,7 +1369,7 @@ function checkDeployStatus(){
                     }
                 }
             }
-        }else if (os_type == "general-virtualization"){
+        }else if (os_type == "ablestack-vm"){
             console.log("step1 :: " + step1 + ", step5 :: " + step5 + ", step6 :: " + step6 + ", step7 :: " + step7 + ", step8 :: " + step8);
 
             if (step1 != "true"){
@@ -1563,7 +1563,7 @@ function saveHostInfo(){
 }
 
 function ribbonWorker() {
-    if (os_type == "general-virtualization"){
+    if (os_type == "ablestack-vm"){
         Promise.all([
             pcsExeHost(),
             checkConfigStatus(),
@@ -1656,13 +1656,13 @@ function updatePfmpInstall(time_value, unit) {
  * Meathod Name : screenConversion
  * Date Created : 2024.09.19
  * Writer  : 정민철
- * Description : 일반 가상화에 대한 화면 처리
+ * Description : 서버 가상화에 대한 화면 처리
  * Parameter : 없음
  * Return  : 없음
  * History  : 2024.09.19 최초 작성
  */
 function screenConversion(){
-    if (os_type == "general-virtualization"){
+    if (os_type == "ablestack-vm"){
         $('#div-card-gfs-cluster-status').show();
         $('#div-card-storage-cluster-status').hide();
         $('#div-card-storage-vm-status').hide();

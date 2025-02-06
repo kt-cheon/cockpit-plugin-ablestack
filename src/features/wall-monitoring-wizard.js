@@ -385,7 +385,7 @@ function resetWallMonitoringWizard() {
         host_ping_test_cmd.push(cubehost_ip);
     }
 
-    if (os_type != "general-virtualization"){
+    if (os_type != "ablestack-vm"){
         for(var i = 1 ; i <= host_count ; i ++ ){
             var scvm_ip = $('#form-input-wall-monitoring-scvm'+i+'-ip').val();
             host_ping_test_cmd.push(scvm_ip);
@@ -421,7 +421,7 @@ function resetWallMonitoringWizard() {
                             setWallProgressStep("span-wall-progress-step1",2);
                             setWallProgressStep("span-wall-progress-step2",1);
 
-                            if(os_type == "general-virtualization"){
+                            if(os_type == "ablestack-vm"){
                                 var prometheus_config_cmd = ['python3', pythonPath + 'config_wall.py', 'configGfs','--ccvm', ccvm_ip];
                             }else{
                                 var prometheus_config_cmd = ['python3', pythonPath + 'config_wall.py', 'config','--ccvm', ccvm_ip];
@@ -432,7 +432,7 @@ function resetWallMonitoringWizard() {
                                 var cubehost_ip = $('#form-input-wall-monitoring-cubehost'+i+'-ip').val();
                                 prometheus_config_cmd.push(cubehost_ip);
                             }
-                            if (os_type != "general-virtualization"){
+                            if (os_type != "ablestack-vm"){
                                 prometheus_config_cmd.push('--scvm');
                                 for(var i = 1 ; i <= host_count ; i ++ ){
                                     var scvm_ip = $('#form-input-wall-monitoring-scvm'+i+'-ip').val();
@@ -733,7 +733,7 @@ function setWallReviewInfo() {
             $('#span-wall-monitoring-cubehost'+i+'-ip').text(cubehost_ip);
         }
     }
-    if (os_type != "general-virtualization"){
+    if (os_type != "ablestack-vm"){
         for(var i = 1 ; i <= host_count ; i ++ ){
             var scvm_ip = $('#form-input-wall-monitoring-scvm'+i+'-ip').val();
             if (scvm_ip == '') {
@@ -836,7 +836,7 @@ function validateWallMonitoringVm() {
             validate_check = false;
         }
     }
-    if (os_type != "general-virtualization"){
+    if (os_type != "ablestack-vm"){
         for(var i = 1 ; i <= host_count ; i ++ ){
             if (validate_check && $('#form-input-wall-monitoring-scvm'+i+'-ip').val() == "") {
                 alert('SCVM'+i+' 관리 IP를 입력해주세요.');
@@ -1014,7 +1014,7 @@ function setWallIpInput(host_count){
     }
     review_el +='            </dd>';
     review_el +='        </div>';
-    if (os_type != "general-virtualization"){
+    if (os_type != "ablestack-vm"){
         review_el +='        <div class="pf-c-description-list__group">';
         review_el +='            <dt class="pf-c-description-list__term">';
         review_el +='                <span class="pf-c-description-list__text">스토리지센터 VM</span>';
@@ -1032,7 +1032,7 @@ function setWallIpInput(host_count){
 
     $('#div-wall-ccvm-ip-area').append(ccvm_el);
     $('#div-wall-cubehost-ip-area').append(cube_host_el);
-    if (os_type != "general-virtualization"){
+    if (os_type != "ablestack-vm"){
         $('#div-wall-scvm-ip-area').append(scvm_el);
     }
     $('#div-wall-review-area').append(review_el);
@@ -1050,7 +1050,7 @@ function autoConfigWallIP(){
         $("#form-input-wall-monitoring-ccvm-ip").val(clusterJsonConf.clusterConfig.ccvm.ip);
         for (let i = 0 ; i < host_count ; i++){
             $("#form-input-wall-monitoring-cubehost"+(i+1)+"-ip").val(clusterJsonConf.clusterConfig.hosts[i].ablecube);
-            if (os_type != "general-virtualization"){
+            if (os_type != "ablestack-vm"){
                 $("#form-input-wall-monitoring-scvm"+(i+1)+"-ip").val(clusterJsonConf.clusterConfig.hosts[i].scvmMngt);
             }
         }
@@ -1062,7 +1062,7 @@ function autoConfigWallIP(){
 }
 
 function screenChange(){
-    if (os_type == "general-virtualization"){
+    if (os_type == "ablestack-vm"){
         $('#div-wall-scvm-ip-area').hide();
     }
 }
