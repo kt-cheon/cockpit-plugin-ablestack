@@ -1162,7 +1162,7 @@ function checkDeployStatus(){
                     showRibbon('warning','스토리지센터 및 클라우드센터 VM이 배포되지 않았습니다. 스토리지센터 VM 배포를 진행하십시오.');
                 }else{
                     if(step3!="true"){
-                        showRibbon('warning','스토리지센터 대시보드에 연결할 수 있도록 스토리지센터 VM Bootstrap 실행 작업을 진행하십시오.');
+                        showRibbon('warning','스토리지센터 대시보드에 연결할 수 있도록 스토리지센터 구성하기 작업을 진행하십시오.');
                     }else{
                         if(step8!="true" && step4=="Health Err"||step4==null){
                             // 스토리지센터 연결 버튼 show
@@ -1187,7 +1187,7 @@ function checkDeployStatus(){
                                     showRibbon('warning','클라우드센터 VM이 배포되지 않았습니다. 클라우드센터 VM 배포를 진행하십시오.');
                                 }else{
                                     if(step8!="true" && step7!="true"){
-                                        showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 VM Bootstrap 실행 작업을 진행하십시오.');
+                                        showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
                                     }else{
                                         // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
                                         $('#button-link-storage-center-dashboard').show();
@@ -1243,7 +1243,7 @@ function checkDeployStatus(){
                     showRibbon('warning','스토리지센터 및 파워 플렉스 관리 플랫폼 및 클라우드센터 VM이 배포되지 않았습니다. 스토리지센터 VM 배포를 진행하십시오.');
                 }else{
                     if(step3!="true"){
-                        showRibbon('warning','스토리지센터의 설정을 위해 스토리지센터 VM Bootstrap 실행 작업을 진행하십시오.');
+                        showRibbon('warning','스토리지센터의 설정을 위해 스토리지센터 구성하기 작업을 진행하십시오.');
                     }else{
                         //여기서 들어가야지 pfmp에 대한
                         if(step8!="true" && ((step9=="HEALTH_ERR"||step9=="null") && step10 == "false")){
@@ -1267,7 +1267,7 @@ function checkDeployStatus(){
                                         showRibbon('warning','클라우드센터 VM이 배포되지 않았습니다. 클라우드센터 VM 배포를 진행하십시오.');
                                     }else{
                                         if(step8!="true" && step7!="true"){
-                                            showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 VM Bootstrap 실행 작업을 진행하십시오.');
+                                            showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
                                         }else{
                                             // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
                                             $('#button-link-storage-center-dashboard').show();
@@ -1308,7 +1308,7 @@ function checkDeployStatus(){
                         }else{
                             if(step10!="true"){
                                 $('#menu-item-pfmp-install').removeClass('pf-m-disabled');
-                                showRibbon('warning','파워플렉스 관리 플랫폼의 쿠버네티스 설정을 위해 파워플렉스 관리 플랫폼 VM Bootstrap 실행 작업을 진행하십시오.');
+                                showRibbon('warning','파워플렉스 관리 플랫폼의 쿠버네티스 설정을 위해 파워플렉스 관리 플랫폼 VM 구성하기 작업을 진행하십시오.');
                             }else{
                                 if(step8!="true" && (step5=="HEALTH_ERR1"||step5=="HEALTH_ERR2"||step5==null)){
                                     //클라우드센터 VM 배포 버튼
@@ -1327,7 +1327,7 @@ function checkDeployStatus(){
                                         showRibbon('warning','클라우드센터 VM이 배포되지 않았습니다. 클라우드센터 VM 배포를 진행하십시오.');
                                     }else{
                                         if(step8!="true" && step7!="true"){
-                                            showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 VM Bootstrap 실행 작업을 진행하십시오.');
+                                            showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
                                         }else{
                                             // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
                                             $('#button-link-storage-center-dashboard').show();
@@ -1393,7 +1393,7 @@ function checkDeployStatus(){
                         showRibbon('warning','클라우드센터 VM이 배포되지 않았습니다. 클라우드센터 VM 배포를 진행하십시오.');
                     }else{
                         if(step8!="true" && step7!="true"){
-                            showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 VM Bootstrap 실행 작업을 진행하십시오.');
+                            showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
                         }else{
                             // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
                             $('#button-link-cloud-center').show();
