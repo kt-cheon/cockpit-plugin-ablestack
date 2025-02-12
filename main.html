@@ -35,7 +35,7 @@
                     <button style="display:none;font-size: 0.83rem;" class="pf-c-button pf-m-primary pf-m-inline"
                         id="button-config-file-download" aria-disabled="false" type="button" data-ouia-safe="true">설정파일
                         다운로드</button>
-                    <!-- <button style="display:none" class="pf-c-button pf-m-link pf-m-inline" type="button" 
+                    <!-- <button style="display:none" class="pf-c-button pf-m-link pf-m-inline" type="button"
                         id="button-open-modal-license-register">라이센스 등록</button> -->
                 </div>
             </div>
@@ -75,11 +75,11 @@
                                                     type="button">멀티패스 동기화</button>
                                                 </li>
                                                 <li class="pf-c-divider" role="separator"></li>
-                                                <li id="gfs-qdevice-init" style="display: none;">
+                                                <!-- <li id="gfs-qdevice-init" style="display: none;">
                                                     <button id="button-gfs-qdevice-init"
                                                     class="pf-c-dropdown__menu-item pf-m-disabled"
                                                     type="button">Quorum 초기화</button>
-                                                </li>
+                                                </li> -->
                                             </ul>
                                         </div>
                                     </div>
@@ -1537,7 +1537,7 @@
 </div>
 
 <!-- 클라우드센터 쿼럼 초기화 : Modal 영역 시작 -->
-<div id="div-modal-cloud-vm-qdevice-init" class="pf-c-backdrop" style="display:none">
+<!-- <div id="div-modal-cloud-vm-qdevice-init" class="pf-c-backdrop" style="display:none">
     <div class="pf-l-bullseye">
         <div class="pf-c-modal-box pf-m-sm" role="dialog" aria-modal="true" aria-label="Cloud VM qdevice-init">
             <button id="button-close-modal-cloud-vm-qdevice-init" aria-disabled="false" aria-label="Close"
@@ -1558,7 +1558,7 @@
             </footer>
         </div>
     </div>
-</div>
+</div> -->
 <!-- 클라우드센터 쿼럼 초기화 : Modal 영역 끝 -->
 <!-- CLVM 디스크 추가 : Modal 영역 시작 -->
 <div id="div-modal-clvm-disk-add" class="pf-c-backdrop" style="display:none">
@@ -1926,12 +1926,12 @@ $('#button-execution-modal-license-register').on('click', function(){
     const reader = new FileReader();
     reader.onload = function(e) {
         const fileContent = e.target.result;
-        
+
         // 라이센스 파일명 생성 (타입_제품ID_타임스탬프.dat)
         const timestamp = Date.now();
         const fileName = `license_${licenseType}_${productId}_${timestamp}.dat`;
         const filePath = `/root/${fileName}`;
-        
+
         // root에 파일 저장
         cockpit.file(filePath).replace(fileContent)
         .then(() => {
@@ -1940,7 +1940,7 @@ $('#button-execution-modal-license-register').on('click', function(){
         })
         .then(() => {
             // 라이센스 등록 Python 스크립트 실행
-            return cockpit.spawn(['python3', pluginpath + '/python/license/register_license.py', 
+            return cockpit.spawn(['python3', pluginpath + '/python/license/register_license.py',
                 '--type', licenseType,
                 '--product-id', productId,
                 '--license-key', licenseKey,
@@ -1958,7 +1958,7 @@ $('#button-execution-modal-license-register').on('click', function(){
                 $('#div-modal-license-register').hide();
                 $('#div-modal-status-alert-body').text("라이센스가 정상적으로 등록되었습니다.");
                 $('#div-modal-status-alert').show();
-                
+
                 // 입력값 초기화
                 $('#input-license-type').val("");
                 $('#input-product-id').val("");

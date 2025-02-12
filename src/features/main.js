@@ -135,12 +135,12 @@ $(document).ready(function(){
         const reader = new FileReader();
         reader.onload = function(e) {
             const fileContent = e.target.result;
-            
+
             // 라이센스 파일명 생성 (타임스탬프.dat)
             const timestamp = Date.now();
             const fileName = `license_${timestamp}.dat`;
             const filePath = `/root/${fileName}`;
-            
+
             // root에 파일 저장
             cockpit.file(filePath).replace(fileContent)
             .then(() => {
@@ -149,7 +149,7 @@ $(document).ready(function(){
             })
             .then(() => {
                 // 라이센스 등록 Python 스크립트 실행
-                return cockpit.spawn(['python3', pluginpath + '/python/license/register_license.py', 
+                return cockpit.spawn(['python3', pluginpath + '/python/license/register_license.py',
                     '--license-file', filePath
                 ], { superuser: true });
             })
@@ -231,7 +231,7 @@ $(document).ready(function(){
             if(result.code == "200") {
                 const licenses = result.val;
                 let hasValidLicense = false;
-                
+
                 licenses.forEach(license => {
                     if(license.status === 'active') {
                         hasValidLicense = true;
@@ -1821,7 +1821,7 @@ function screenConversion(){
         $('#div-card-storage-vm-status').hide();
         $('#div-card-gfs-disk-status').show();
         $('#gfs-maintenance-update').show();
-        $('#gfs-qdevice-init').show();
+        // $('#gfs-qdevice-init').show();
     }
 }
 
@@ -2464,44 +2464,44 @@ $('#button-cancel-modal-gfs-maintenance-setting, #button-close-modal-cloud-vm-ma
     $('#div-modal-gfs-maintenance-setting').hide();
 })
 
-$('#button-gfs-qdevice-init').on('click', function(){
-    $('#div-modal-cloud-vm-qdevice-init').show();
-});
-$('#button-close-modal-cloud-vm-qdevice-init, #button-cancel-modal-cloud-vm-qdevice-init').on('click', function(){
-    $('#div-modal-cloud-vm-qdevice-init').hide();
-});
-$('#button-execution-modal-cloud-vm-qdevice-init').on('click', function(){
-    $('#div-modal-cloud-vm-qdevice-init').hide();
+// $('#button-gfs-qdevice-init').on('click', function(){
+//     $('#div-modal-cloud-vm-qdevice-init').show();
+// });
+// $('#button-close-modal-cloud-vm-qdevice-init, #button-cancel-modal-cloud-vm-qdevice-init').on('click', function(){
+//     $('#div-modal-cloud-vm-qdevice-init').hide();
+// });
+// $('#button-execution-modal-cloud-vm-qdevice-init').on('click', function(){
+//     $('#div-modal-cloud-vm-qdevice-init').hide();
 
-    $('#div-modal-spinner-header-txt').text('쿼럼을 초기화하고 있습니다.');
-    $('#div-modal-spinner').show();
+//     $('#div-modal-spinner-header-txt').text('쿼럼을 초기화하고 있습니다.');
+//     $('#div-modal-spinner').show();
 
-    $("#modal-status-alert-title").html("쿼럼 초기화");
-    $("#modal-status-alert-body").html("쿼럼 초기화를 실패하였습니다.<br/>쿼럼 상태를 확인해주세요.");
+//     $("#modal-status-alert-title").html("쿼럼 초기화");
+//     $("#modal-status-alert-body").html("쿼럼 초기화를 실패하였습니다.<br/>쿼럼 상태를 확인해주세요.");
 
-    cmd =["python3", pluginpath + "/python/gfs/gfs_manage.py", "--init-qdevice"];
-    console.log(cmd);
-    cockpit.spawn(cmd)
-    .then(function(data){
-        var retVal = JSON.parse(data);
-        if(retVal.code == "200"){
-            $('#div-modal-spinner').hide();
-            $("#modal-status-alert-title").html("쿼럼 초기화 완료");
-            $("#modal-status-alert-body").html("쿼럼 초기화를 완료하였습니다.");
-            $('#div-modal-status-alert').show();
-        }else{
-            $('#div-modal-spinner').hide();
-            $("#modal-status-alert-title").html("쿼럼 초기화 실패");
-            $("#modal-status-alert-body").html("쿼럼 초기화를 실패하였습니다.");
-            $('#div-modal-status-alert').show();
-        }
-    }).catch(function(data){
-        $('#div-modal-spinner').hide();
-        $('#div-modal-status-alert').show();
-        createLoggerInfo("쿼럼 초기화 실패 : " + data);
-    });
+//     cmd =["python3", pluginpath + "/python/gfs/gfs_manage.py", "--init-qdevice"];
+//     console.log(cmd);
+//     cockpit.spawn(cmd)
+//     .then(function(data){
+//         var retVal = JSON.parse(data);
+//         if(retVal.code == "200"){
+//             $('#div-modal-spinner').hide();
+//             $("#modal-status-alert-title").html("쿼럼 초기화 완료");
+//             $("#modal-status-alert-body").html("쿼럼 초기화를 완료하였습니다.");
+//             $('#div-modal-status-alert').show();
+//         }else{
+//             $('#div-modal-spinner').hide();
+//             $("#modal-status-alert-title").html("쿼럼 초기화 실패");
+//             $("#modal-status-alert-body").html("쿼럼 초기화를 실패하였습니다.");
+//             $('#div-modal-status-alert').show();
+//         }
+//     }).catch(function(data){
+//         $('#div-modal-spinner').hide();
+//         $('#div-modal-status-alert').show();
+//         createLoggerInfo("쿼럼 초기화 실패 : " + data);
+//     });
 
-});
+// });
 
 $('#button-gfs-multipath-sync').on("click",function(){
     $('#div-modal-spinner-header-txt').text('멀티패스 장치 동기화하고 있습니다.');
@@ -2980,16 +2980,16 @@ function gfsResourceStatus() {
             }
             resolve();
         })
-        cockpit.spawn(['python3', pluginpath + '/python/gfs/gfs_manage.py', '--check-qdevice'])
-        .then(function(data){
-            var retVal =JSON.parse(data);
-            if (retVal.code == "200"){
-                sessionStorage.setItem("qdevice_status","true");
-                $('#button-gfs-qdevice-init').removeClass("pf-m-disabled");
-            }else{
-                sessionStorage.setItem("qdevice_status","false");
-            }
-            resolve();
-        })
+        // cockpit.spawn(['python3', pluginpath + '/python/gfs/gfs_manage.py', '--check-qdevice'])
+        // .then(function(data){
+        //     var retVal =JSON.parse(data);
+        //     if (retVal.code == "200" || retVal.code == "204"){
+        //         sessionStorage.setItem("qdevice_status","true");
+        //         $('#button-gfs-qdevice-init').removeClass("pf-m-disabled");
+        //     }else{
+        //         sessionStorage.setItem("qdevice_status","false");
+        //     }
+        //     resolve();
+        // })
 })
 }

@@ -151,12 +151,12 @@ def auth_hosts(list_ips, username, password):
 def setup_cluster(cluster_name, list_ips):
     """Setup the cluster with the provided cluster name and IP addresses."""
     try:
+
         ips = " ".join(list_ips)
-        if len(list_ips)%2 == 0:
-            run_command(f"pcs cluster setup {cluster_name} --start {ips} quorum auto_tie_breaker=1 wait_for_all=1 last_man_standing=1")
-        else:
-            run_command(f"pcs cluster setup {cluster_name} --start {ips} quorum wait_for_all=1 last_man_standing=1")
+
+        run_command(f"pcs cluster setup {cluster_name} --start {ips} quorum wait_for_all=1 last_man_standing=1")
         run_command("pcs cluster enable --all")
+
 
         ret = createReturn(code=200, val="Set Up Cluster Success")
         return print(json.dumps(json.loads(ret), indent=4))
@@ -361,57 +361,57 @@ def create_ccvm_cluster(gfs_name, mount_point, cluster_name, list_ips):
         run_command(f"cp /var/lib/libvirt/images/ablestack-template.qcow2 {mount_point}/ccvm.qcow2")
         run_command(f"qemu-img resize {mount_point}/ccvm.qcow2 +350G")
 
-        if len(list_ips) % 2 == 0:
-            run_command(f"virsh create {mount_point}/ccvm.xml")
-            ip = run_command("grep 'ccvm-mngt' /etc/hosts | awk '{print $1}'").strip()
+        # if len(list_ips) % 2 == 0:
+        #     run_command(f"virsh create {mount_point}/ccvm.xml")
+        #     ip = run_command("grep 'ccvm-mngt' /etc/hosts | awk '{print $1}'").strip()
 
-            # Setup qdevice
-            qdevice_command = (
-                "echo 'hacluster:password' | chpasswd; "
-                "systemctl enable --now pcsd; "
-                "pcs qdevice setup model net --enable --start; "
-                "firewall-cmd --permanent --add-service=high-availability; "
-                "firewall-cmd --add-service=high-availability"
-            )
+        #     # Setup qdevice
+        #     qdevice_command = (
+        #         "echo 'hacluster:password' | chpasswd; "
+        #         "systemctl enable --now pcsd; "
+        #         "pcs qdevice setup model net --enable --start; "
+        #         "firewall-cmd --permanent --add-service=high-availability; "
+        #         "firewall-cmd --add-service=high-availability"
+        #     )
 
-            retries = 5
-            interval = 2
-            for _ in range(retries):
-                response = subprocess.run(
-                    ["ping", "-c", "1", "ccvm"],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True
-                )
-                if response.returncode == 0:
-                    time.sleep(2)
-                    ssh_client = connect_to_host(ip)
-                    run_command(qdevice_command, ssh_client)
-                    ssh_client.close()
-                    break
-                else:
-                    time.sleep(interval)
+        #     retries = 5
+        #     interval = 2
+        #     for _ in range(retries):
+        #         response = subprocess.run(
+        #             ["ping", "-c", "1", "ccvm"],
+        #             stdout=subprocess.PIPE,
+        #             stderr=subprocess.PIPE,
+        #             text=True
+        #         )
+        #         if response.returncode == 0:
+        #             time.sleep(2)
+        #             ssh_client = connect_to_host(ip)
+        #             run_command(qdevice_command, ssh_client)
+        #             ssh_client.close()
+        #             break
+        #         else:
+        #             time.sleep(interval)
 
-            pcs_command = (
-                f"pcs host auth {ip} -u hacluster -p password; "
-                "pcs cluster stop --all; "
-                f"pcs quorum device add model net host={ip} algorithm=ffsplit; "
-                "pcs cluster start --all;"
-            )
-            run_command(pcs_command)
+        #     pcs_command = (
+        #         f"pcs host auth {ip} -u hacluster -p password; "
+        #         "pcs cluster stop --all; "
+        #         f"pcs quorum device add model net host={ip} algorithm=ffsplit; "
+        #         "pcs cluster start --all;"
+        #     )
+        #     run_command(pcs_command)
 
-            ccvm_command = (
-                "virsh destroy ccvm; "
-                "sed -i 's|/mnt/ccvm.qcow2|/mnt/glue-gfs/ccvm.qcow2|g' /mnt/ccvm.xml; "
-                f"cp {mount_point}/ccvm.* /mnt/glue-gfs/; "
-                f"rm -rf {mount_point}/ccvm.*;"
-            )
-            time.sleep(40)
-            run_command(ccvm_command)
+        #     ccvm_command = (
+        #         "virsh destroy ccvm; "
+        #         "sed -i 's|/mnt/ccvm.qcow2|/mnt/glue-gfs/ccvm.qcow2|g' /mnt/ccvm.xml; "
+        #         f"cp {mount_point}/ccvm.* /mnt/glue-gfs/; "
+        #         f"rm -rf {mount_point}/ccvm.*;"
+        #     )
+        #     time.sleep(40)
+        #     run_command(ccvm_command)
 
-            config_path = f"{mount_point}/glue-gfs/ccvm.xml"
-        else:
-            config_path = f"{mount_point}/ccvm.xml"
+        #     config_path = f"{mount_point}/glue-gfs/ccvm.xml"
+        # else:
+        config_path = f"{mount_point}/ccvm.xml"
 
         pcs_resource_command = (
             f"pcs resource create {cluster_name} VirtualDomain hypervisor=qemu:///system config={config_path} "
@@ -605,6 +605,7 @@ def init_qdevice():
                 )
                 if response.returncode == 0:
                     run_command(f"pcs quorum device add model net host={ip} algorithm=ffsplit")
+                    break
                 else:
                     time.sleep(interval)
 
