@@ -2121,9 +2121,9 @@ function deployCloudCenterVM() {
                                                                                         //결과 값 json으로 return
                                                                                         var create_ccvm_cloudinit_result = JSON.parse(data);
                                                                                         if(create_ccvm_cloudinit_result.code=="200"){
-                                                                                            if(host_names.length == 2){
-                                                                                                gfs_mount_point = "/mnt"
-                                                                                            }
+                                                                                            // if(host_names.length == 2){
+                                                                                            //     gfs_mount_point = "/mnt"
+                                                                                            // }
                                                                                             //=========== 4. 클라우드센터 가상머신 구성 ===========
                                                                                             setProgressStep("span-ccvm-progress-step3",2);
                                                                                             setProgressStep("span-ccvm-progress-step4",1);
