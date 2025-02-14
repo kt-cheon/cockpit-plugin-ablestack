@@ -355,7 +355,7 @@ def create_gfs(disks, vg_name, lv_name, gfs_name, mount_point, cluster_name, num
 
 def create_ccvm_cluster(gfs_name, mount_point, cluster_name, list_ips):
     try:
-        time.sleep(10)
+        time.sleep(15)
 
         run_command("cp "+ pluginpath + f"/tools/vmconfig/ccvm/ccvm.xml {mount_point}/ccvm.xml")
         run_command(f"cp /var/lib/libvirt/images/ablestack-template.qcow2 {mount_point}/ccvm.qcow2")

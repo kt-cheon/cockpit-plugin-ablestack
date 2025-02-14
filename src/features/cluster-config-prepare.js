@@ -466,7 +466,7 @@ $('#button-next-step-modal-wizard-cluster-config-prepare').on('click', function 
 
                         var ipmi_config = `${ipmi_ip},${ipmi_port},${ipmi_user},${ipmi_password}`;
 
-                        var host_ping_test_and_cluster_config_cmd = ['python3', pluginpath + '/python/cluster/cluster_config.py', 'insertAllHost', '-t' , os_type, '-js', ret_json_string, '-cmi', ccvm_mgmt_ip, '-ets', extenal_timeserver, '-pcl', ...host_names, '-eh', exclude_hostname];
+                        var host_ping_test_and_cluster_config_cmd = ['python3', pluginpath + '/python/cluster/cluster_config.py', 'insertAllHost', '-t' , os_type, '-js', ret_json_string, '-cmi', ccvm_mgmt_ip, '-pcl', ...host_names, '-eh', exclude_hostname];
                         if(mngt_nic_cidr != ""){
                             host_ping_test_and_cluster_config_cmd.push("-mnc",mngt_nic_cidr)
                         }
@@ -475,6 +475,9 @@ $('#button-next-step-modal-wizard-cluster-config-prepare').on('click', function 
                         }
                         if(mngt_nic_dns != ""){
                             host_ping_test_and_cluster_config_cmd.push("-mnd",mngt_nic_dns)
+                        }
+                        if(extenal_timeserver != ""){
+                            host_ping_test_and_cluster_config_cmd.push("-ets", extenal_timeserver)
                         }
                         if(console_log){console.log(host_ping_test_and_cluster_config_cmd);}
                         cockpit.spawn(host_ping_test_and_cluster_config_cmd)
@@ -537,7 +540,7 @@ $('#button-next-step-modal-wizard-cluster-config-prepare').on('click', function 
                             console.log(":::Please check the cluster.json file.::: "+ data);
                         });
                     }else{
-                        var host_ping_test_and_cluster_config_cmd = ['python3', pluginpath + '/python/cluster/cluster_config.py', 'insertAllHost', '-t' , os_type,'-js', ret_json_string, '-cmi', ccvm_mgmt_ip, '-ets', extenal_timeserver, '-pcl', ...host_names, '-eh', exclude_hostname];
+                        var host_ping_test_and_cluster_config_cmd = ['python3', pluginpath + '/python/cluster/cluster_config.py', 'insertAllHost', '-t' , os_type,'-js', ret_json_string, '-cmi', ccvm_mgmt_ip, '-pcl', ...host_names, '-eh', exclude_hostname];
                         if(mngt_nic_cidr != ""){
                             host_ping_test_and_cluster_config_cmd.push("-mnc",mngt_nic_cidr)
                         }
@@ -546,6 +549,9 @@ $('#button-next-step-modal-wizard-cluster-config-prepare').on('click', function 
                         }
                         if(mngt_nic_dns != ""){
                             host_ping_test_and_cluster_config_cmd.push("-mnd",mngt_nic_dns)
+                        }
+                        if(extenal_timeserver != ""){
+                            host_ping_test_and_cluster_config_cmd.push("-ets", extenal_timeserver)
                         }
                         if(console_log){console.log(host_ping_test_and_cluster_config_cmd);}
                         cockpit.spawn(host_ping_test_and_cluster_config_cmd)
