@@ -266,7 +266,8 @@ def insertAllHost(args):
                     ret = ssh('-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=5', p_val2["ablecube"], "echo ok").strip()
                     if ret != "ok":
                         return createReturn(code=500, val=return_val + " : " + p_val2["ablecube"])
-
+                    os.system("touch /var/lib/libvirt/images/ccvm-cloudinit.iso")
+                    os.system("chmod 777 /var/lib/libvirt/images/ccvm-cloudinit.iso")
                     # 호스트 추가시 클러스터 구성단계에서는 scvm이 배포되기 전이므로 해당 scvm에 echo 테스트 명령을 수행할 수 없음
                     if args.type != "ablestack-vm":
                         if args.exclude_hostname != p_val2["hostname"]:
@@ -292,6 +293,9 @@ def insertAllHost(args):
 
                     if args.mngt_nic_dns is not None:
                         cmd_str += " -mnd "+args.mngt_nic_dns
+
+                    if args.extenal_timeserver is not None:
+                        cmd_str += " -ets "+args.extenal_timeserver
 
                     if args.type != "ablestack-vm":
                         if args.exclude_hostname != p_val3["hostname"]:
