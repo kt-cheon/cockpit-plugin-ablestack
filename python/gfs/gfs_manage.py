@@ -100,12 +100,14 @@ def modify_lvm_conf(ips):
                 'sed -i \'s/# types = \\[ "fd", 16 \\]/types = \\[ "scini", 16 \\]/\' /etc/lvm/lvm.conf;'
                 'sed -i "s/# use_lvmlockd = 0/use_lvmlockd = 1/" /etc/lvm/lvm.conf;'
                 'sed -i "s/use_devicesfile = 0/use_devicesfile = 1/" /etc/lvm/lvm.conf;'
+                'mpathconf --enable'
             )
             ret = createReturn(code=200, val="Modify Lvm Conf Success,"+powerflex_disk_name)
         else:
             modify_command = (
                 'sed -i "s/# use_lvmlockd = 0/use_lvmlockd = 1/" /etc/lvm/lvm.conf;'
                 'sed -i "s/use_devicesfile = 0/use_devicesfile = 1/" /etc/lvm/lvm.conf;'
+                'mpathconf --enable'
             )
             ret = createReturn(code=200, val="Modify Lvm Conf Success")
 
@@ -191,15 +193,28 @@ def init_pcs_cluster(disks,vg_name,lv_name,list_ips):
 
                 run_command(f"vgremove {vg_name}")
                 for disk in disks:
-                    partition = f"{disk}1"
-                    run_command(f"pvremove {partition}",ignore_errors=True)
-                    run_command(f"echo -e 'd\nw\n' | fdisk {disk} >/dev/null 2>&1", ignore_errors=True)
+                    if "mpath" not in disk:
+                        partition = f"{disk}1"
+                        run_command(f"pvremove {partition}",ignore_errors=True)
+                        run_command(f"parted -s {disk} rm 1", ignore_errors=True)
 
-                    for ip in list_ips:
-                        ssh_client = connect_to_host(ip)
-                        # lvm.conf 초기화
-                        run_command(f"partprobe {disk}",ssh_client,ignore_errors=True)
-                        ssh_client.close()
+                        for ip in list_ips:
+                            ssh_client = connect_to_host(ip)
+                            single_disk_arr = run_command("lsblk -r -n -o NAME,TYPE -d | grep -v rom | awk '{print $1}'", ssh_client).split()
+                            for single_disk in single_disk_arr:
+                                # lvm.conf 초기화
+                                run_command(f"partprobe /dev/{single_disk}",ssh_client,ignore_errors=True)
+                            ssh_client.close()
+                    else:
+                        partition = f"{disk}1"
+                        run_command(f"pvremove {partition}",ignore_errors=True)
+                        run_command(f"echo -e 'd\nw\n' | fdisk {disk} >/dev/null 2>&1", ignore_errors=True)
+
+                        for ip in list_ips:
+                            ssh_client = connect_to_host(ip)
+                            # lvm.conf 초기화
+                            run_command(f"partprobe {disk}",ssh_client,ignore_errors=True)
+                            ssh_client.close()
 
         rc_local_init_command =(
             'systemctl disable --now rc-local.service;'
@@ -243,7 +258,7 @@ def configure_stonith_devices(stonith_info, list_ips):
             command_create = (
                 f'pcs stonith create {device_name} fence_ipmilan delay={delay} '
                 f'ip={ip} ipport={ipport} lanplus=1 method=onoff '
-                f'username={username} password={password} '
+                f'username={username} password="{password}" '
                 f'pcmk_host_list={storage_ip} pcmk_off_action=off pcmk_reboot_action=off debug_file=/var/log/stonith.log'
             )
             run_command(command_create, ignore_errors=True)
@@ -290,9 +305,18 @@ def create_gfs(disks, vg_name, lv_name, gfs_name, mount_point, cluster_name, num
             # 파티션 생성
             run_command(f"parted -s {disk} mklabel gpt mkpart {gfs_name} 0% 100% set 1 lvm on ")
             # 파티션 테이블 다시 읽기
-            for ip in list_ips:
-                ssh_client = connect_to_host(ip)
-                run_command(f"partprobe {disk}", ssh_client, ignore_errors=True)
+            if "mpath" not in disk:
+                for ip in list_ips:
+                    ssh_client = connect_to_host(ip)
+                    run_command("systemctl disable --now multipathd", ssh_client)
+                    single_disk_arr = run_command("lsblk -r -n -o NAME,TYPE -d | grep -v rom | awk '{print $1}'", ssh_client).split()
+                    for single_disk in single_disk_arr:
+                        run_command(f"partprobe /dev/{single_disk}", ssh_client)
+
+            else:
+                for ip in list_ips:
+                    ssh_client = connect_to_host(ip)
+                    run_command(f"partprobe {disk}", ssh_client, ignore_errors=True)
             # 파티션 이름 확인
             partition = f"{disk}1"
             # 물리 볼륨 생성
@@ -315,11 +339,21 @@ def create_gfs(disks, vg_name, lv_name, gfs_name, mount_point, cluster_name, num
         for ip in list_ips:
             ssh_client = connect_to_host(ip)
             for disk in disks:
-                partition = f"{disk}1"
+                if "mpath" not in disk:
+                    single_disk_arr = run_command("lsblk -r -n -o NAME,TYPE -d | grep -v rom | awk '{print $1}'", ssh_client).split()
+                    for single_disk in single_disk_arr:
+                        single_partition = f"{single_disk}1"
+                        run_command(f"partprobe /dev/{single_disk}", ssh_client, ignore_errors=True)
+                        run_command(f"lvmdevices --adddev /dev/{single_partition} ", ssh_client, ignore_errors=True)
+                        run_command(f"grep -qxF 'partprobe /dev/{single_disk}' /etc/rc.local || echo 'partprobe /dev/{single_disk}' >> /etc/rc.local", ssh_client, ignore_errors=True)
+                        run_command(f"grep -qxF 'lvmdevices --adddev /dev/{single_partition}' /etc/rc.local || echo 'lvmdevices --adddev /dev/{single_partition}' >> /etc/rc.local", ssh_client, ignore_errors=True)
+                else:
+                        partition = f"{disk}1"
 
-                run_command(f"partprobe {disk}", ssh_client, ignore_errors=True)
-                run_command(f"lvmdevices --adddev {partition} ", ssh_client, ignore_errors=True)
-                run_command(f"echo -e 'partprobe {disk}\nlvmdevices --adddev {partition}' >> /etc/rc.local ", ssh_client, ignore_errors=True)
+                        run_command(f"partprobe {disk}", ssh_client, ignore_errors=True)
+                        run_command(f"lvmdevices --adddev {partition} ", ssh_client, ignore_errors=True)
+                        run_command(f"echo -e 'partprobe {disk}\nlvmdevices --adddev {partition}' >> /etc/rc.local ", ssh_client, ignore_errors=True)
+
             status = run_command("systemctl is-active rc-local.service", ssh_client, ignore_errors=True).strip()
             run_command("pcs resource cleanup ", ssh_client, ignore_errors=True)
             if status != "active":
@@ -341,9 +375,17 @@ def create_gfs(disks, vg_name, lv_name, gfs_name, mount_point, cluster_name, num
         for ip in list_ips:
             ssh_client = connect_to_host(ip)
             for disk in disks:
-                partition = f"{disk}1"
-                run_command(f"partprobe {disk}", ssh_client, ignore_errors=True)
-                run_command(f"lvmdevices --adddev {partition} ", ssh_client, ignore_errors=True)
+                if "mpath" not in disk:
+                    single_disk_arr = run_command("lsblk -r -n -o NAME,TYPE -d | grep -v rom | awk '{print $1}'", ssh_client).split()
+
+                    for single_disk in single_disk_arr:
+                        single_partition = f"{single_disk}1"
+                        run_command(f"partprobe /dev/{single_disk}", ssh_client, ignore_errors=True)
+                        run_command(f"lvmdevices --adddev /dev/{single_partition} ", ssh_client, ignore_errors=True)
+                else:
+                        partition = f"{disk}1"
+                        run_command(f"partprobe {disk}", ssh_client, ignore_errors=True)
+                        run_command(f"lvmdevices --adddev {partition} ", ssh_client, ignore_errors=True)
             run_command("pcs resource cleanup ", ssh_client, ignore_errors=True)
             ssh_client.close()
 
@@ -433,19 +475,28 @@ def create_ccvm_cluster(gfs_name, mount_point, cluster_name, list_ips):
 def extend_pcs_cluster(username,password,stonith_info,mount_point,list_ips):
     try:
         host_ip = socket.gethostbyname(socket.getfqdn())
-        # 해당 호스트에서 lvm conf 설정 하기
-        modify_command = (
-            'sed -i "s/# use_lvmlockd = 0/use_lvmlockd = 1/" /etc/lvm/lvm.conf;'
-            'sed -i "s/use_devicesfile = 0/use_devicesfile = 1/" /etc/lvm/lvm.conf;'
-            'mpathconf --enable;'
-            'systemctl start multipathd;'
-        )
-        run_command(modify_command)
         # 해당 호스트에서 hacluster에 대한 패스워드 설정
         run_command(f"echo 'hacluster:{password}' | chpasswd")
         # 마스터 노드에서 pcs host auth 설정
         for ip in list_ips[:1]:
             ssh_client = connect_to_host(ip)
+            multipath_check = run_command("multipath -l -v 1",ssh_client).split()
+            if len(multipath_check) != 0:
+                modify_command = (
+                    'sed -i "s/# use_lvmlockd = 0/use_lvmlockd = 1/" /etc/lvm/lvm.conf;'
+                    'sed -i "s/use_devicesfile = 0/use_devicesfile = 1/" /etc/lvm/lvm.conf;'
+                    'mpathconf --enable;'
+                    'systemctl start multipathd;'
+                )
+            else :
+                modify_command = (
+                    'sed -i "s/# use_lvmlockd = 0/use_lvmlockd = 1/" /etc/lvm/lvm.conf;'
+                    'sed -i "s/use_devicesfile = 0/use_devicesfile = 1/" /etc/lvm/lvm.conf;'
+                    'mpathconf --enable;'
+                    'systemctl disable --now multipathd;'
+                )
+            run_command(modify_command)
+
             for i, (info, _) in enumerate(zip(stonith_info, list_ips)):
                 stonith_ip = info["ipaddr"]
                 stonith_ipport = info["ipport"]
@@ -460,7 +511,7 @@ def extend_pcs_cluster(username,password,stonith_info,mount_point,list_ips):
                 command_create = (
                     f'pcs stonith create {device_name} fence_ipmilan delay={delay} '
                     f'ip={stonith_ip} ipport={stonith_ipport} lanplus=1 method=onoff '
-                    f'username={stonith_username} password={stonith_password} '
+                    f'username={stonith_username} password="{stonith_password}" '
                     f'pcmk_host_list={host_ip} pcmk_off_action=off pcmk_reboot_action=off debug_file=/var/log/stonith.log'
                 )
                 command_constraint = (f'pcs constraint location {device_name} avoids {host_ip}')
@@ -480,15 +531,26 @@ def extend_pcs_cluster(username,password,stonith_info,mount_point,list_ips):
         for ip in list_ips:
             ssh_client = connect_to_host(ip)
             multipath_disks = run_command("multipath -l -v 1", ssh_client, ignore_errors=True).split()
+            if len(multipath_disks) != 0:
+                for disk in multipath_disks:
+                    partition = f"{disk}1"
+                    run_command(f"partprobe /dev/mapper/{disk}", ssh_client, ignore_errors=True)
+                    run_command(f"lvmdevices --adddev /dev/mapper/{partition}", ssh_client, ignore_errors=True)
+                    if ip == list_ips[-1]:
+                        run_command(f"echo -e 'partprobe /dev/mapper/{disk}\nlvmdevices --adddev /dev/mapper/{partition}' >> /etc/rc.local", ssh_client, ignore_errors=True)
 
-            for disk in multipath_disks:
-                partition = f"{disk}1"
-                run_command(f"partprobe /dev/mapper/{disk}", ssh_client, ignore_errors=True)
-                run_command(f"lvmdevices --adddev /dev/mapper/{partition}", ssh_client, ignore_errors=True)
-                if ip == list_ips[-1]:
-                    run_command(f"echo -e 'partprobe /dev/mapper/{disk}\nlvmdevices --adddev /dev/mapper/{partition}' >> /etc/rc.local", ssh_client, ignore_errors=True)
+                ssh_client.close()
+            else:
+                single_disk_arr = run_command("lsblk -r -n -o NAME,TYPE -d | grep -v rom | awk '{print $1}'", ssh_client).split()
+                for disk in single_disk_arr:
+                    partition = f"{disk}1"
+                    run_command(f"partprobe /dev/{disk}", ssh_client, ignore_errors=True)
+                    run_command(f"lvmdevices --adddev /dev/{partition}", ssh_client, ignore_errors=True)
+                    if ip == list_ips[-1]:
+                        run_command(f"grep -qxF 'partprobe /dev/{disk}' /etc/rc.local || echo 'partprobe /dev/{disk}' >> /etc/rc.local", ssh_client, ignore_errors=True)
+                        run_command(f"grep -qxF 'lvmdevices --adddev /dev/{partition}' /etc/rc.local || echo 'lvmdevices --adddev /dev/{partition}' >> /etc/rc.local", ssh_client, ignore_errors=True)
 
-            ssh_client.close()
+                ssh_client.close()
 
         run_command("pcs resource cleanup", ignore_errors=True)
         run_command("chmod +x /etc/rc.local /etc/rc.d/rc.local", ignore_errors=True)
@@ -524,7 +586,7 @@ def check_ipmi(stonith_str):
             username = info["login"]
             password = info["passwd"]
 
-            command = f'ipmitool -I lanplus -H {ip} -U {username} -P {password} power status'
+            command = f'ipmitool -I lanplus -H {ip} -U {username} -P "{password}" power status'
             try:
                 result = run_command(command, ignore_errors=False).strip()
                 if not result:  # Check if the result is empty

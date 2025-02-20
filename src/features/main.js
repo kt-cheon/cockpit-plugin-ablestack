@@ -2913,9 +2913,8 @@ function gfsResourceStatus() {
                         }
                     }else{
                         if (gfs_dlm_stop_arr.length == 0 && gfs_lvmlockd_stop_arr.length == 0) {
-                            $("#gfs-lock-back-color").attr('class', 'pf-c-label pf-m-green');
-                            $("#gfs-lock-icon").attr('class', 'fas fa-fw fa-check-circle');
-                            $('#gfs-lock-status').text("Health OK");
+                            $("#gfs-lock-back-color").attr('class', 'pf-c-label pf-m-orange');
+                            $('#gfs-lock-status').text("Health Warn");
                             $('#gfs-lock-text').html(
                                 'glue-dlm : Started ( ' + gfs_dlm_start_arr.join(', ') + ' ), Offline ( ' + gfs_dlm_offline_arr.join(', ') + ' )</br>' +
                                 'glue-lvmlockd : Started ( ' + gfs_lvmlockd_start_arr.join(', ') + ' ), Offline ( ' + gfs_lvmlockd_offline_arr.join(', ') + ' )'

@@ -11,6 +11,7 @@ hosts=$(grep "ablecube" /etc/hosts | grep -v pn | awk '{print $1}')
 for host in $hosts
 do
     # 처음 Mpath 활성화 하여 파일듣 가져오기
+    ssh -o StrictHostKeyChecking=no "$host" 'for host in /sys/class/scsi_host/*; do echo "- - -" > "$host/scan"; done'
     /usr/bin/ssh -o StrictHostKeyChecking=no $host mpathconf --enable
     /usr/bin/ssh -o StrictHostKeyChecking=no $host systemctl start multipathd
 
