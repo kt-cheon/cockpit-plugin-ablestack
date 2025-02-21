@@ -65,7 +65,7 @@ def parse_and_serialize_resources():
             attributes = {attr: resource.get(attr) for attr in resource.keys()}
 
             # Fence 자원 처리 (순차적으로 노드 할당)
-            if resource_id.startswith("fence-ablecube"):
+            if resource_id.startswith("fence-"):
                 # 순차적으로 nodes_info에서 하나씩 가져오기
                 node_name = nodes_info[node_index % len(nodes_info)]["name"]  # 노드 리스트에서 순환
                 node_index += 1  # 다음 노드를 가리키도록 증가

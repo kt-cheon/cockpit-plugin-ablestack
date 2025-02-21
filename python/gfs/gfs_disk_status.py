@@ -106,18 +106,37 @@ def filter_gfs2_mounted_devices(blockdevices, gfs2_mounts):
     """
     filtered_devices = []
 
-    for device in blockdevices:
-        if 'children' in device:
-            for child in device['children']:
-                if 'children' in child:
-                    for sub_child in child['children']:
-                        if 'children' in sub_child:
-                            for lvm in sub_child['children']:
+    multipath_check = os.popen("multipath -l -v 1").read().strip()
+
+    if multipath_check != "":
+        for device in blockdevices:
+            if 'children' in device:
+                for child in device['children']:
+                    if 'children' in child:
+                        for sub_child in child['children']:
+                            if 'children' in sub_child:
+                                for lvm in sub_child['children']:
+                                    for gfs2_dev, gfs2_mount in gfs2_mounts:
+                                        if lvm['path'] == gfs2_dev:
+                                            filtered_devices.append({
+                                                "lvm": lvm['path'],
+                                                "multipath": sub_child['path'],
+                                                "device": device['path'],
+                                                "mountpoint": gfs2_mount,
+                                                "size": lvm['size']
+                                            })
+    else:
+        for device in blockdevices:
+            if 'children' in device:
+                for child in device['children']:
+                    if 'children' in child:
+                        for lvm in child['children']:
+                            if "vg_glue" in lvm["name"]:
                                 for gfs2_dev, gfs2_mount in gfs2_mounts:
                                     if lvm['path'] == gfs2_dev:
                                         filtered_devices.append({
                                             "lvm": lvm['path'],
-                                            "multipath": sub_child['path'],
+                                            "multipath": device['path'],
                                             "device": device['path'],
                                             "mountpoint": gfs2_mount,
                                             "size": lvm['size']
