@@ -18,6 +18,8 @@ let interval;
 var gfs_file_system_arr = [];
 
 $(document).ready(function(){
+    // 라이센스 등록 버튼 표시
+    $('#button-open-modal-license-register').show();
 
     $('#dropdown-menu-storage-cluster-status').hide();
     $('#dropdown-menu-cloud-cluster-status').hide();
@@ -108,6 +110,7 @@ $(document).ready(function(){
     // 라이센스 등록 관련 이벤트 처리
     $('#button-open-modal-license-register').on('click', function(){
         $('#div-modal-license-register').show();
+        updateLicenseStatus();
     });
 
     // 닫기 버튼 클릭 이벤트
@@ -136,40 +139,42 @@ $(document).ready(function(){
         reader.onload = function(e) {
             const fileContent = e.target.result;
 
-            // 라이센스 파일명 생성 (타임스탬프.dat)
+            // 현재 시간을 이용한 임시 파일명 생성
             const timestamp = Date.now();
-            const fileName = `license_${timestamp}.dat`;
-            const filePath = `/root/${fileName}`;
+            const tempPath = `/tmp/license_temp_${timestamp}.dat`;
 
-            // root에 파일 저장
-            cockpit.file(filePath).replace(fileContent)
-            .then(() => {
-                // 파일 권한 설정 (600)
-                return cockpit.spawn(['chmod', '600', filePath], { superuser: true });
-            })
+            // 임시 파일로 저장
+            cockpit.file(tempPath, { superuser: "try" }).replace(fileContent)
             .then(() => {
                 // 라이센스 등록 Python 스크립트 실행
-                return cockpit.spawn(['python3', pluginpath + '/python/license/register_license.py',
-                    '--license-file', filePath
-                ], { superuser: true });
+                return cockpit.spawn(['python3', '/usr/share/cockpit/ablestack/python/license/register_license.py', '--license-file', tempPath], { superuser: true });
             })
             .then(function(data) {
                 $('#div-modal-spinner').hide();
                 const result = JSON.parse(data);
                 if(result.code == "200") {
-                    // 등록 성공 - 성공 메시지 표시 후 새로고침
+                    // 등록 성공
                     $('#div-modal-license-register').hide();
-                    alert("라이센스가 등록되었습니다.");
+                    alert("라이센스가 성공적으로 등록되었습니다.");
                     location.reload();
                 } else {
                     // 실패 알림 표시
-                    alert("라이센스 등록 실패 : " + result.val);
+                    $('#div-modal-license-register').hide();
+                    alert("라이센스 등록 실패: " + result.val);
+                    location.reload();
                 }
             })
             .catch(function(error) {
                 $('#div-modal-spinner').hide();
+                $('#div-modal-license-register').hide();
                 console.error("Error:", error);
                 alert("라이센스 등록 중 오류가 발생했습니다: " + error);
+                location.reload();
+            })
+            .finally(() => {
+                // 임시 파일 삭제 시도
+                cockpit.spawn(['rm', '-f', tempPath], { superuser: true })
+                .catch(error => console.error("임시 파일 삭제 실패:", error));
             });
         };
 
@@ -2913,8 +2918,9 @@ function gfsResourceStatus() {
                         }
                     }else{
                         if (gfs_dlm_stop_arr.length == 0 && gfs_lvmlockd_stop_arr.length == 0) {
-                            $("#gfs-lock-back-color").attr('class', 'pf-c-label pf-m-orange');
-                            $('#gfs-lock-status').text("Health Warn");
+                            $("#gfs-lock-back-color").attr('class', 'pf-c-label pf-m-green');
+                            $("#gfs-lock-icon").attr('class', 'fas fa-fw fa-check-circle');
+                            $('#gfs-lock-status').text("Health OK");
                             $('#gfs-lock-text').html(
                                 'glue-dlm : Started ( ' + gfs_dlm_start_arr.join(', ') + ' ), Offline ( ' + gfs_dlm_offline_arr.join(', ') + ' )</br>' +
                                 'glue-lvmlockd : Started ( ' + gfs_lvmlockd_start_arr.join(', ') + ' ), Offline ( ' + gfs_lvmlockd_offline_arr.join(', ') + ' )'
@@ -2992,3 +2998,48 @@ function gfsResourceStatus() {
         // })
 })
 }
+
+// 라이센스 상태 확인 및 표시
+function updateLicenseStatus() {
+    // superuser 권한으로 실행
+    cockpit.spawn(['python3', '/usr/share/cockpit/ablestack/python/license/register_license.py', '--status'], { superuser: true })
+        .then(function(data) {
+            const result = JSON.parse(data);
+            if(result.code == "200") {
+                const licenseInfo = result.val;
+                // 라이센스 정보 표시
+                const licenseDescription = `
+                    <p><i class="fas fa-info-circle"></i> ${licenseInfo.status}</p>
+                    <p><i class="fas fa-file-alt"></i> <strong>파일명:</strong> ${licenseInfo.fileName}</p>
+                `;
+
+                $('#div-license-description').html(licenseDescription);
+            } else {
+                $('#div-license-description').html(`
+                    <p><i class="fas fa-info-circle"></i> ${result.val}</p>
+                `);
+            }
+        })
+        .catch(function(error) {
+            console.error("라이센스 상태 확인 실패:", error);
+            $('#div-license-description').html(`
+                <p><i class="fas fa-exclamation-triangle" style="color: red;"></i> 라이센스 상태 확인 중 오류가 발생했습니다.</p>
+            `);
+        });
+}
+
+// 라이센스 등록 버튼 클릭 이벤트
+$('#button-execution-modal-license-register').on('click', function(){
+    // ... 기존 코드 ...
+});
+
+// 모달이 열릴 때 라이센스 상태 확인
+$('#button-open-modal-license-register').on('click', function(){
+    $('#div-modal-license-register').show();
+    updateLicenseStatus();
+});
+
+// 파일 선택 시 버튼 활성화
+$('#input-license-file').on('change', function(){
+    $('#button-execution-modal-license-register').prop('disabled', !this.files.length);
+});
