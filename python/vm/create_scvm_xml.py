@@ -168,6 +168,7 @@ def createScvmXml(args):
                         line = ''
                 elif '<!--management_network_bridge-->' in line:
                     mnb_txt = "    <interface type='bridge'>\n"
+                    mnb_txt += "      <filterref filter='allow-all-traffic'/>\n"
                     mnb_txt += "      <mac address='" + generateMacAddress() + "'/>\n"
                     mnb_txt += "      <source bridge='" + args.management_network_bridge + "'/>\n"
                     mnb_txt += "      <target dev='vnet" + str(br_num) + "'/>\n"
@@ -181,6 +182,7 @@ def createScvmXml(args):
                 elif '<!--server_network_bridge-->' in line:
                     if 'bridge' == args.storage_traffic_network_type:
                         snb_txt = "    <interface type='bridge'>\n"
+                        snb_txt += "      <filterref filter='allow-all-traffic'/>\n"
                         snb_txt += "      <mac address='" + generateMacAddress() + "'/>\n"
                         snb_txt += "      <source bridge='" + args.server_network_bridge + "'/>\n"
                         snb_txt += "      <target dev='vnet" + str(br_num) + "'/>\n"
@@ -198,6 +200,7 @@ def createScvmXml(args):
                 elif '<!--replication_network_bridge-->' in line:
                     if 'bridge' == args.storage_traffic_network_type:
                         rnb_txt = "    <interface type='bridge'>\n"
+                        rnb_txt += "      <filterref filter='allow-all-traffic'/>\n"
                         rnb_txt += "      <mac address='" + generateMacAddress() + "'/>\n"
                         rnb_txt += "      <source bridge='" + args.replication_network_bridge + "'/>\n"
                         rnb_txt += "      <target dev='vnet" + str(br_num) + "'/>\n"
