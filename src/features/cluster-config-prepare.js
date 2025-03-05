@@ -270,6 +270,10 @@ $('#button-next-step-modal-wizard-cluster-config-prepare').on('click', function 
         cur_step_wizard_cluster_config_prepare = "4";
 
     } else if (cur_step_wizard_cluster_config_prepare == "4") {
+        let cluster_host_yn = $('input[name=radio-cluster-host]:checked').val();
+        if (os_type == "ablestack-vm" && cluster_host_yn == "add"){
+            $('#button-next-step-modal-wizard-cluster-config-prepare').attr('disabled', true);
+        }
 
         $('#div-modal-wizard-cluster-config-time-server').show();
         $('#nav-button-cluster-config-time-server').addClass('pf-m-current');
@@ -302,20 +306,38 @@ $('#button-next-step-modal-wizard-cluster-config-prepare').on('click', function 
         if ($('input[name=radio-timeserver]:checked').val() == "internal") {
             inputPnIntoTimeServer(os_type);
         }
-        // 구성할 호스트 수가 3대 미만이면 로컬 시간 서버 비활성화
-        // if($('#form-input-cluster-config-host-number').val() < 3) {
-        //     $("input[name='radio-timeserver'][value='external']").prop("checked", true);
-        //     $('#form-radio-timeserver-int').attr('disabled', true);
-        //     $('#span-timeserver2-required').hide();
-        //     $('#span-timeserver3-required').hide();
-        //     $('#form-input-cluster-config-time-server-ip-2').removeAttr('required');
-        //     // 현재 host radio 버튼 숨김
-        //     $('#div-timeserver-host-num').hide();
-        //     // radio 버튼 클릭 시 ip 정보 초기화
-        //     $('input[name=form-input-cluster-config-timeserver]').val("");
-        // }else {
-        //     $('#form-radio-timeserver-int').attr('disabled', false);
-        // }
+        if (os_type == "ablestack-vm" && cluster_host_yn == "add"){
+            var ipmi_ip = $('#form-input-cluster-config-credentials-ipmi-ip').val();
+            var ipmi_user = $('#form-input-cluster-config-credentials-ipmi-user').val();
+            var ipmi_password = $('#form-input-cluster-config-credentials-ipmi-password').val();
+            var ipmi_port = "623";
+
+            var ipmi_config = `${ipmi_ip},${ipmi_port},${ipmi_user},${ipmi_password}`;
+
+            console.log(ipmi_config);
+            check_ipmi_cmd = ['python3',pluginpath + '/python/gfs/gfs_manage.py' , '--check-ipmi', '--stonith', ipmi_config];
+            console.log(check_ipmi_cmd);
+            cockpit.spawn(check_ipmi_cmd)
+            .then(function(data) {
+                var retVal = JSON.parse(data);
+                console.log(retVal);
+                if (retVal.code == "200"){
+                    $('#button-next-step-modal-wizard-cluster-config-prepare').attr('disabled', false);
+                    $('#button-before-step-modal-wizard-cluster-config-prepare').attr('disabled', false);
+                    $('#button-cancel-config-modal-wizard-cluster-config-prepare').attr('disabled', false);
+
+                    cur_step_wizard_cloud_vm = "5";
+                }else{
+                    $('#button-next-step-modal-wizard-cluster-config-prepare').attr('disabled', true);
+                    cur_step_wizard_cloud_vm = "5";
+                    alert(retVal.val.message + " 이전으로 돌아가 정확한 자격증명을 입력하시길 바랍니다.");
+                }
+            }).catch(function () {
+                $('#button-next-step-modal-wizard-cluster-config-prepare').attr('disabled', true);
+                cur_step_wizard_cloud_vm = "5";
+                alert("이전으로 돌아가 정확한 자격증명을 입력하시길 바랍니다.");
+            })
+        }
 
     } else if (cur_step_wizard_cluster_config_prepare == "5") {
         $('#div-modal-wizard-cluster-config-review').show();
@@ -1746,8 +1768,8 @@ function validateClusterConfigPrepare(timeserver_type, os_type) {
             }else if ($('#form-input-cluster-config-credentials-ipmi-user').val() == ""){
                 alert("IPMI User를 입력해주세요.");
                 validate_check = false;
-            }else if ($('#form-input-cluster-config-credentials-ipmi-password').val() == "" || $('#form-input-cluster-config-credentials-ipmi-password-check').val() == ""){
-                alert("IPMI Password를 입력 및 확인해주세요.");
+            }else if ($('#form-input-cluster-config-credentials-ipmi-password').val() == "" ){
+                alert("IPMI Password를 입력해주세요.");
                 validate_check = false;
             }else if (!checkIp($('#form-input-cluster-config-credentials-ipmi-ip').val())){
                 alert("IPMI IP 형식을 확인해주세요.");

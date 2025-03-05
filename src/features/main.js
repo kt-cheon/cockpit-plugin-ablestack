@@ -2712,16 +2712,20 @@ $('#button-execution-modal-gfs-host-remove').on('click', function(){
     $('#div-modal-spinner-header-txt').text('CCVM 체크 및 마이그레이션 중');
     $('#div-modal-spinner').show();
     var remove_host_name = $('#form-select-gfs-host-remove option:selected').val();
-    var remove_host_ip = $('#form-select-gfs-host-remove opotion:seleted').data('ip');
+    var remove_host_ip = $('#form-select-gfs-host-remove option:selected').data('ip');
     cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--check-ccvm', '--target-ip', remove_host_ip];
+    console.log(cmd);
     cockpit.spawn(cmd).then(function(data){
         retVal = JSON.parse(data);
-        if (retVal.code == "200"){
+        console.log(retVal);
+        if (retVal.code == "200" || retVal.code == "201"){
             $('#div-modal-spinner-header-txt').text('호스트 제거 중');
-            cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--remove-host', '--target-ip', remove_host_ip, '--hostname', remove_host_name, '--list-ip', list_ip]
+            cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--remove-host', '--target-ip', remove_host_ip, '--hostname', remove_host_name];
+            console.log(cmd);
             cockpit.spawn(cmd).then(function(data){
                 retVal = JSON.parse(data);
                 if (retVal.code == "200"){
+                    console.log(retVal);
                     $('#div-modal-spinner').hide();
                     $("#modal-status-alert-title").html("호스트 제거");
                     $("#modal-status-alert-body").html("호스트 제거를 성공하였습니다.");
@@ -3032,23 +3036,15 @@ function gfsResourceStatus() {
 
             if (retVal.val == "Started"){
                 $('#gfs-maintenance-update').html('<a class="pf-c-dropdown__menu-item" href="#" id="menu-item-gfs-maintenance" onclick="gfs_maintenance_run()">펜스 장치 유지보수 설정</a>');
-                $('#gfs-host-remove').show();
             }else if (retVal.val == "Stopped"){
                 $('#gfs-maintenance-update').html('<a class="pf-c-dropdown__menu-item" href="#" id="menu-item-gfs-maintenance" onclick="gfs_maintenance_run()">펜스 장치 유지보수 해제</a>');
             }
             else{
                 $('#gfs-maintenance-update').html('<a class="pf-c-dropdown__menu-item pf-m-disabled" href="#" id="menu-item-gfs-maintenance" onclick="gfs_maintenance_run()">펜스 장치 유지보수 설정</a>');
-                $('#gfs-host-remove').hide();
             }
             resolve();
         })
-        ccvm_status = sessionStorage.getItem("ccvm_status");
-        cc_status = sessionStorage.getItem("cc_status");
-        if (ccvm_status == "RUNNING" && cc_status == "HEALTH_OK"){
-            $('#button-gfs-host-remove').removeClass("pf-m-disabled");
-        }else{
-            $('#button-gfs-host-remove').addClass("pf-m-disabled");
-        }
+
         // cockpit.spawn(['python3', pluginpath + '/python/gfs/gfs_manage.py', '--check-qdevice'])
         // .then(function(data){
         //     var retVal =JSON.parse(data);
@@ -3080,7 +3076,7 @@ function updateGfsHostList(){
             selectHost.empty();
             selectHost.append('<option value="">- 선택하십시오 -</option>');
             for (var i = 0; i < hostList.length; i++){
-                selectHost.append('<option value="' + hostList[i].hostname + '" data-ip="' + hostList[i].ip + '">' + hostList[i].hostname + '</option>');
+                selectHost.append('<option value="' + hostList[i].hostname + '" data-ip="' + hostList[i].ablecube + '">' + hostList[i].hostname + '</option>');
             }
         }
     })
