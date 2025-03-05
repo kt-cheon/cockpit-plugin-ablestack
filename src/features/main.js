@@ -795,6 +795,7 @@ $('#button-execution-modal-remove-cube-host').on('click', function(){
 $('#button-cancel-modal-remove-cube-host').on('click', function(){
     $('#div-modal-remove-cube-host').hide();
 });
+
 /** move cube host config modal 관련 action end */
 
 
@@ -2697,6 +2698,63 @@ $('#button-execution-modal-gfs-disk-delete').on('click', function() {
             $('#div-modal-status-alert').show();
         });
 });
+$('#button-gfs-host-remove').on('click', function(){
+    updateGfsHostList();
+    $('#div-modal-gfs-host-remove').show();
+});
+
+$('#button-cancel-modal-gfs-host-remove, #button-close-gfs-host-remove').on('click', function(){
+    $('#div-modal-gfs-host-remove').hide();
+});
+
+$('#button-execution-modal-gfs-host-remove').on('click', function(){
+    $('#div-modal-gfs-host-remove').hide();
+    $('#div-modal-spinner-header-txt').text('CCVM 체크 및 마이그레이션 중');
+    $('#div-modal-spinner').show();
+    var remove_host_name = $('#form-select-gfs-host-remove option:selected').val();
+    var remove_host_ip = $('#form-select-gfs-host-remove option:selected').data('ip');
+    cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--check-ccvm', '--target-ip', remove_host_ip];
+    console.log(cmd);
+    cockpit.spawn(cmd).then(function(data){
+        retVal = JSON.parse(data);
+        console.log(retVal);
+        if (retVal.code == "200" || retVal.code == "201"){
+            $('#div-modal-spinner-header-txt').text('호스트 제거 중');
+            cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--remove-host', '--target-ip', remove_host_ip, '--hostname', remove_host_name];
+            console.log(cmd);
+            cockpit.spawn(cmd).then(function(data){
+                retVal = JSON.parse(data);
+                if (retVal.code == "200"){
+                    console.log(retVal);
+                    $('#div-modal-spinner').hide();
+                    $("#modal-status-alert-title").html("호스트 제거");
+                    $("#modal-status-alert-body").html("호스트 제거를 성공하였습니다.");
+                    $('#div-modal-status-alert').show();
+                }else{
+                    $('#div-modal-spinner').hide();
+                    $("#modal-status-alert-title").html("호스트 제거");
+                    $("#modal-status-alert-body").html("호스트를 제거를 실패하였습니다.");
+                    $('#div-modal-status-alert').show();
+                }
+            }).catch(function(){
+                $('#div-modal-spinner').hide();
+                $("#modal-status-alert-title").html("호스트 제거");
+                $("#modal-status-alert-body").html("호스트를 제거를 실패하였습니다.");
+                $('#div-modal-status-alert').show();
+            });
+        }else{
+            $('#div-modal-spinner').hide();
+            $("#modal-status-alert-title").html("CCVM 체크 중");
+            $("#modal-status-alert-body").html("CCVM 체크 및 마이그레이션을 실패하였습니다.");
+            $('#div-modal-status-alert').show();
+        }
+    }).catch(function(){
+        $('#div-modal-spinner').hide();
+        $("#modal-status-alert-title").html("CCVM 체크 중");
+        $("#modal-status-alert-body").html("CCVM 체크 및 마이그레이션을 실패하였습니다.");
+        $('#div-modal-status-alert').show();
+    });
+});
 /**
  * Meathod Name : gfsResourceStatus
  * Date Created : 2025.01.06
@@ -2832,9 +2890,8 @@ function gfsResourceStatus() {
                     }
                 }else{
                     if (gfs_fence_stopped_arr.length == 0){
-                        $("#gfs-fence-back-color").attr('class','pf-c-label pf-m-green');
-                        $("#gfs-fence-icon").attr('class','fas fa-fw fa-check-circle');
-                        $('#gfs-fence-status').text("Health OK");
+                        $("#gfs-fence-back-color").attr('class','pf-c-label pf-m-orange');
+                        $('#gfs-fence-status').text("Health Warn");
                         $('#gfs-fence-text').text('Started ( ' + gfs_fence_started_arr.join(', ') + ' ), Offline ( ' + gfs_fence_offline_arr.join(', ') + ' )');
                     }else if (gfs_fence_started_arr.length == 0){
                         $("#gfs-fence-back-color").attr('class','pf-c-label pf-m-orange');
@@ -2921,9 +2978,8 @@ function gfsResourceStatus() {
                         }
                     }else{
                         if (gfs_dlm_stop_arr.length == 0 && gfs_lvmlockd_stop_arr.length == 0) {
-                            $("#gfs-lock-back-color").attr('class', 'pf-c-label pf-m-green');
-                            $("#gfs-lock-icon").attr('class', 'fas fa-fw fa-check-circle');
-                            $('#gfs-lock-status').text("Health OK");
+                            $("#gfs-lock-back-color").attr('class', 'pf-c-label pf-m-orange');
+                            $('#gfs-lock-status').text("Health Warn");
                             $('#gfs-lock-text').html(
                                 'glue-dlm : Started ( ' + gfs_dlm_start_arr.join(', ') + ' ), Offline ( ' + gfs_dlm_offline_arr.join(', ') + ' )</br>' +
                                 'glue-lvmlockd : Started ( ' + gfs_lvmlockd_start_arr.join(', ') + ' ), Offline ( ' + gfs_lvmlockd_offline_arr.join(', ') + ' )'
@@ -2988,6 +3044,7 @@ function gfsResourceStatus() {
             }
             resolve();
         })
+
         // cockpit.spawn(['python3', pluginpath + '/python/gfs/gfs_manage.py', '--check-qdevice'])
         // .then(function(data){
         //     var retVal =JSON.parse(data);
@@ -3000,6 +3057,29 @@ function gfsResourceStatus() {
         //     resolve();
         // })
 })
+}
+/**
+ * Meathod Name : updateGfsHostList
+ * Date Created : 2025.02.28
+ * Writer  : 정민철
+ * Description : GFS 호스트 제거를 위한 호스트 리스트
+ * Parameter : 없음
+ * Return  : 없음
+ * History  : 2025.02.28 최초 작성
+ */
+function updateGfsHostList(){
+    cockpit.spawn(['python3', pluginpath + '/python/gfs/gfs_manage.py', '--check-host']).then(function(data){
+        var result = JSON.parse(data);
+        if (result.code == "200"){
+            var hostList = result.val;
+            var selectHost = $('#form-select-gfs-host-remove');
+            selectHost.empty();
+            selectHost.append('<option value="">- 선택하십시오 -</option>');
+            for (var i = 0; i < hostList.length; i++){
+                selectHost.append('<option value="' + hostList[i].hostname + '" data-ip="' + hostList[i].ablecube + '">' + hostList[i].hostname + '</option>');
+            }
+        }
+    })
 }
 
 // 라이센스 상태 확인 및 표시

@@ -34,7 +34,7 @@ def createArgumentParser():
                                         usage='%(prog)s arguments')
 
     # 인자 추가: https://docs.python.org/ko/3/library/argparse.html#the-add-argument-method
-    parser.add_argument('action', choices=['insert','insertScvmHost','insertAllHost','remove','check'], help='choose one of the actions')
+    parser.add_argument('action', choices=['insert','insertScvmHost','insertAllHost','remove','check','reset','reset-sync'], help='choose one of the actions')
     parser.add_argument('-t', '--type', metavar='[OS Type]', type=str, help='input Value to OS Type')
     parser.add_argument('-cmi', '--ccvm-mngt-ip', metavar='[cloudcenter vm IP information]', type=str, help='input Value to coludcenter vm IP information')
     parser.add_argument('-mnc', '--mngt-nic-cidr', metavar='[management Nic cidr]', type=str, help='input Value to management Nic cidr')
@@ -46,6 +46,7 @@ def createArgumentParser():
     parser.add_argument('-eh', '--exclude-hostname', metavar='[Hostnames to exclude from copying the hosts file to scvm and checking the network]', type=str, help='input Value to exclude hostname')
     parser.add_argument('-rh', '--remove-hostname', metavar='[Hostnames to remove configuration in cluster]', type=str, help='input Value to remove hostname')
     parser.add_argument('-ets', '--extenal-timeserver', metavar='[Extenal Timeserver]', type=str, help='input Value to Extenal Timeserver')
+    parser.add_argument('-ti', '--target-ip', metavar='[Remove Target Host IP Address]', type=str, help="input Value to remove target host ip address")
 
     # output 민감도 추가(v갯수에 따라 output및 log가 많아짐):
     parser.add_argument('-v', '--verbose', action='count', default=0, help='increase output verbosity')
@@ -383,6 +384,31 @@ def reset_cluster_config():
         clusterConfig["pcsCluster"]["hostname"+str(i+1)] = ""
     clusterConfig["hosts"] = []
 
+    with open(json_file_path, "w", encoding="utf-8") as file:
+        json.dump(json_data, file, indent=4)
+
+def remove_ip_from_cluster_config_and_hosts_file(args):
+    try:
+        if args.target_ip is not None:
+            # 1. pcsCluster에서 해당 IP 값만 삭제 (키 유지)
+            for i in range(len(json_data["clusterConfig"]["pcsCluster"])):
+                if json_data["clusterConfig"]["pcsCluster"]["hostname"+str(i+1)] == args.target_ip:
+                    json_data["clusterConfig"]["pcsCluster"]["hostname"+str(i+1)] = ""
+            # 2. hosts 배열에서 해당 IP가 포함된 객체 제거
+            json_data["clusterConfig"]["hosts"] = [
+                host for host in json_data["clusterConfig"]["hosts"] if host["ablecube"] != args.target_ip
+            ]
+            with open(json_file_path, "w", encoding="utf-8") as file:
+                json.dump(json_data, file, indent=4)
+
+            os.system(f"sed -i '/^{args.target_ip}/d' /etc/hosts")
+
+            return createReturn(code=200, val="Cluster.json Remove Host Info Success")
+        else:
+            return createReturn(code=500, val="Target IP required")
+    except:
+        return createReturn(code=500, val="Cluster.json Remove Host Info Failed")
+
 def PingCheck(args):
     return_val = "The ping test failed. Check ablecube hosts network IPs."
     try:
@@ -471,4 +497,10 @@ if __name__ == '__main__':
         print(ret)
     elif args.action == 'check':
         ret = PingCheck(args)
+        print(ret)
+    elif args.action == 'reset':
+        ret = reset_cluster_config()
+        print(ret)
+    elif args.action == "reset-sync":
+        ret = remove_ip_from_cluster_config_and_hosts_file(args)
         print(ret)

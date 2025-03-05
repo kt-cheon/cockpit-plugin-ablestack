@@ -621,9 +621,6 @@ function settingProfile(clusterJsonConf, option, os_type){
             $("#form-input-cluster-mngt-nic-cidr").val(clusterJsonConf.clusterConfig.mngtNic.cidr);
             $("#form-input-cluster-mngt-nic-gateway").val(clusterJsonConf.clusterConfig.mngtNic.gw);
             $("#form-input-cluster-mngt-nic-dns").val(clusterJsonConf.clusterConfig.mngtNic.dns);
-            $("#form-input-cluster-pcs-hostname1").val(clusterJsonConf.clusterConfig.pcsCluster.hostname1);
-            $("#form-input-cluster-pcs-hostname2").val(clusterJsonConf.clusterConfig.pcsCluster.hostname2);
-            $("#form-input-cluster-pcs-hostname3").val(clusterJsonConf.clusterConfig.pcsCluster.hostname3);
             $("#form-input-cluster-config-external-time-server-ip").val(clusterJsonConf.clusterConfig.extenal_timeserver);
         }
 
@@ -636,9 +633,10 @@ function settingProfile(clusterJsonConf, option, os_type){
             $("#form-input-cloud-vm-mngt-nic-ip").val("");
             $("#form-input-cloud-vm-mngt-gw").val("");
             $("#form-input-cloud-vm-dns").val("");
-            $("#form-input-cloud-vm-failover-cluster-host1-name").val("");
-            $("#form-input-cloud-vm-failover-cluster-host2-name").val("");
-            $("#form-input-cloud-vm-failover-cluster-host3-name").val("");
+
+            for (let i = 0 ; i < hostCnt ; i++){
+                $(`#form-input-cloud-vm-failover-cluster-host${i+1}-name`).val("");
+            }
 
             // 값 세팅
             if(clusterJsonConf.clusterConfig.ccvm.ip != "" && clusterJsonConf.clusterConfig.ccvm.ip != null){
@@ -654,23 +652,12 @@ function settingProfile(clusterJsonConf, option, os_type){
             if(c_mngt_dns != ""){
                 $("#form-input-cloud-vm-dns").val(c_mngt_dns);
             }
-
-            if(clusterJsonConf.clusterConfig.pcsCluster.hostname1 != "" && clusterJsonConf.clusterConfig.pcsCluster.hostname1 != null){
-                $("#form-input-cloud-vm-failover-cluster-host1-name").val(clusterJsonConf.clusterConfig.pcsCluster.hostname1);
-            }else if(clusterJsonConf.clusterConfig.hosts.length > 0 && clusterJsonConf.clusterConfig.hosts[0].hostname != "" && clusterJsonConf.clusterConfig.hosts[0].hostname != null){
-                $("#form-input-cloud-vm-failover-cluster-host1-name").val(clusterJsonConf.clusterConfig.hosts[0].hostname);
-            }
-
-            if(clusterJsonConf.clusterConfig.pcsCluster.hostname2 != "" && clusterJsonConf.clusterConfig.pcsCluster.hostname2 != null){
-                $("#form-input-cloud-vm-failover-cluster-host2-name").val(clusterJsonConf.clusterConfig.pcsCluster.hostname2);
-            }else if(clusterJsonConf.clusterConfig.hosts.length > 1 && clusterJsonConf.clusterConfig.hosts[1].hostname != "" && clusterJsonConf.clusterConfig.hosts[1].hostname != null){
-                $("#form-input-cloud-vm-failover-cluster-host2-name").val(clusterJsonConf.clusterConfig.hosts[1].hostname);
-            }
-
-            if(clusterJsonConf.clusterConfig.pcsCluster.hostname3 != "" && clusterJsonConf.clusterConfig.pcsCluster.hostname3 != null){
-                $("#form-input-cloud-vm-failover-cluster-host3-name").val(clusterJsonConf.clusterConfig.pcsCluster.hostname3);
-            }else if(clusterJsonConf.clusterConfig.hosts.length > 2 && clusterJsonConf.clusterConfig.hosts[2].hostname != "" && clusterJsonConf.clusterConfig.hosts[2].hostname != null){
-                $("#form-input-cloud-vm-failover-cluster-host3-name").val(clusterJsonConf.clusterConfig.hosts[2].hostname);
+            for (let i = 0 ; i < hostCnt ; i++){
+                if(clusterJsonConf.clusterConfig.pcsCluster[`hostname${i+1}`] != "" && clusterJsonConf.clusterConfig.pcsCluster[`hostname${i+1}`] != null){
+                    $(`#form-input-cloud-vm-failover-cluster-host${i+1}-name`).val(clusterJsonConf.clusterConfig.pcsCluster[`hostname${i+1}`]);
+                }else if(clusterJsonConf.clusterConfig.hosts.length > 0 && clusterJsonConf.clusterConfig.hosts[i].hostname != "" && clusterJsonConf.clusterConfig.hosts[i].hostname != null){
+                    $(`#form-input-cloud-vm-failover-cluster-host${i+1}-name`).val(clusterJsonConf.clusterConfig.hosts[i].hostname);
+                }
             }
         }
     }else{

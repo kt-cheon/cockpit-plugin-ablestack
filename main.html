@@ -73,6 +73,12 @@
                                                     class="pf-c-dropdown__menu-item"
                                                     type="button">멀티패스 동기화</button>
                                                 </li>
+                                                <li class="pf-c-divider" role="separator"></li>
+                                                <li id="gfs-host-remove">
+                                                    <button id="button-gfs-host-remove"
+                                                    class="pf-c-dropdown__menu-item"
+                                                    type="button">호스트 제거</button>
+                                                </li>
                                                 <!-- <li id="gfs-qdevice-init" style="display: none;">
                                                     <button id="button-gfs-qdevice-init"
                                                     class="pf-c-dropdown__menu-item pf-m-disabled"
@@ -1464,15 +1470,12 @@
             <div class="pf-c-modal-box__body">
                 <div>이중화 구성할 클라우드센터 가상머신의 관리 IP를 입력해주세요.</div>
                 <form novalidate class="pf-c-form pf-m-horizontal" >
-
                     <div class="pf-c-form__group-label" style="margin-left:15px;margin-top:15px">
                         <label class="pf-c-form__label" for="form-input-ccvm-dup-mngt-ip" style="margin-right:15px">
                             <span class="pf-c-form__label-text">관리 IP</span>
                         </label>
                         <input class="pf-c-form-control" style="width:50%" type="text" id="form-input-ccvm-dup-mngt-ip" name="form-input-ccvm-dup-mngt-ip" placeholder="xxx.xxx.xxx.xxx 형식으로 입력"/>
                     </div>
-
-
                 </form>
             </div>
             <footer class="pf-c-modal-box__footer">
@@ -1838,6 +1841,38 @@
     </div>
 </div>
 <!-- GFS 디스크 추가 : Modal 영역 끝 -->
+<!-- GFS 호스트 제거 : Modal 영역 시작 -->
+<div id="div-modal-gfs-host-remove" class="pf-c-backdrop" style="display:none">
+    <div class="pf-l-bullseye">
+        <div class="pf-c-modal-box pf-m-sm" role="dialog" aria-modal="true" aria-label="GFS Host Remove">
+            <button id="button-close-gfs-host-remove" aria-disabled="false" aria-label="Close"
+                class="pf-c-button pf-m-plain" type="button">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <header class="pf-c-modal-box__header">
+                <h1 class="pf-c-modal-box__title"><span class="pf-c-modal-box__title-text">호스트 제거</span></h1>
+            </header>
+            <div class="pf-c-modal-box__body">
+                <div>제거할 호스트를 선택해 주세요.</div>
+                <div>
+                    <div class="pf-c-dropdown">
+                        <select class="pf-c-form-control" id="form-select-gfs-host-remove"
+                            name="form-select-gfs-host-remove" style="width:100%">
+                        </select>
+                    </div>
+                </div>
+                <div style="color: var(--pf-global--danger-color--100); margin-top: 20px;"><i class="fas fa-fw fa-exclamation-triangle" aria-hidden="true" style="color: red;"></i>호스트를 제거하면 해당 호스트는 클러스터에서 제외되며, 더 이상 자원을 사용할 수 없습니다.</div>
+            </div>
+            <footer class="pf-c-modal-box__footer">
+                <button id="button-execution-modal-gfs-host-remove" aria-disabled="false"
+                    class="pf-c-button pf-m-primary" type="button" data-ouia-safe="true">실행</button>
+                <button id="button-cancel-modal-gfs-host-remove" aria-disabled="false" class="pf-c-button pf-m-link"
+                    type="button" data-ouia-safe="true">취소</button>
+            </footer>
+        </div>
+    </div>
+</div>
+<!--GFS 호스트 제거 : Modal 영역 끝 -->
 <!-- 모달 영역 끝  -->
 
 <!-- 클라우드센터VM 용량 변경에 관한 modal : ./src/features/cloud-vm-change.html을 내용으로 load -->

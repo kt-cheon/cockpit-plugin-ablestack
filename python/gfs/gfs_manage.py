@@ -649,6 +649,70 @@ def check_stonith(control):
     except Exception:
         ret = createReturn(code=500, val="Stonith Pcs Cluster Failure")
         return print(json.dumps(json.loads(ret), indent=4))
+def check_host():
+    try:
+        hosts = json_data["clusterConfig"]["hosts"]
+        hosts_sorted = sorted(hosts, key=lambda x: x["hostname"])
+
+        ret = createReturn(code=200, val=hosts_sorted)
+        return print(json.dumps(json.loads(ret), indent=4))
+    except Exception:
+        ret = createReturn(code=500, val="Get Host IP Failure")
+        return print(json.dumps(json.loads(ret), indent=4))
+def check_ccvm(target_ip):
+    try:
+        ssh_client = connect_to_host(target_ip)
+        check = run_command("virsh list --all | grep ccvm", ssh_client)
+        if check == "":
+            ret = createReturn(code=201, val="CCVM IP is None")
+            return print(json.dumps(json.loads(ret), indent=4))
+        else:
+            run_command("pcs resource move cloudcenter_res", ssh_client)
+        ret = createReturn(code=200, val="Get CCVM IP Success")
+        return print(json.dumps(json.loads(ret), indent=4))
+    except Exception:
+        ret = createReturn(code=500, val="Get CCVM IP Error")
+        return print(json.dumps(json.loads(ret), indent=4))
+def remove_host(target_ip, hostname):
+    try:
+        ssh_client = connect_to_host(target_ip)
+        pcs_init_command = [
+            f"pcs stonith delete fence-{hostname}",
+            f"pcs resource remove fence-{hostname}",
+            f"pcs cluster node remove {target_ip}"
+        ]
+        for cmd in pcs_init_command:
+            run_command(cmd, ssh_client)
+        ssh_client.close()
+
+        list_ips = [host["ablecube"] for host in json_data["clusterConfig"]["hosts"]]
+
+        for ip in list_ips:
+            if ip == target_ip:
+                pass
+            else:
+                ssh_client = connect_to_host(ip)
+                run_command(f"python3 {pluginpath}/python/cluster/cluster_config.py reset-sync -ti {target_ip}", ssh_client)
+        ssh_client.close()
+
+        ssh_client = connect_to_host(target_ip)
+        cleanup_commands = [
+            f"python3 {pluginpath}/python/cluster/cluster_config.py reset",     # cluster.json 초기화 명령어
+            f"python3 {pluginpath}/python/ablestack/ablestackJson.py reset",    # ablestack.json 초기화 명령어
+            "sed -i '3,$d' /etc/hosts",                                 # hosts 파일 초기화
+            "rm -rf /root/.ssh/id_rsa /root/.ssh/id_rsa.pub"            # SSH 키 삭제
+        ]
+        for cmd in cleanup_commands:
+            run_command(cmd, ssh_client)
+
+        ssh_client.close()
+
+        ret = createReturn(code=200, val="Remove Host Success")
+        return print(json.dumps(json.loads(ret), indent=4))
+    except Exception:
+        ret = createReturn(code=500, val="Remove Host Failure")
+        return print(json.dumps(json.loads(ret), indent=4))
+
 def init_qdevice():
     try:
             ip = run_command("grep 'ccvm-mngt' /etc/hosts | awk '{print $1}'").strip()
@@ -705,7 +769,6 @@ def check_qdevice():
     except Exception as e:
         ret = createReturn(code=500, val="Qdevice Check Failure")
         return print(json.dumps(json.loads(ret), indent=4))
-
 def main():
     parser = argparse.ArgumentParser(description="Cluster configuration script")
 
@@ -729,6 +792,11 @@ def main():
     parser.add_argument('--check-stonith', action='store_true', help='Flag to Check Pcs Cluster Stonith.')
     parser.add_argument('--control', type=str, help='Flag to Pcs Cluster Stonith Maintenance Control.')
     parser.add_argument('--check-ipmi',action='store_true', help='Flag to Check Pcs Cluster IPMI Status.')
+    parser.add_argument('--check-host', action='store_true', help='Flag to Check Host Info.')
+    parser.add_argument('--check-ccvm', action='store_true', help='Flag to Check CCVM IP.')
+    parser.add_argument('--remove-host', action='store_true', help='Flag to Remove Host.')
+    parser.add_argument('--target-ip', type=str, help='Flag to Host IP.')
+    parser.add_argument('--hostname', type=str, help='Flag to Host Name.')
     parser.add_argument('--init-qdevice', action='store_true', help='Flag to Qdevice Init.')
     parser.add_argument('--check-qdevice', action='store_true', help='Flag to Check Pcs Cluster Qdevice Structure.')
     # 확장할 시에 사용되는 parser들
@@ -863,6 +931,22 @@ def main():
              parser.error("--control is required for --check-stonith")
         control = args.control
         check_stonith(control)
+
+    if args.check_host:
+        check_host()
+
+    if args.check_ccvm:
+        if not args.target_ip:
+            parser.error("--target-ip is required for --check-ccvm")
+        else:
+            check_ccvm(args.target_ip)
+
+    if args.remove_host:
+        if not all([args.target_ip, args.hostname]):
+            print("--target-ip, --hostname required when using --remove-host")
+            parser.print_help()
+        else:
+            remove_host(args.target_ip, args.hostname)
 
     if args.init_qdevice:
         init_qdevice()
