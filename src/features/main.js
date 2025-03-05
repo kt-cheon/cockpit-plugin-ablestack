@@ -237,12 +237,15 @@ $(document).ready(function(){
                 const licenses = result.val;
                 let hasValidLicense = false;
 
-                licenses.forEach(license => {
-                    if(license.status === 'active') {
-                        hasValidLicense = true;
-                        // 여기에 라이센스 상태에 따른 UI 업데이트 로직 추가
-                    }
-                });
+                if(Array.isArray(licenses)) {
+                    licenses.forEach(license => {
+                        if(license.status === 'active') {
+                            hasValidLicense = true;
+                        }
+                    });
+                } else if(licenses.status === 'active') { // 단일 라이센스 객체인 경우
+                    hasValidLicense = true;
+                }
 
                 if(!hasValidLicense) {
                     // 유효한 라이센스가 없는 경우 처리
