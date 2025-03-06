@@ -2513,13 +2513,29 @@ $('#button-cancel-modal-gfs-maintenance-setting, #button-close-modal-cloud-vm-ma
 // });
 
 $('#button-gfs-multipath-sync').on("click",function(){
+    $('#div-modal-multipath-sync').show();
+});
+
+$('#button-execution-modal-multipath-sync').on("click",function(){
+    $('#div-modal-multipath-sync').hide();
     $('#div-modal-spinner-header-txt').text('멀티패스 장치 동기화하고 있습니다.');
     $('#div-modal-spinner').show();
 
     cockpit.spawn(["sh", pluginpath + "/shell/host/multipath_sync.sh"])
-    .then(function(data){
+    .then(function(){
         $('#div-modal-spinner').hide();
-    })
+        $("#modal-status-alert-title").html("멀티패스 동기화");
+        $("#modal-status-alert-body").html("멀티패스 동기화를 완료되었습니다.");
+        $('#div-modal-status-alert').show();
+    });
+});
+$('#modal-input-multipath-sync').on('click', function(){
+    var condition = $("#button-execution-modal-multipath-sync").prop( 'disabled' );
+    $("#button-execution-modal-multipath-sync").prop("disabled", condition ? false : true);
+});
+
+$('#button-close-modal-multipath-sync, #button-cancel-modal-multipath-sync').on("click",function(){
+    $('#div-modal-multipath-sync').hide();
 });
 
 $('#menu-item-set-gfs-disk-add').on('click',function(){
@@ -2705,6 +2721,13 @@ $('#button-gfs-host-remove').on('click', function(){
 
 $('#button-cancel-modal-gfs-host-remove, #button-close-gfs-host-remove').on('click', function(){
     $('#div-modal-gfs-host-remove').hide();
+});
+
+$('#modal-input-gfs-host-remove').on('click', function(){
+    var condition = $("#button-execution-modal-gfs-host-remove").prop( 'disabled' );
+    var check = $('#form-select-gfs-host-remove').val();
+
+    $("#button-execution-modal-gfs-host-remove").prop("disabled", condition ? (check ? false : true) : true);
 });
 
 $('#button-execution-modal-gfs-host-remove').on('click', function(){
