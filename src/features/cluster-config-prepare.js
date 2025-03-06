@@ -1852,7 +1852,8 @@ function screenConversion(){
         $('#form-input-cluster-config-host-number').val(1);
         $('#div-form-hosts-ablestack-vm').show();
         $('#div-form-hosts').hide();
-        $('[name=pcs-cluster]').hide();
+        $('[name="pcs-cluster"]').hide();
+        $('[name="pcs-host-pn-ip-all"]').hide();
         if($('[name="radio-cluster-host"').val() == "add"){
             $('[name="cluster-config-ccvm-info"]').hide();
             $('[name="cluster-config-ipmi-info"]').show();
@@ -1867,7 +1868,7 @@ function screenConversion(){
         $('#form-input-cluster-config-host-number').val(3);
         $('#div-form-hosts-ablestack-vm').hide();
         $('#div-form-hosts').show();
-        $('[name=pcs-cluster]').show();
+        $('[name="pcs-cluster"]').show();
     }
 }
 
