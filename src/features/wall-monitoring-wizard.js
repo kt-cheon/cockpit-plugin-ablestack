@@ -368,7 +368,7 @@ function resetWallMonitoringWizard() {
     var smtp_server_port = $('#form-input-wall-smtp-server-port').val();
     var email_addr = $('#form-input-wall-smtp-email-addr').val();
     var email_pw = $('#form-input-wall-smtp-email-pw').val();
-    var receive_email_addr = $('#form-input-wall-smtp-receive-email-addr').val();
+    // var receive_email_addr = $('#form-input-wall-smtp-receive-email-addr').val();
 
     if (!smtp_yn_bool) {
         $('#div-wall-progress-step3').hide();
@@ -461,6 +461,18 @@ function resetWallMonitoringWizard() {
                                                 .then(function (data) {
                                                     var smtp_conf_result = JSON.parse(data);
                                                     if(smtp_conf_result.code=="200") { //정상
+                                                        // /root/bootstrap.sh 파일을 실행함.
+                                                        cockpit.spawn(["sh", pluginpath+"/shell/host/bootstrap_run.sh","wall"])
+                                                        .then(function(data){
+                                                            console.log(data);
+                                                            setWallProgressStep("span-wall-progress-step3",2);
+                                                            //최종 화면 호출
+                                                            showDivisionWallConfigFinish();
+                                                        })
+                                                        .catch(function(data){
+                                                            console.log("bootstrap_run_check() Error : " + data);
+                                                        });
+                                                        /** grafana 11 버전으로 업그레이드 하면서 불필요
                                                         //=========== 3-2. API key 생성 ===========
                                                         var api_key_cmd = ['python3', pythonPath + 'create_admin_apikey.py', ccvm_ip, 'ablestack-admin'];
                                                         if (console_log) { console.log(api_key_cmd); }
@@ -476,48 +488,48 @@ function resetWallMonitoringWizard() {
                                                                     var notifi_channel_config_result = JSON.parse(data);
                                                                     if(notifi_channel_config_result.code=="200") { //정상
                                                                         //=========== 3-4. notification channel 생성 ===========
-                                                                        var notifi_channel_create_cmd = ['python3', pythonPath + 'create_noti_channel.py', ccvm_ip];
-                                                                        if (console_log) { console.log(notifi_channel_create_cmd); }
-                                                                        cockpit.spawn(notifi_channel_create_cmd, { host: ccvm_ip })
-                                                                        .then(function (data) {
-                                                                            var notifi_channel_create_result = JSON.parse(data);
-                                                                            if(notifi_channel_create_result.code=="200") { //정상
-                                                                                //=========== 3-5. smtp - notification channel 테스트 ===========
-                                                                                var notifi_channel_test_cmd = ['python3', pythonPath + 'test_noti_channel.py', ccvm_ip];
-                                                                                if (console_log) { console.log(notifi_channel_test_cmd); }
-                                                                                cockpit.spawn(notifi_channel_test_cmd, { host: ccvm_ip })
-                                                                                .then(function (data) {
-                                                                                    var notifi_channel_test_result = JSON.parse(data);
-                                                                                    if(notifi_channel_test_result.code=="200") { //정상
-                                                                                        // /root/bootstrap.sh 파일을 실행함.
-                                                                                        cockpit.spawn(["sh", pluginpath+"/shell/host/bootstrap_run.sh","wall"])
-                                                                                        .then(function(data){
-                                                                                            console.log(data);
-                                                                                            setWallProgressStep("span-wall-progress-step3",2);
-                                                                                            //최종 화면 호출
-                                                                                            showDivisionWallConfigFinish();
-                                                                                        })
-                                                                                        .catch(function(data){
-                                                                                            console.log("bootstrap_run_check() Error : " + data);
-                                                                                        });
-                                                                                    } else {
-                                                                                        setWallProgressFail(3);
-                                                                                        alert(notifi_channel_test_result.val);
-                                                                                    }
-                                                                                })
-                                                                                .catch(function (data) {
-                                                                                    setWallProgressFail(3);
-                                                                                    alert("notification channel 연결 테스트 실패 : " + data);
-                                                                                });
-                                                                            } else {
-                                                                                setWallProgressFail(3);
-                                                                                alert(notifi_channel_create_result.val);
-                                                                            }
-                                                                        })
-                                                                        .catch(function (data) {
-                                                                            setWallProgressFail(3);
-                                                                            alert("notification channel 생성 실패 : " + data);
-                                                                        });
+                                                                         var notifi_channel_create_cmd = ['python3', pythonPath + 'create_noti_channel.py', ccvm_ip];
+                                                                         if (console_log) { console.log(notifi_channel_create_cmd); }
+                                                                         cockpit.spawn(notifi_channel_create_cmd, { host: ccvm_ip })
+                                                                         .then(function (data) {
+                                                                             var notifi_channel_create_result = JSON.parse(data);
+                                                                             if(notifi_channel_create_result.code=="200") { //정상
+                                                                                 //=========== 3-5. smtp - notification channel 테스트 ===========
+                                                                                 var notifi_channel_test_cmd = ['python3', pythonPath + 'test_noti_channel.py', ccvm_ip];
+                                                                                 if (console_log) { console.log(notifi_channel_test_cmd); }
+                                                                                 cockpit.spawn(notifi_channel_test_cmd, { host: ccvm_ip })
+                                                                                 .then(function (data) {
+                                                                                     var notifi_channel_test_result = JSON.parse(data);
+                                                                                     if(notifi_channel_test_result.code=="200") { //정상
+                                                                                         // /root/bootstrap.sh 파일을 실행함.
+                                                                                         cockpit.spawn(["sh", pluginpath+"/shell/host/bootstrap_run.sh","wall"])
+                                                                                         .then(function(data){
+                                                                                             console.log(data);
+                                                                                             setWallProgressStep("span-wall-progress-step3",2);
+                                                                                             //최종 화면 호출
+                                                                                             showDivisionWallConfigFinish();
+                                                                                         })
+                                                                                         .catch(function(data){
+                                                                                             console.log("bootstrap_run_check() Error : " + data);
+                                                                                         });
+                                                                                     } else {
+                                                                                         setWallProgressFail(3);
+                                                                                         alert(notifi_channel_test_result.val);
+                                                                                     }
+                                                                                 })
+                                                                                 .catch(function (data) {
+                                                                                     setWallProgressFail(3);
+                                                                                     alert("notification channel 연결 테스트 실패 : " + data);
+                                                                                 });
+                                                                             } else {
+                                                                                 setWallProgressFail(3);
+                                                                                 alert(notifi_channel_create_result.val);
+                                                                             }
+                                                                         })
+                                                                         .catch(function (data) {
+                                                                             setWallProgressFail(3);
+                                                                             alert("notification channel 생성 실패 : " + data);
+                                                                         });
                                                                     } else {
                                                                         setWallProgressFail(3);
                                                                         alert(notifi_channel_config_result.val);
@@ -536,6 +548,7 @@ function resetWallMonitoringWizard() {
                                                             setWallProgressFail(3);
                                                             alert("API key 생성 실패 : " + data);
                                                         });
+                                                        */
                                                     } else {
                                                         setWallProgressFail(3);
                                                         alert(smtp_conf_result.val);
@@ -651,7 +664,7 @@ function resetSmtpValues() {
         $('#form-input-wall-smtp-server-port').attr('disabled', false);
         $('#form-input-wall-smtp-email-addr').attr('disabled', false);
         $('#form-input-wall-smtp-email-pw').attr('disabled', false);
-        $('#form-input-wall-smtp-receive-email-addr').attr('disabled', false);
+        // $('#form-input-wall-smtp-receive-email-addr').attr('disabled', false);
     }
     else {
         // 값 초기화
@@ -659,14 +672,14 @@ function resetSmtpValues() {
         $('#form-input-wall-smtp-server-port').val("");
         $('#form-input-wall-smtp-email-addr').val("");
         $('#form-input-wall-smtp-email-pw').val("");
-        $('#form-input-wall-smtp-receive-email-addr').val("");
+        // $('#form-input-wall-smtp-receive-email-addr').val("");
 
         // 입력값 비활성화
         $('#form-input-wall-smtp-server-ip').attr('disabled', true);
         $('#form-input-wall-smtp-server-port').attr('disabled', true);
         $('#form-input-wall-smtp-email-addr').attr('disabled', true);
         $('#form-input-wall-smtp-email-pw').attr('disabled', true);
-        $('#form-input-wall-smtp-receive-email-addr').attr('disabled', true);
+        // $('#form-input-wall-smtp-receive-email-addr').attr('disabled', true);
     }
 }
 
@@ -773,12 +786,12 @@ function setWallReviewInfo() {
         $('#span-wall-monitoring-smtp-email-pw').text("********");
     }
 
-    var receive_email_addr = $('#form-input-wall-smtp-receive-email-addr').val();
-    if (receive_email_addr == '') {
-        $('#span-wall-monitoring-smtp-receive-email-addr').text("미입력");
-    } else {
-        $('#span-wall-monitoring-smtp-receive-email-addr').text(receive_email_addr);
-    }
+    // var receive_email_addr = $('#form-input-wall-smtp-receive-email-addr').val();
+    // if (receive_email_addr == '') {
+    //     $('#span-wall-monitoring-smtp-receive-email-addr').text("미입력");
+    // } else {
+    //     $('#span-wall-monitoring-smtp-receive-email-addr').text(receive_email_addr);
+    // }
 
     var smtp_yn_bool = $('input[type=checkbox][id="form-checkbox-smtp-yn"]').is(":checked");
     if (smtp_yn_bool) {
@@ -789,7 +802,7 @@ function setWallReviewInfo() {
         $('#span-wall-monitoring-smtp-server-port').text("N/A");
         $('#span-wall-monitoring-smtp-email-addr').text("N/A");
         $('#span-wall-monitoring-smtp-email-pw').text("N/A");
-        $('#span-wall-monitoring-smtp-receive-email-addr').text("N/A");
+        // $('#span-wall-monitoring-smtp-receive-email-addr').text("N/A");
     }
 }
 
@@ -879,10 +892,10 @@ function validateWallMonitoringVm() {
             alert("이메일 비밀번호를 입력해주세요.");
             validate_check = false;
         }
-        else if (smtp_yn_bool && !checkEmail($("#form-input-wall-smtp-receive-email-addr").val())) {
-            alert("수신 이메일 주소 형식을 확인해주세요.");
-            validate_check = false;
-        }
+        // else if (smtp_yn_bool && !checkEmail($("#form-input-wall-smtp-receive-email-addr").val())) {
+        //     alert("수신 이메일 주소 형식을 확인해주세요.");
+        //     validate_check = false;
+        // }
     }
 
     return validate_check;
