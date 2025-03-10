@@ -3010,8 +3010,8 @@ function setGfsDiskInfo(){
                             if (!displayedMultipaths.has(mpathName)) {
                                 var mpathHtml = '';
                                 mpathHtml += '<div class="pf-c-check">';
-                                // mpathHtml += '<input class="pf-c-check__input" type="checkbox" id="form-cloud-checkbox-disk' + i + '" name="form-cloud-checkbox-disk" value="' + pci_list[i].children[j].path + '" ' + check_disable + ' />';
-                                mpathHtml += '<input class="pf-c-check__input" type="checkbox" id="form-cloud-checkbox-disk' + i + '" name="form-cloud-checkbox-disk" value="' + pci_list[i].children[j].path + '" />';
+                                mpathHtml += '<input class="pf-c-check__input" type="checkbox" id="form-cloud-checkbox-disk' + i + '" name="form-cloud-checkbox-disk" value="' + pci_list[i].children[j].path + '" ' + check_disable + ' />';
+                                // mpathHtml += '<input class="pf-c-check__input" type="checkbox" id="form-cloud-checkbox-disk' + i + '" name="form-cloud-checkbox-disk" value="' + pci_list[i].children[j].path + '" />';
                                 mpathHtml += '<label class="pf-c-check__label" style="margin-top:5px" for="form-cloud-checkbox-disk' + i + '">' + pci_list[i].children[j].path + ' ' + pci_list[i].children[j].state + ' (' + pci_list[i].children[j].type + ') ' + pci_list[i].children[j].size + ' ' + ' ' + pci_list[i].vendor + ' ' + pci_list[i].wwn  + ' ' + partition_text + '</label>';
                                 mpathHtml += '</div>';
 
@@ -3026,8 +3026,8 @@ function setGfsDiskInfo(){
                             var disk_name = pci_list[i].name;
                             if (!displayedName.has(disk_name)) {
                                 el += '<div class="pf-c-check">';
-                                // el += '<input class="pf-c-check__input" type="checkbox" id="form-cloud-checkbox-disk' + i + '" name="form-cloud-checkbox-disk" value="' + pci_list[i].path + '" ' + check_disable + ' />';
-                                el += '<input class="pf-c-check__input" type="checkbox" id="form-cloud-checkbox-disk' + i + '" name="form-cloud-checkbox-disk" value="' + pci_list[i].path + '" />';
+                                el += '<input class="pf-c-check__input" type="checkbox" id="form-cloud-checkbox-disk' + i + '" name="form-cloud-checkbox-disk" value="' + pci_list[i].path + '" ' + check_disable + ' />';
+                                // el += '<input class="pf-c-check__input" type="checkbox" id="form-cloud-checkbox-disk' + i + '" name="form-cloud-checkbox-disk" value="' + pci_list[i].path + '" />';
                                 el += '<label class="pf-c-check__label" style="margin-top:5px" for="form-cloud-checkbox-disk' + i + '">' + pci_list[i].path + ' ' + pci_list[i].state + ' (' + pci_list[i].tran + ') ' + pci_list[i].size + ' ' + pci_list[i].model + ' ' + pci_list[i].wwn + partition_text + '</label>';
                                 el += '</div>';
 
@@ -3040,8 +3040,8 @@ function setGfsDiskInfo(){
                         pci_list[i].wwn = ""; // 값을 공백으로 설정
                     }
                     el += '<div class="pf-c-check">';
-                    // el += '<input class="pf-c-check__input" type="checkbox" id="form-cloud-checkbox-disk' + i + '" name="form-cloud-checkbox-disk" value="' + pci_list[i].path + '" ' + check_disable + ' />';
-                    el += '<input class="pf-c-check__input" type="checkbox" id="form-cloud-checkbox-disk' + i + '" name="form-cloud-checkbox-disk" value="' + pci_list[i].path + '" />';
+                    el += '<input class="pf-c-check__input" type="checkbox" id="form-cloud-checkbox-disk' + i + '" name="form-cloud-checkbox-disk" value="' + pci_list[i].path + '" ' + check_disable + ' />';
+                    // el += '<input class="pf-c-check__input" type="checkbox" id="form-cloud-checkbox-disk' + i + '" name="form-cloud-checkbox-disk" value="' + pci_list[i].path + '" />';
                     el += '<label class="pf-c-check__label" style="margin-top:5px" for="form-cloud-checkbox-disk' + i + '">' + pci_list[i].path + ' ' + pci_list[i].state + ' (' + pci_list[i].tran + ') ' + pci_list[i].size + ' ' + pci_list[i].model + ' ' + pci_list[i].wwn + partition_text + '</label>';
                     el += '</div>';
                 }
