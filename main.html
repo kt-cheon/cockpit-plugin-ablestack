@@ -70,8 +70,9 @@
                                                 <li class="pf-c-divider" role="separator"></li>
                                                 <li id="gfs-multipath-sync">
                                                     <button id="button-gfs-multipath-sync"
+                                                    name="button-gfs-multipath-sync-name"
                                                     class="pf-c-dropdown__menu-item"
-                                                    type="button">멀티패스 동기화</button>
+                                                    type="button">외부 스토리지 동기화</button>
                                                 </li>
                                                 <li class="pf-c-divider" role="separator"></li>
                                                 <li id="gfs-host-remove">
@@ -202,6 +203,27 @@
                                                 <li id="scvm-before-bootstrap-run"></li>
                                                 <li id="scvm-after-update-glue-config"></li>
                                                 <li id="pfmp-bootstrap-run"></li>
+                                                <li class="pf-c-divider" role="separator"></li>
+                                                <li id="gfs-multipath-sync">
+                                                    <button id="button-gfs-multipath-sync"
+                                                    name="button-gfs-multipath-sync-name"
+                                                    class="pf-c-dropdown__menu-item"
+                                                    type="button">외부 스토리지 동기화</button>
+                                                </li>
+                                                <li class="pf-c-divider" role="separator"></li>
+                                                <li>
+                                                    <button class="pf-c-dropdown__menu-item" type="button"
+                                                        id="menu-item-set-hci-clvm-disk-add">CLVM 디스크 추가</button>
+                                                </li>
+                                                <li>
+                                                    <button class="pf-c-dropdown__menu-item" type="button"
+                                                        id="menu-item-set-hci-clvm-disk-delete">CLVM 디스크 삭제</button>
+                                                </li>
+                                                <li class="pf-c-divider" role="separator"></li>
+                                                <li>
+                                                    <button class="pf-c-dropdown__menu-item" type="button"
+                                                        id="menu-item-set-hci-clvm-disk-info">CLVM 디스크 정보</button>
+                                                </li>
                                                 <li class="pf-c-divider" role="separator"></li>
                                                 <li>
                                                     <button class="pf-c-dropdown__menu-item pf-m-disabled" type="button"
@@ -1882,7 +1904,7 @@
     </div>
 </div>
 <!--GFS 호스트 제거 : Modal 영역 끝 -->
-<!-- 멀티패스 동기화  : Modal 영역 시작 -->
+<!-- 외부 스토리지 동기화  : Modal 영역 시작 -->
 <div id="div-modal-multipath-sync" class="pf-c-backdrop" style="display:none">
     <div class="pf-l-bullseye">
         <div class="pf-c-modal-box pf-m-sm" role="dialog" aria-modal="true" aria-label="Multipath Sync">
@@ -1891,16 +1913,16 @@
                 <i class="fas fa-times" aria-hidden="true"></i>
             </button>
             <header class="pf-c-modal-box__header">
-                <h1 class="pf-c-modal-box__title"><span class="pf-c-modal-box__title-text">멀티패스 동기화</span>
+                <h1 class="pf-c-modal-box__title"><span class="pf-c-modal-box__title-text">외부 스토리지 동기화</span>
                 </h1>
             </header>
             <div class="pf-c-modal-box__body">
-                <div>멀티패스 동기화를 진행하시겠습니까?<br/><br/><p style="color:maroon;"><i class="fas fa-fw fa-exclamation-triangle" aria-hidden="true" style="color: orange;"></i>해당 장치는 반드시 이중화되어 있어야 합니다. 만약 싱글 패스로 구성되어 있다면 실행하지 마세요.</p></div>
+                <div> 동기화를 진행하시겠습니까?<br/><br/><p style="color:maroon;"><i class="fas fa-fw fa-exclamation-triangle" aria-hidden="true" style="color: orange;"></i>해당 장치는 반드시 이중화되어 있어야 합니다. 만약 싱글 패스로 구성되어 있다면 실행하지 마세요.</p></div>
             </div>
             <div id="modal-div-multipath-sync" class="pf-c-modal-box__body pf-l-flex pf-m-align-items-center">
-                <p>멀티패스 설정 확인</p>
+                <p>외부 스토리지 설정 확인</p>
                 <label class="pf-c-switch">
-                    <input id="modal-input-multipath-sync" class="pf-c-switch__input" type="checkbox" aria-label="멀티패스 체크">
+                    <input id="modal-input-multipath-sync" class="pf-c-switch__input" type="checkbox" aria-label="외부 스토리지 체크">
                     <span class="pf-c-switch__toggle">
                         <div id="modal-switch-multipath-sync" class="pf-c-switch__toggle-icon" aria-hidden="true"></div>
                     </span>
@@ -1915,7 +1937,7 @@
         </div>
     </div>
 </div>
-<!-- 멀티패스 동기화 : Modal 영역 끝 -->
+<!-- 외부 스토리지 동기화 : Modal 영역 끝 -->
 <!-- 모달 영역 끝  -->
 
 <!-- 클라우드센터VM 용량 변경에 관한 modal : ./src/features/cloud-vm-change.html을 내용으로 load -->
