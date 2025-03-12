@@ -78,6 +78,11 @@ def setupStorageVm(args):
     if check_err != 0 :
         success_bool = False
 
+    # openvswitch를 위한 scvm.xml에서 filterref 부분 삭제
+    openvswitch_service_check = os.system("systemctl is-active openvswitch > /dev/null")
+    if openvswitch_service_check == 0:
+        os.system("sed -i '/<filterref/d' /usr/share/cockpit/ablestack/tools/vmconfig/scvm/scvm.xml")
+
     # virsh 초기화
     check_err = os.system("virsh define "+pluginpath+"/tools/vmconfig/scvm/scvm.xml > /dev/null")
     if check_err != 0 :

@@ -120,7 +120,7 @@ def createScvmXml(args):
         slot_hex_num = generateDecToHex()
         host_dev_num = 0
         br_num = 0
-
+        openvswitch_service_check = os.system("systemctl is-active openvswitch > /dev/null")
         # 생성할 가상머신 xml 템플릿
         if os_type == "PowerFlex":
             os.system("/usr/bin/cp -f "+pluginpath+"/tools/xml-template/powerflex-scvm-xml-template.xml "+pluginpath+"/tools/vmconfig/scvm/scvm-temp.xml")
@@ -173,6 +173,9 @@ def createScvmXml(args):
                     mnb_txt += "      <target dev='vnet" + str(br_num) + "'/>\n"
                     mnb_txt += "      <model type='virtio'/>\n"
                     mnb_txt += "      <alias name='net" + str(br_num) + "'/>\n"
+                    # openvswitch 서비스가 활성화일 경우 해당 코드 추가
+                    if openvswitch_service_check == 0:
+                        mnb_txt += "      <virtualport type='openvswitch' />\n"
                     mnb_txt += "      <address type='pci' domain='0x0000' bus='0x00' slot='" + slot_hex_num.pop(0) + "' function='0x0'/>\n"
                     mnb_txt += "    </interface>\n"
 
