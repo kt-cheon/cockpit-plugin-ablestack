@@ -2331,6 +2331,10 @@ $('#menu-item-set-gfs-clvm-disk-add').on('click',function(){
     setDiskAction("clvm","add")
     $('#div-modal-clvm-disk-add').show();
 });
+$('#menu-item-set-hci-clvm-disk-add').on('click',function(){
+    setDiskAction("clvm","add")
+    $('#div-modal-clvm-disk-add').show();
+});
 $('#button-close-modal-clvm-disk-add, #button-cancel-modal-clvm-disk-add').on('click',function(){
     $('#div-modal-clvm-disk-add').hide();
 });
@@ -2372,6 +2376,10 @@ $('#div-modal-clvm-disk-add').on('change', 'input[type=checkbox][name="form-clvm
 });
 
 $('#menu-item-set-gfs-clvm-disk-delete').on('click',function(){
+    setDiskAction("clvm","delete")
+    $('#div-modal-clvm-disk-delete').show();
+});
+$('#menu-item-set-hci-clvm-disk-delete').on('click',function(){
     setDiskAction("clvm","delete")
     $('#div-modal-clvm-disk-delete').show();
 });
@@ -2424,6 +2432,10 @@ $('#div-modal-clvm-disk-delete').on('change', 'input[type=checkbox][name="form-c
     $('#button-execution-modal-clvm-disk-delete').prop('disabled', !isChecked);
 });
 $('#menu-item-set-gfs-clvm-disk-info').on('click',function(){
+    setDiskAction("clvm", "list")
+    $('#div-modal-clvm-disk-info').show();
+});
+$('#menu-item-set-hci-clvm-disk-info').on('click',function(){
     setDiskAction("clvm", "list")
     $('#div-modal-clvm-disk-info').show();
 });
@@ -2512,20 +2524,20 @@ $('#button-cancel-modal-gfs-maintenance-setting, #button-close-modal-cloud-vm-ma
 
 // });
 
-$('#button-gfs-multipath-sync').on("click",function(){
+$('[name="button-gfs-multipath-sync-name"]').on("click",function(){
     $('#div-modal-multipath-sync').show();
 });
 
 $('#button-execution-modal-multipath-sync').on("click",function(){
     $('#div-modal-multipath-sync').hide();
-    $('#div-modal-spinner-header-txt').text('멀티패스 장치 동기화하고 있습니다.');
+    $('#div-modal-spinner-header-txt').text('외부 스토리지 장치 동기화하고 있습니다.');
     $('#div-modal-spinner').show();
 
     cockpit.spawn(["sh", pluginpath + "/shell/host/multipath_sync.sh"])
     .then(function(){
         $('#div-modal-spinner').hide();
-        $("#modal-status-alert-title").html("멀티패스 동기화");
-        $("#modal-status-alert-body").html("멀티패스 동기화를 완료되었습니다.");
+        $("#modal-status-alert-title").html("외부 스토리지 동기화");
+        $("#modal-status-alert-body").html("외부 스토리지 동기화를 완료되었습니다.");
         $('#div-modal-status-alert').show();
     });
 });

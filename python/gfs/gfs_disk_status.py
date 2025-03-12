@@ -102,7 +102,7 @@ def get_gfs2_mounts():
 def filter_gfs2_mounted_devices(blockdevices, gfs2_mounts):
     """
     GFS2로 마운트된 디스크만 필터링합니다.
-    - LVM 경로, 멀티패스 경로, 마운트 경로만 반환합니다.
+    - LVM 경로, 외부 스토리지 경로, 마운트 경로만 반환합니다.
     """
     filtered_devices = []
 
