@@ -923,7 +923,7 @@ function tableToHostsText(table_tr_obj, option, os_type){
             if(current_host_name == host_name){
                 temp_text = host_ip + "\t" + host_name + "\t" + "ablecube" + "\n";
                 temp_text += scvm_mngt_ip + "\t"  + "scvm"+idx+"-mngt" + "\t" + "scvm-mngt" + "\n";
-                temp_text += host_pn_ip + "\t"  + "pn-"+"ablecube"+idx+ + "\t" + "pn-ablecube" + "\n";
+                temp_text += host_pn_ip + "\t"  + "pn-"+"ablecube"+idx + "\t" + "pn-ablecube" + "\n";
                 temp_text += scvm_pn_ip + "\t"  + "pn-"+"scvm"+idx + "\t" + "pn-scvm" + "\n";
                 temp_text += scvm_cn_ip + "\t"  + "cn-"+"scvm"+idx + "\t" + "cn-scvm" + "\n";
             } else {
