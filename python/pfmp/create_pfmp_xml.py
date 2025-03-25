@@ -103,8 +103,6 @@ def createPfmpXml(args):
                     # openvswitch 서비스가 활성화일 경우 해당 코드 추가
                     if openvswitch_service_check == 0:
                         mnb_txt += "      <virtualport type='openvswitch' />\n"
-                    else:
-                        mnb_txt += "      <filterref filter='allow-all-traffic'/>\n"
                     mnb_txt += "      <mac address='" + generateMacAddress() + "'/>\n"
                     mnb_txt += "      <source bridge='" + args.management_network_bridge + "'/>\n"
                     mnb_txt += "      <target dev='vnet" + str(br_num) + "'/>\n"
@@ -118,8 +116,6 @@ def createPfmpXml(args):
                 elif '<!--storage_network_bridge-->' in line:
                     if args.storage_network_bridge is not None:
                         snb_txt = "    <interface type='bridge'>\n"
-                        if openvswitch_service_check != 0:
-                            snb_txt += "      <filterref filter='allow-all-traffic'/>\n"
                         snb_txt += "      <mac address='" + generateMacAddress() + "'/>\n"
                         snb_txt += "      <source bridge='" + args.storage_network_bridge + "'/>\n"
                         snb_txt += "      <target dev='vnet" + str(br_num) + "'/>\n"
