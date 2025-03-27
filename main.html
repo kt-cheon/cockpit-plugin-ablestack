@@ -35,7 +35,7 @@
                     <button style="display:none;font-size: 0.83rem;" class="pf-c-button pf-m-primary pf-m-inline"
                         id="button-config-file-download" aria-disabled="false" type="button" data-ouia-safe="true">설정파일
                         다운로드</button>
-                    <button class="pf-c-button pf-m-link pf-m-inline" type="button" id="button-open-modal-license-register">라이센스 등록</button>
+                    <button class="pf-c-button pf-m-link pf-m-inline" type="button" id="button-open-modal-license-register">라이센스 관리</button>
                 </div>
             </div>
         </section>
@@ -1952,7 +1952,7 @@
 <!-- 해당 페이지에 필요한 javascript 파일 추가 영역 끝 -->
 
 <!-- 모달 영역 끝 부분에 추가 -->
-<!-- 라이센스 등록 : Modal 영역 시작 -->
+<!-- 라이센스 관리 : Modal 영역 시작 -->
 <div id="div-modal-license-register" class="pf-c-backdrop" style="display:none">
     <div class="pf-l-bullseye">
         <div class="pf-c-modal-box pf-m-sm" role="dialog" aria-modal="true" aria-label="License Registration">
@@ -1961,7 +1961,7 @@
                 <i class="fas fa-times" aria-hidden="true"></i>
             </button>
             <header class="pf-c-modal-box__header">
-                <h1 class="pf-c-modal-box__title"><span class="pf-c-modal-box__title-text">라이센스 등록</span></h1>
+                <h1 class="pf-c-modal-box__title"><span class="pf-c-modal-box__title-text">라이센스 관리</span></h1>
             </header>
             <div class="pf-c-modal-box__body">
                 <form novalidate class="pf-c-form pf-m-horizontal">
@@ -1973,7 +1973,7 @@
                             </label>
                         </div>
                         <div class="pf-c-form__group-control">
-                            <input class="pf-c-form-control" type="file" id="input-license-file" name="input-license-file" accept=".lic" required />
+                            <input class="pf-c-form-control" type="file" id="input-license-file" name="input-license-file" accept="*" required />
                         </div>
                     </div>
                 </form>
@@ -1983,77 +1983,14 @@
             </div>
             <footer class="pf-c-modal-box__footer">
                 <button id="button-execution-modal-license-register" aria-disabled="false"
-                    class="pf-c-button pf-m-primary" type="button" data-ouia-safe="true">등록</button>
-                <button id="button-cancel-modal-license-register" aria-disabled="false" class="pf-c-button pf-m-link"
-                    type="button" data-ouia-safe="true">취소</button>
+                    class="pf-c-button pf-m-primary" type="button" data-ouia-safe="true" disabled>실행</button>
+                <button id="button-cancel-modal-license-register" aria-disabled="false"
+                    class="pf-c-button pf-m-link" type="button" data-ouia-safe="true">취소</button>
             </footer>
         </div>
     </div>
 </div>
-<!-- 라이센스 등록 : Modal 영역 끝 -->
-
-<!-- 실행 버튼 클릭 이벤트 -->
-<script>
-$('#button-execution-modal-license-register').on('click', function(){
-    const licenseFile = $('#input-license-file')[0].files[0];
-
-    // 필수 입력값 검증
-    if (!licenseFile) {
-        alert("라이센스 파일을 선택해주세요.");
-        return;
-    }
-
-    // 로딩 스피너 표시
-    $('#div-modal-spinner-header-txt').text('라이센스 등록중입니다...');
-    $('#div-modal-spinner-body-txt').text('라이센스를 등록하는 중입니다. 잠시만 기다려주세요.');
-    $('#div-modal-spinner').show();
-
-    // 파일 읽기
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const fileContent = e.target.result;
-
-        // 임시 파일로 저장
-        const tempPath = `/tmp/license.dat`;
-
-        // 임시 파일로 저장
-        cockpit.file(tempPath, { superuser: "try" }).replace(fileContent)
-        .then(() => {
-            // 라이센스 등록 Python 스크립트 실행
-            return cockpit.spawn(['python3', '/usr/share/cockpit/ablestack/python/license/register_license.py', '--license-file', tempPath], { superuser: true });
-        })
-        .then(function(data) {
-            $('#div-modal-spinner').hide();
-            const result = JSON.parse(data);
-            if(result.code == "200") {
-                // 등록 성공
-                $('#div-modal-license-register').hide();
-                alert("라이센스가 등록되었습니다.");
-                location.reload();
-            } else {
-                // 실패 알림 표시
-                alert("라이센스 등록 실패 : " + result.val);
-            }
-        })
-        .catch(function(error) {
-            $('#div-modal-spinner').hide();
-            console.error("Error:", error);
-            alert("라이센스 등록 중 오류가 발생했습니다: " + error);
-        });
-    };
-
-    // 파일 읽기 시작
-    reader.readAsBinaryString(licenseFile);
-});
-
-// 파일 선택 시 버튼 활성화
-$('#input-license-file').on('change', function(){
-    $('#button-execution-modal-license-register').prop('disabled', !this.files.length);
-});
-
-// 초기 버튼 비활성화
-$('#button-execution-modal-license-register').prop('disabled', true);
-</script>
+<!-- 라이센스 관리 : Modal 영역 끝 -->
 
 </body>
 
