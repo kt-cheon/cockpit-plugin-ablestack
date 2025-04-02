@@ -6,112 +6,203 @@ import json
 import sys
 import os
 import shutil
+import uuid
 from datetime import datetime
+from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
+from cryptography.hazmat.backends import default_backend
+import base64
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
+import Crypto
 
 def get_license_status():
     """현재 등록된 라이센스 상태 확인"""
     try:
-        # /root 디렉토리에서 라이센스 파일 찾기
-        license_file = None
-        for file in os.listdir("/root"):
-            if file.startswith("license_") and file.endswith(".lic"):
-                license_file = os.path.join("/root", file)
-                break
+        # 호스트 UUID 가져오기
+        host_uuid = None
+        try:
+            with open('/etc/machine-id', 'r') as f:
+                host_uuid = f.read().strip()
+        except:
+            return {'code': '500', 'val': '호스트 UUID를 읽을 수 없습니다.'}
 
-        if not license_file:
+        # 라이센스 디렉토리 경로
+        license_dir = f"/usr/share/{host_uuid}"
+        
+        # 디렉토리가 없거나 비어있는 경우
+        if not os.path.exists(license_dir) or not os.listdir(license_dir):
             return {'code': '404', 'val': '등록된 라이센스가 없습니다.'}
 
-        return {
-            'code': '200',
-            'val': {
-                'status': '라이센스 파일이 등록되어 있습니다. 다시 등록하면 새 라이센스로 교체됩니다.',
-                'fileName': os.path.basename(license_file)
+        # 가장 최근 라이센스 파일 찾기
+        license_files = [f for f in os.listdir(license_dir) if os.path.isfile(os.path.join(license_dir, f))]
+        if not license_files:
+            return {'code': '404', 'val': '등록된 라이센스가 없습니다.'}
+
+        latest_license = sorted(license_files)[-1]
+        license_file = os.path.join(license_dir, latest_license)
+
+        # 라이센스 파일에서 만료일 추출
+        try:
+            with open(license_file, 'r') as f:
+                license_content = f.read()
+
+            # 복호화 로직
+            password = b"password"
+            salt = b"salt"
+
+            # 32바이트 길이의 키 생성
+            scrypt_kdf = Scrypt(
+                salt=salt,
+                length=32,
+                n=16384,
+                r=8,
+                p=1,
+                backend=default_backend()
+            )
+            key = scrypt_kdf.derive(password)
+
+            # IV 생성
+            iv_scrypt_kdf = Scrypt(
+                salt=salt,
+                length=16,
+                n=16384,
+                r=8,
+                p=1,
+                backend=default_backend()
+            )
+            iv = iv_scrypt_kdf.derive(password)
+
+            # base64로 인코딩된 데이터를 디코딩
+            encrypted_content_bytes = base64.b64decode(license_content)
+
+            # AES 복호화
+            cipher = AES.new(key, AES.MODE_CBC, iv)
+            decrypted_content = unpad(cipher.decrypt(encrypted_content_bytes), AES.block_size)
+            
+            # 복호화된 내용에서 만료일 파싱
+            license_info = json.loads(decrypted_content.decode('utf-8'))
+            expired = license_info.get('expired')
+            
+            if not expired:
+                raise ValueError("만료일을 찾을 수 없습니다")
+            
+            return {
+                'code': '200',
+                'val': {
+                    'status': 'active',
+                    'expired': expired,
+                    'file_path': license_file
+                }
             }
-        }
+        except Exception as e:
+            return {'code': '500', 'val': f'라이센스 정보를 읽을 수 없습니다: {str(e)}'}
+
     except Exception as e:
         return {'code': '500', 'val': f'라이센스 상태 확인 중 오류가 발생했습니다: {str(e)}'}
 
-def validate_license_file(file_path):
-    """라이센스 파일 유효성 검사"""
+def process_license_content(content=None, original_filename=None):
+    """라이센스 내용 처리"""
     try:
-        if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
-            return False
-        if not file_path.lower().endswith(('.dat','.lic')):  # .lic 확장자 허용
-            return False
-        return True
-    except:
-        return False
-
-def process_license_file(license_file=None):
-    """라이센스 파일 처리"""
-    try:
-        if license_file is None:
-            # 라이센스 파일이 지정되지 않은 경우 현재 상태 반환
+        if content is None:
             return get_license_status()
 
-        # 입력 파일 존재 여부 확인
-        if not os.path.exists(license_file):
-            return {'code': '404', 'val': f'라이센스 파일을 찾을 수 없습니다: {license_file}'}
+        # base64 디코딩
+        try:
+            license_content = base64.b64decode(content).decode('utf-8')
+        except:
+            return {'code': '400', 'val': '유효하지 않은 라이센스 내용입니다.'}
 
-        # 라이센스 파일 유효성 검사
-        if not validate_license_file(license_file):
-            return {'code': '400', 'val': '유효하지 않은 라이센스 파일입니다. .lic 확장자의 파일만 등록 가능합니다.'}
+        # 호스트 UUID 가져오기
+        host_uuid = None
+        try:
+            with open('/etc/machine-id', 'r') as f:
+                host_uuid = f.read().strip()
+        except:
+            return {'code': '500', 'val': '호스트 UUID를 읽을 수 없습니다.'}
 
-        # 기존 라이센스 파일 확인
-        existing_license = False
-        for file in os.listdir("/root"):
-            if file.startswith("license_") and file.endswith(".lic"):
-                existing_license = True
-                break
+        # 라이센스 디렉토리 경로
+        license_dir = f"/usr/share/{host_uuid}"
+        
+        # 디렉토리가 없으면 생성
+        if not os.path.exists(license_dir):
+            os.makedirs(license_dir, mode=0o700)
 
-        # 타임스탬프를 이용한 새 파일명 생성
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        new_filename = f"license_{timestamp}.lic"
-        new_filepath = os.path.join("/root", new_filename)
+        try:
+            # 파일내용 복호화
+            password = b"password"
+            salt = b"salt"
 
-        # 기존 라이센스 파일이 있다면 삭제
-        for file in os.listdir("/root"):
-            if file.startswith("license_") and file.endswith(".lic"):
-                try:
-                    os.remove(os.path.join("/root", file))
-                except:
-                    pass
+            # 32바이트 길이의 키 생성
+            scrypt_kdf = Scrypt(
+                salt=salt,
+                length=32,
+                n=16384,
+                r=8,
+                p=1,
+                backend=default_backend()
+            )
+            key = scrypt_kdf.derive(password)
 
-        # 새 파일 복사
-        shutil.copy2(license_file, new_filepath)
+            # IV 생성
+            iv_scrypt_kdf = Scrypt(
+                salt=salt,
+                length=16,
+                n=16384,
+                r=8,
+                p=1,
+                backend=default_backend()
+            )
+            iv = iv_scrypt_kdf.derive(password)
+
+            # base64로 인코딩된 데이터를 디코딩
+            encrypted_content_bytes = base64.b64decode(license_content)
+
+            # AES 복호화
+            cipher = AES.new(key, AES.MODE_CBC, iv)
+            decrypted_content = unpad(cipher.decrypt(encrypted_content_bytes), AES.block_size)
+            
+            # 복호화된 내용에서 만료일 파싱
+            license_info = json.loads(decrypted_content.decode('utf-8'))
+            expired = license_info.get('expired')
+            
+            if not expired:
+                raise ValueError("만료일을 찾을 수 없습니다")
+
+        except Exception as e:
+            return {'code': '500', 'val': f'라이센스 내용을 처리할 수 없습니다: {str(e)}'}
+
+        # 기존 라이센스 파일 삭제
+        for file in os.listdir(license_dir):
+            try:
+                os.remove(os.path.join(license_dir, file))
+            except:
+                pass
+
+        # 원본 파일명에서 확장자 제거
+        if original_filename:
+            filename_without_ext = os.path.splitext(original_filename)[0]
+            new_filename = f"{filename_without_ext}"
+        else:
+            new_filename = f"license_{expired}"
+            
+        new_filepath = os.path.join(license_dir, new_filename)
+
+        # 라이센스 내용 저장
+        with open(new_filepath, 'w') as f:
+            f.write(license_content)
 
         # 파일 권한 설정 (600)
         os.chmod(new_filepath, 0o600)
 
-        # 임시 파일 삭제
-        try:
-            if os.path.exists(license_file):
-                os.remove(license_file)
-        except:
-            pass
-
-        # 라이센스 파일이 정상적으로 복사되었는지 확인
-        if not os.path.exists(new_filepath):
-            return {'code': '500', 'val': '라이센스 파일 복사 실패'}
-
-        # 복사된 파일 크기 확인
-        if os.path.getsize(new_filepath) == 0:
-            os.remove(new_filepath)
-            return {'code': '500', 'val': '라이센스 파일이 비어있습니다.'}
-
-        # 등록 성공 메시지 반환
-        message = "라이센스가 성공적으로 등록되었습니다."
-        if existing_license:
-            message = "기존 라이센스가 새로운 라이센스로 교체되었습니다."
-
-        return {'code': '200', 'val': message}
+        return {'code': '200', 'val': '라이센스가 성공적으로 등록되었습니다.'}
 
     except Exception as e:
         return {'code': '500', 'val': f'라이센스 등록 중 오류가 발생했습니다: {str(e)}'}
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='ABLESTACK 라이센스 등록')
-    parser.add_argument('--license-file', help='라이센스 파일 경로', required=False)
+    parser.add_argument('--license-content', help='라이센스 파일 내용(base64)', required=False)
+    parser.add_argument('--original-filename', help='원본 파일명', required=False)
     parser.add_argument('--status', help='라이센스 상태 확인', action='store_true')
 
     args = parser.parse_args()
@@ -119,7 +210,9 @@ if __name__ == '__main__':
     if args.status:
         result = get_license_status()
     else:
-        result = process_license_file(args.license_file)
+        result = process_license_content(args.license_content, args.original_filename)
 
     print(json.dumps(result))
     sys.exit(0)
+
+print(Crypto.__version__)
