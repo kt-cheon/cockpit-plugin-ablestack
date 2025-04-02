@@ -769,6 +769,33 @@ def check_qdevice():
     except Exception as e:
         ret = createReturn(code=500, val="Qdevice Check Failure")
         return print(json.dumps(json.loads(ret), indent=4))
+
+def alert_setup(list_ips):
+    try:
+        pcmk_log_file = "/var/log/pcmk_alert_file.log"
+        path = pluginpath+"/shell/host/alert_file.sh"
+        if not os.path.exists(pcmk_log_file):
+            for ip in list_ips:
+                ssh_client = connect_to_host(ip)
+                hostname = run_command("hostname", ssh_client)
+                commands = [
+                    f"touch {pcmk_log_file}",
+                    f"chown hacluster:haclient {pcmk_log_file}",
+                    f"chmod 600 {pcmk_log_file}",
+                    f"(crontab -l 2>/dev/null; echo \"@reboot /usr/bin/sleep 20 && /usr/sbin/pcs stonith enable fence-{hostname}\") | crontab -"
+                ]
+                for cmd in commands:
+                    run_command(cmd, ssh_client)
+                ssh_client.close()
+            run_command(f"pcs alert create id=alert_file description='Log events to a file.' path={path}")
+            run_command(f"pcs alert recipient add alert_file id=alert_logfile value={pcmk_log_file}")
+
+        ret = createReturn(code=200, val="Pcs Alert Success")
+        return print(json.dumps(json.loads(ret), indent=4))
+
+    except Exception as e:
+        ret = createReturn(code=500, val="Pcs Alert Failure")
+        return print(json.dumps(json.loads(ret), indent=4))
 def main():
     parser = argparse.ArgumentParser(description="Cluster configuration script")
 
@@ -799,6 +826,7 @@ def main():
     parser.add_argument('--hostname', type=str, help='Flag to Host Name.')
     parser.add_argument('--init-qdevice', action='store_true', help='Flag to Qdevice Init.')
     parser.add_argument('--check-qdevice', action='store_true', help='Flag to Check Pcs Cluster Qdevice Structure.')
+    parser.add_argument('--set-alert', action='store_true', help='Flag to set Pcs Cluster Log File.')
     # 확장할 시에 사용되는 parser들
     parser.add_argument('--password',  help="Extend Host Set the hacluster user password.")
     parser.add_argument('--stonith',  help="Extend Host Set Configure STONITH devices with a list of comma-separated values (ipaddr,port,username,password).")
@@ -953,6 +981,12 @@ def main():
 
     if args.check_qdevice:
         check_qdevice()
+
+    if args.set_alert:
+        if not args.list_ip:
+            parser.error("--list-ip is required for --set-alert")
+        list_ips = args.list_ip.split()
+        alert_setup(list_ips)
 
 if __name__ == "__main__":
     main()
