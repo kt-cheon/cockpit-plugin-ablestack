@@ -1735,144 +1735,161 @@ function deployCloudCenterVM() {
                                                                 var set_configure_stonith_result = JSON.parse(data);
                                                                 console.log(set_configure_stonith_result);
                                                                 if (set_configure_stonith_result.code == "200"){
-                                                                    setProgressStep("span-ccvm-progress-step2",4);
-                                                                    var create_gfs_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--create-gfs',
-                                                                                            '--disks', '/dev/' + powerflex_disk_name, '--vg-name', gfs_vg_name, '--lv-name', gfs_lv_name,
-                                                                                            '--gfs-name', gfs_name, '--mount-point', gfs_mount_point, '--cluster-name', gfs_cluster_name,
-                                                                                            '--journal-nums', journal_nums, '--list-ip', all_host_name]
-                                                                    console.log(create_gfs_cmd);
-                                                                    cockpit.spawn(create_gfs_cmd)
+                                                                    var set_alert_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--set-alert', '--list-ip', all_host_name];
+                                                                    console.log(set_alert_cmd);
+                                                                    cockpit.spawn(set_alert_cmd)
                                                                     .then(function(data){
-                                                                        var create_gfs_result = JSON.parse(data);
-                                                                        console.log(create_gfs_result);
-                                                                        if (create_gfs_result.code == "200"){
-                                                                            //=========== 3. cloudinit iso 파일 생성 ===========
-                                                                            // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/ccvm/cloudinit 경로에 hosts, ssh key 파일 저장
-                                                                            setProgressStep("span-ccvm-progress-step2",2);
-                                                                            setProgressStep("span-ccvm-progress-step3",1);
-                                                                            var host_name = $('#form-input-cloud-vm-hostname').val();
-                                                                            var mgmt_ip = $('#form-input-cloud-vm-mngt-nic-ip').val().split("/")[0];
-                                                                            var mgmt_prefix = $('#form-input-cloud-vm-mngt-nic-ip').val().split("/")[1];
-                                                                            var mngt_gw = $('#form-input-cloud-vm-mngt-gw').val();
-                                                                            var dns = $('#form-input-cloud-vm-dns').val();
-                                                                            create_ccvm_cloudinit_cmd = ['python3', pluginpath + '/python/vm/create_ccvm_cloudinit.py'
-                                                                                                    ,"-f1",pluginpath+"/tools/vmconfig/ccvm/hosts","-t1", $("#div-textarea-cluster-config-confirm-hosts-file-ccvm").val() // hosts 파일
-                                                                                                    ,"-f2",pluginpath+"/tools/vmconfig/ccvm/id_rsa","-t2", $("#form-textarea-cloud-vm-ssh-private-key-file").val() // ssh 개인 key 파일
-                                                                                                    ,"-f3",pluginpath+"/tools/vmconfig/ccvm/id_rsa.pub","-t3", $("#form-textarea-cloud-vm-ssh-public-key-file").val() // ssh 공개 key 파일
-                                                                                                    ,'--hostname',host_name
-                                                                                                    ,'-hns', all_host_name
-                                                                                                    ,'--mgmt-nic','enp0s20'
-                                                                                                    ,'--mgmt-ip',mgmt_ip
-                                                                                                    ,'--mgmt-prefix',mgmt_prefix
-                                                                                                ];
-                                                                            //GATEWAY가 공백이 아닐 시 삽입
-                                                                            if(mngt_gw != ""){
-                                                                                create_ccvm_cloudinit_cmd.push('--mgmt-gw',mngt_gw);
-                                                                            }
-                                                                            // DNS가 공백이 아닐 시 삽입
-                                                                            if(dns != ""){
-                                                                                create_ccvm_cloudinit_cmd.push('--dns',dns);
-                                                                            }
-                                                                            var svc_bool = $('input[type=checkbox][id="form-checkbox-svc-network"]').is(":checked");
-                                                                            if(svc_bool){
-                                                                                var sn_ip = $('#form-input-cloud-vm-svc-nic-ip').val().split("/")[0];
-                                                                                var sn_prefix = $('#form-input-cloud-vm-svc-nic-ip').val().split("/")[1];
-                                                                                var sn_gw = $('#form-input-cloud-vm-svc-gw').val();
-                                                                                var sn_dns = $('#form-input-cloud-vm-svc-dns').val();
-                                                                                create_ccvm_cloudinit_cmd.push('--sn-nic','enp0s21','--sn-ip',sn_ip,'--sn-prefix',sn_prefix,'--sn-gw',sn_gw,'--sn-dns',sn_dns);
-                                                                            }
-                                                                            if(console_log){console.log(create_ccvm_cloudinit_cmd);}
-                                                                            cockpit.spawn(create_ccvm_cloudinit_cmd)
-                                                                                .then(function(data){
-                                                                                    //결과 값 json으로 return
-                                                                                    var create_ccvm_cloudinit_result = JSON.parse(data);
-                                                                                    if(create_ccvm_cloudinit_result.code=="200"){
-                                                                                        //=========== 4. 클라우드센터 가상머신 구성 ===========
-                                                                                        setProgressStep("span-ccvm-progress-step3",2);
-                                                                                        setProgressStep("span-ccvm-progress-step4",1);
-                                                                                        xml_create_cmd.push("-hns",all_host_name, "-gmp", gfs_mount_point);
-                                                                                        if(console_log){console.log(xml_create_cmd);}
-                                                                                        cockpit.spawn(xml_create_cmd)
-                                                                                            .then(function(data){
-                                                                                                //결과 값 json으로 return
-                                                                                                var create_ccvm_xml_result = JSON.parse(data);
-                                                                                                if(create_ccvm_xml_result.code=="200"){
-                                                                                                    //=========== 5. 클러스터 구성 및 클라우드센터 가상머신 배포 ===========
-                                                                                                    //클러스터 생성
-                                                                                                    setProgressStep("span-ccvm-progress-step4",2);
-                                                                                                    setProgressStep("span-ccvm-progress-step5",1);
-                                                                                                    var pcs_config = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--create-ccvm-cluster', '--gfs-name', gfs_name, '--mount-point', gfs_mount_point, '--cluster-name', gfs_cluster_name,'--list-ip', all_host_name];
-                                                                                                    if(console_log){console.log(pcs_config);}
-                                                                                                    cockpit.spawn(pcs_config)
-                                                                                                        .then(function(data){
-                                                                                                            //결과 값 json으로 return
-                                                                                                            var ccvm_result = JSON.parse(data);
-                                                                                                            if(ccvm_result.code=="200"){
-                                                                                                                var cluster_sync_mechanism_cmd = ['python3', pluginpath + '/python/pcs/main.py', 'sync', '--time', cluster_sync_mechanism];
-                                                                                                                if(console_log){console.log(cluster_sync_mechanism_cmd);}
-                                                                                                                cockpit.spawn(cluster_sync_mechanism_cmd)
+                                                                        var set_alert_result = JSON.parse(data);
+                                                                        console.log(set_alert_result);
+                                                                        if (set_alert_result.code == "200"){
+                                                                            setProgressStep("span-ccvm-progress-step2",4);
+                                                                            var create_gfs_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--create-gfs',
+                                                                                                    '--disks', '/dev/' + powerflex_disk_name, '--vg-name', gfs_vg_name, '--lv-name', gfs_lv_name,
+                                                                                                    '--gfs-name', gfs_name, '--mount-point', gfs_mount_point, '--cluster-name', gfs_cluster_name,
+                                                                                                    '--journal-nums', journal_nums, '--list-ip', all_host_name]
+                                                                            console.log(create_gfs_cmd);
+                                                                            cockpit.spawn(create_gfs_cmd)
+                                                                            .then(function(data){
+                                                                                var create_gfs_result = JSON.parse(data);
+                                                                                console.log(create_gfs_result);
+                                                                                if (create_gfs_result.code == "200"){
+                                                                                    //=========== 3. cloudinit iso 파일 생성 ===========
+                                                                                    // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/ccvm/cloudinit 경로에 hosts, ssh key 파일 저장
+                                                                                    setProgressStep("span-ccvm-progress-step2",2);
+                                                                                    setProgressStep("span-ccvm-progress-step3",1);
+                                                                                    var host_name = $('#form-input-cloud-vm-hostname').val();
+                                                                                    var mgmt_ip = $('#form-input-cloud-vm-mngt-nic-ip').val().split("/")[0];
+                                                                                    var mgmt_prefix = $('#form-input-cloud-vm-mngt-nic-ip').val().split("/")[1];
+                                                                                    var mngt_gw = $('#form-input-cloud-vm-mngt-gw').val();
+                                                                                    var dns = $('#form-input-cloud-vm-dns').val();
+                                                                                    create_ccvm_cloudinit_cmd = ['python3', pluginpath + '/python/vm/create_ccvm_cloudinit.py'
+                                                                                                            ,"-f1",pluginpath+"/tools/vmconfig/ccvm/hosts","-t1", $("#div-textarea-cluster-config-confirm-hosts-file-ccvm").val() // hosts 파일
+                                                                                                            ,"-f2",pluginpath+"/tools/vmconfig/ccvm/id_rsa","-t2", $("#form-textarea-cloud-vm-ssh-private-key-file").val() // ssh 개인 key 파일
+                                                                                                            ,"-f3",pluginpath+"/tools/vmconfig/ccvm/id_rsa.pub","-t3", $("#form-textarea-cloud-vm-ssh-public-key-file").val() // ssh 공개 key 파일
+                                                                                                            ,'--hostname',host_name
+                                                                                                            ,'-hns', all_host_name
+                                                                                                            ,'--mgmt-nic','enp0s20'
+                                                                                                            ,'--mgmt-ip',mgmt_ip
+                                                                                                            ,'--mgmt-prefix',mgmt_prefix
+                                                                                                        ];
+                                                                                    //GATEWAY가 공백이 아닐 시 삽입
+                                                                                    if(mngt_gw != ""){
+                                                                                        create_ccvm_cloudinit_cmd.push('--mgmt-gw',mngt_gw);
+                                                                                    }
+                                                                                    // DNS가 공백이 아닐 시 삽입
+                                                                                    if(dns != ""){
+                                                                                        create_ccvm_cloudinit_cmd.push('--dns',dns);
+                                                                                    }
+                                                                                    var svc_bool = $('input[type=checkbox][id="form-checkbox-svc-network"]').is(":checked");
+                                                                                    if(svc_bool){
+                                                                                        var sn_ip = $('#form-input-cloud-vm-svc-nic-ip').val().split("/")[0];
+                                                                                        var sn_prefix = $('#form-input-cloud-vm-svc-nic-ip').val().split("/")[1];
+                                                                                        var sn_gw = $('#form-input-cloud-vm-svc-gw').val();
+                                                                                        var sn_dns = $('#form-input-cloud-vm-svc-dns').val();
+                                                                                        create_ccvm_cloudinit_cmd.push('--sn-nic','enp0s21','--sn-ip',sn_ip,'--sn-prefix',sn_prefix,'--sn-gw',sn_gw,'--sn-dns',sn_dns);
+                                                                                    }
+                                                                                    if(console_log){console.log(create_ccvm_cloudinit_cmd);}
+                                                                                    cockpit.spawn(create_ccvm_cloudinit_cmd)
+                                                                                        .then(function(data){
+                                                                                            //결과 값 json으로 return
+                                                                                            var create_ccvm_cloudinit_result = JSON.parse(data);
+                                                                                            if(create_ccvm_cloudinit_result.code=="200"){
+                                                                                                //=========== 4. 클라우드센터 가상머신 구성 ===========
+                                                                                                setProgressStep("span-ccvm-progress-step3",2);
+                                                                                                setProgressStep("span-ccvm-progress-step4",1);
+                                                                                                xml_create_cmd.push("-hns",all_host_name, "-gmp", gfs_mount_point);
+                                                                                                if(console_log){console.log(xml_create_cmd);}
+                                                                                                cockpit.spawn(xml_create_cmd)
+                                                                                                    .then(function(data){
+                                                                                                        //결과 값 json으로 return
+                                                                                                        var create_ccvm_xml_result = JSON.parse(data);
+                                                                                                        if(create_ccvm_xml_result.code=="200"){
+                                                                                                            //=========== 5. 클러스터 구성 및 클라우드센터 가상머신 배포 ===========
+                                                                                                            //클러스터 생성
+                                                                                                            setProgressStep("span-ccvm-progress-step4",2);
+                                                                                                            setProgressStep("span-ccvm-progress-step5",1);
+                                                                                                            var pcs_config = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--create-ccvm-cluster', '--gfs-name', gfs_name, '--mount-point', gfs_mount_point, '--cluster-name', gfs_cluster_name,'--list-ip', all_host_name];
+                                                                                                            if(console_log){console.log(pcs_config);}
+                                                                                                            cockpit.spawn(pcs_config)
                                                                                                                 .then(function(data){
-                                                                                                                    var cluster_sync_mechanism_result = JSON.parse(data);
-                                                                                                                    if (cluster_sync_mechanism_result.code == "200"){
-                                                                                                                        createLoggerInfo("deployCloudCenterVM success");
-                                                                                                                        setProgressStep("span-ccvm-progress-step5",2);
-                                                                                                                        //최종 화면 호출
-                                                                                                                        showDivisionCloudVMConfigFinish();
-                                                                                                                    }
-                                                                                                                    else{
-                                                                                                                         setProgressFail(5);
-                                                                                                                         createLoggerInfo(cluster_sync_mechanism_result.val);
-                                                                                                                         alert(cluster_sync_mechanism_result.val);
+                                                                                                                    //결과 값 json으로 return
+                                                                                                                    var ccvm_result = JSON.parse(data);
+                                                                                                                    if(ccvm_result.code=="200"){
+                                                                                                                        var cluster_sync_mechanism_cmd = ['python3', pluginpath + '/python/pcs/main.py', 'sync', '--time', cluster_sync_mechanism];
+                                                                                                                        if(console_log){console.log(cluster_sync_mechanism_cmd);}
+                                                                                                                        cockpit.spawn(cluster_sync_mechanism_cmd)
+                                                                                                                        .then(function(data){
+                                                                                                                            var cluster_sync_mechanism_result = JSON.parse(data);
+                                                                                                                            if (cluster_sync_mechanism_result.code == "200"){
+                                                                                                                                createLoggerInfo("deployCloudCenterVM success");
+                                                                                                                                setProgressStep("span-ccvm-progress-step5",2);
+                                                                                                                                //최종 화면 호출
+                                                                                                                                showDivisionCloudVMConfigFinish();
+                                                                                                                            }
+                                                                                                                            else{
+                                                                                                                                setProgressFail(5);
+                                                                                                                                createLoggerInfo(cluster_sync_mechanism_result.val);
+                                                                                                                                alert(cluster_sync_mechanism_result.val);
 
+                                                                                                                            }
+                                                                                                                        })
+                                                                                                                        .catch(function(data){
+                                                                                                                            setProgressFail(5);
+                                                                                                                            createLoggerInfo("Cluster configuration and cloud center virtual machine deployment failed");
+                                                                                                                            alert("클러스터 구성 및 클라우드센터 가상머신 배포 및 클러스터 민감도 설정 실패 : "+data);
+                                                                                                                        });
+                                                                                                                    } else {
+                                                                                                                        setProgressFail(5);
+                                                                                                                        createLoggerInfo(ccvm_result.val);
+                                                                                                                        alert(ccvm_result.val);
                                                                                                                     }
                                                                                                                 })
                                                                                                                 .catch(function(data){
                                                                                                                     setProgressFail(5);
                                                                                                                     createLoggerInfo("Cluster configuration and cloud center virtual machine deployment failed");
-                                                                                                                    alert("클러스터 구성 및 클라우드센터 가상머신 배포 및 클러스터 민감도 설정 실패 : "+data);
+                                                                                                                    alert("클러스터 구성 및 클라우드센터 가상머신 배포 실패 : "+data);
                                                                                                                 });
-                                                                                                            } else {
-                                                                                                                setProgressFail(5);
-                                                                                                                createLoggerInfo(ccvm_result.val);
-                                                                                                                alert(ccvm_result.val);
-                                                                                                            }
-                                                                                                        })
-                                                                                                        .catch(function(data){
-                                                                                                            setProgressFail(5);
-                                                                                                            createLoggerInfo("Cluster configuration and cloud center virtual machine deployment failed");
-                                                                                                            alert("클러스터 구성 및 클라우드센터 가상머신 배포 실패 : "+data);
-                                                                                                        });
-                                                                                                } else {
-                                                                                                    setProgressFail(4);
-                                                                                                    createLoggerInfo(create_ccvm_xml_result.val);
-                                                                                                    alert(create_ccvm_xml_result.val);
-                                                                                                }
-                                                                                            })
-                                                                                            .catch(function(data){
-                                                                                                setProgressFail(4);
-                                                                                                createLoggerInfo("Cloud Center Virtual Machine XML Creation Failed");
-                                                                                                alert("클라우드센터 가상머신 XML 생성 실패 : "+data);
-                                                                                            });
-                                                                                    } else {
-                                                                                        setProgressFail(3);
-                                                                                        createLoggerInfo(create_ccvm_cloudinit_result.val);
-                                                                                        alert(create_ccvm_cloudinit_result.val);
-                                                                                    }
-                                                                                })
-                                                                                .catch(function(data){
-                                                                                    setProgressFail(3);
-                                                                                    createLoggerInfo("Failed to create cloudinit iso file");
-                                                                                    alert("cloudinit iso 파일 생성 실패 : "+data);
-                                                                                });
+                                                                                                        } else {
+                                                                                                            setProgressFail(4);
+                                                                                                            createLoggerInfo(create_ccvm_xml_result.val);
+                                                                                                            alert(create_ccvm_xml_result.val);
+                                                                                                        }
+                                                                                                    })
+                                                                                                    .catch(function(data){
+                                                                                                        setProgressFail(4);
+                                                                                                        createLoggerInfo("Cloud Center Virtual Machine XML Creation Failed");
+                                                                                                        alert("클라우드센터 가상머신 XML 생성 실패 : "+data);
+                                                                                                    });
+                                                                                            } else {
+                                                                                                setProgressFail(3);
+                                                                                                createLoggerInfo(create_ccvm_cloudinit_result.val);
+                                                                                                alert(create_ccvm_cloudinit_result.val);
+                                                                                            }
+                                                                                        })
+                                                                                        .catch(function(data){
+                                                                                            setProgressFail(3);
+                                                                                            createLoggerInfo("Failed to create cloudinit iso file");
+                                                                                            alert("cloudinit iso 파일 생성 실패 : "+data);
+                                                                                        });
+                                                                                }else{
+                                                                                    setProgressFail(2);
+                                                                                    createLoggerInfo(create_gfs_result.val);
+                                                                                    alert(create_gfs_result.val);
+                                                                                }
+                                                                            }).catch(function(data){
+                                                                                setProgressFail(2);
+                                                                                createLoggerInfo("GFS configuration settings and Pcs task Pcs resource settings failed");
+                                                                                alert("GFS 구성 설정 및 Pcs 작업 7. Pcs 리소스 설정 실패 : "+data);
+                                                                            });
                                                                         }else{
                                                                             setProgressFail(2);
-                                                                            createLoggerInfo(create_gfs_result.val);
-                                                                            alert(create_gfs_result.val);
+                                                                            createLoggerInfo(set_alert_result.val);
+                                                                            alert(set_alert_result.val);
                                                                         }
                                                                     }).catch(function(data){
                                                                         setProgressFail(2);
-                                                                        createLoggerInfo("GFS configuration settings and Pcs task Pcs resource settings failed");
-                                                                        alert("GFS 구성 설정 및 Pcs 작업 6. Pcs 리소스 설정 실패 : "+data);
+                                                                        createLoggerInfo("GFS configuration setup and Pcs Alert setup failed");
+                                                                        alert("GFS 구성 설정 및 Pcs 작업 6. PCS 알림 설정 실패 : "+data);
                                                                     });
                                                                 }else{
                                                                     setProgressFail(2);
@@ -2068,149 +2085,167 @@ function deployCloudCenterVM() {
                                                                     var set_configure_stonith_result = JSON.parse(data);
                                                                     console.log(set_configure_stonith_result);
                                                                     if (set_configure_stonith_result.code == "200"){
-                                                                        setProgressStep("span-ccvm-progress-step2",4);
-                                                                        var create_gfs_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--create-gfs',
-                                                                                                '--disks', general_virtual_disk_name , '--vg-name', gfs_vg_name, '--lv-name', gfs_lv_name,
-                                                                                                '--gfs-name', gfs_name, '--mount-point', gfs_mount_point, '--cluster-name', gfs_cluster_name,
-                                                                                                '--journal-nums', journal_nums, '--list-ip', all_host_name]
-                                                                        console.log(create_gfs_cmd);
-                                                                        cockpit.spawn(create_gfs_cmd)
+                                                                        var set_alert_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--set-alert', '--list-ip', all_host_name];
+                                                                        console.log(set_alert_cmd);
+                                                                        cockpit.spawn(set_alert_cmd)
                                                                         .then(function(data){
-                                                                            var create_gfs_result = JSON.parse(data);
-                                                                            console.log(create_gfs_result);
-                                                                            if (create_gfs_result.code == "200"){
-                                                                                //=========== 3. cloudinit iso 파일 생성 ===========
-                                                                                // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/ccvm/cloudinit 경로에 hosts, ssh key 파일 저장
-                                                                                setProgressStep("span-ccvm-progress-step2",2);
-                                                                                setProgressStep("span-ccvm-progress-step3",1);
-                                                                                var host_name = $('#form-input-cloud-vm-hostname').val();
-                                                                                var mgmt_ip = $('#form-input-cloud-vm-mngt-nic-ip').val().split("/")[0];
-                                                                                var mgmt_prefix = $('#form-input-cloud-vm-mngt-nic-ip').val().split("/")[1];
-                                                                                var mngt_gw = $('#form-input-cloud-vm-mngt-gw').val();
-                                                                                var dns = $('#form-input-cloud-vm-dns').val();
+                                                                            var set_alert_result = JSON.parse(data);
+                                                                            console.log(set_alert_result);
+                                                                            if(set_alert_result.code == "200"){
+                                                                                setProgressStep("span-ccvm-progress-step2",4);
+                                                                                var create_gfs_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--create-gfs',
+                                                                                                        '--disks', general_virtual_disk_name , '--vg-name', gfs_vg_name, '--lv-name', gfs_lv_name,
+                                                                                                        '--gfs-name', gfs_name, '--mount-point', gfs_mount_point, '--cluster-name', gfs_cluster_name,
+                                                                                                        '--journal-nums', journal_nums, '--list-ip', all_host_name]
+                                                                                console.log(create_gfs_cmd);
+                                                                                cockpit.spawn(create_gfs_cmd)
+                                                                                .then(function(data){
+                                                                                    var create_gfs_result = JSON.parse(data);
+                                                                                    console.log(create_gfs_result);
+                                                                                    if (create_gfs_result.code == "200"){
+                                                                                        //=========== 3. cloudinit iso 파일 생성 ===========
+                                                                                        // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/ccvm/cloudinit 경로에 hosts, ssh key 파일 저장
+                                                                                        setProgressStep("span-ccvm-progress-step2",2);
+                                                                                        setProgressStep("span-ccvm-progress-step3",1);
+                                                                                        var host_name = $('#form-input-cloud-vm-hostname').val();
+                                                                                        var mgmt_ip = $('#form-input-cloud-vm-mngt-nic-ip').val().split("/")[0];
+                                                                                        var mgmt_prefix = $('#form-input-cloud-vm-mngt-nic-ip').val().split("/")[1];
+                                                                                        var mngt_gw = $('#form-input-cloud-vm-mngt-gw').val();
+                                                                                        var dns = $('#form-input-cloud-vm-dns').val();
 
-                                                                                create_ccvm_cloudinit_cmd = ['python3', pluginpath + '/python/vm/create_ccvm_cloudinit.py'
-                                                                                                        ,"-f1",pluginpath+"/tools/vmconfig/ccvm/hosts","-t1", $("#div-textarea-cluster-config-confirm-hosts-file-ccvm").val() // hosts 파일
-                                                                                                        ,"-f2",pluginpath+"/tools/vmconfig/ccvm/id_rsa","-t2", $("#form-textarea-cloud-vm-ssh-private-key-file").val() // ssh 개인 key 파일
-                                                                                                        ,"-f3",pluginpath+"/tools/vmconfig/ccvm/id_rsa.pub","-t3", $("#form-textarea-cloud-vm-ssh-public-key-file").val() // ssh 공개 key 파일
-                                                                                                        ,'--hostname',host_name
-                                                                                                        ,'-hns', all_host_name
-                                                                                                        ,'--mgmt-nic','enp0s20'
-                                                                                                        ,'--mgmt-ip',mgmt_ip
-                                                                                                        ,'--mgmt-prefix',mgmt_prefix
-                                                                                                    ];
-                                                                                //GATEWAY가 공백이 아닐 시 삽입
-                                                                                if(mngt_gw != ""){
-                                                                                    create_ccvm_cloudinit_cmd.push('--mgmt-gw',mngt_gw);
-                                                                                }
-                                                                                // DNS가 공백이 아닐 시 삽입
-                                                                                if(dns != ""){
-                                                                                    create_ccvm_cloudinit_cmd.push('--dns',dns);
-                                                                                }
-                                                                                var svc_bool = $('input[type=checkbox][id="form-checkbox-svc-network"]').is(":checked");
-                                                                                if(svc_bool){
-                                                                                    var sn_ip = $('#form-input-cloud-vm-svc-nic-ip').val().split("/")[0];
-                                                                                    var sn_prefix = $('#form-input-cloud-vm-svc-nic-ip').val().split("/")[1];
-                                                                                    var sn_gw = $('#form-input-cloud-vm-svc-gw').val();
-                                                                                    var sn_dns = $('#form-input-cloud-vm-svc-dns').val();
-                                                                                    create_ccvm_cloudinit_cmd.push('--sn-nic','enp0s21','--sn-ip',sn_ip,'--sn-prefix',sn_prefix,'--sn-gw',sn_gw,'--sn-dns',sn_dns);
-                                                                                }
-                                                                                if(console_log){console.log(create_ccvm_cloudinit_cmd);}
-                                                                                cockpit.spawn(create_ccvm_cloudinit_cmd)
-                                                                                    .then(function(data){
-                                                                                        //결과 값 json으로 return
-                                                                                        var create_ccvm_cloudinit_result = JSON.parse(data);
-                                                                                        if(create_ccvm_cloudinit_result.code=="200"){
-                                                                                            // if(host_names.length == 2){
-                                                                                            //     gfs_mount_point = "/mnt"
-                                                                                            // }
-                                                                                            //=========== 4. 클라우드센터 가상머신 구성 ===========
-                                                                                            setProgressStep("span-ccvm-progress-step3",2);
-                                                                                            setProgressStep("span-ccvm-progress-step4",1);
-                                                                                            xml_create_cmd.push("-hns",all_host_name, "-gmp", gfs_mount_point);
-                                                                                            if(console_log){console.log(xml_create_cmd);}
-                                                                                            cockpit.spawn(xml_create_cmd)
-                                                                                                .then(function(data){
-                                                                                                    //결과 값 json으로 return
-                                                                                                    var create_ccvm_xml_result = JSON.parse(data);
-                                                                                                    if(create_ccvm_xml_result.code=="200"){
-                                                                                                        //=========== 5. 클러스터 구성 및 클라우드센터 가상머신 배포 ===========
-                                                                                                        //클러스터 생성
-                                                                                                        setProgressStep("span-ccvm-progress-step4",2);
-                                                                                                        setProgressStep("span-ccvm-progress-step5",1);
-                                                                                                        var pcs_config = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--create-ccvm-cluster', '--gfs-name', gfs_name, '--mount-point', gfs_mount_point, '--cluster-name', gfs_cluster_name, '--list-ip', all_host_name];
-                                                                                                        if(console_log){console.log(pcs_config);}
-                                                                                                        cockpit.spawn(pcs_config)
-                                                                                                            .then(function(data){
-                                                                                                                //결과 값 json으로 return
-                                                                                                                var ccvm_result = JSON.parse(data);
-                                                                                                                if(ccvm_result.code=="200"){
-                                                                                                                    var cluster_sync_mechanism_cmd = ['python3', pluginpath + '/python/pcs/main.py', 'sync', '--time', cluster_sync_mechanism];
-                                                                                                                    if(console_log){console.log(cluster_sync_mechanism_cmd);}
-                                                                                                                    cockpit.spawn(cluster_sync_mechanism_cmd)
+                                                                                        create_ccvm_cloudinit_cmd = ['python3', pluginpath + '/python/vm/create_ccvm_cloudinit.py'
+                                                                                                                ,"-f1",pluginpath+"/tools/vmconfig/ccvm/hosts","-t1", $("#div-textarea-cluster-config-confirm-hosts-file-ccvm").val() // hosts 파일
+                                                                                                                ,"-f2",pluginpath+"/tools/vmconfig/ccvm/id_rsa","-t2", $("#form-textarea-cloud-vm-ssh-private-key-file").val() // ssh 개인 key 파일
+                                                                                                                ,"-f3",pluginpath+"/tools/vmconfig/ccvm/id_rsa.pub","-t3", $("#form-textarea-cloud-vm-ssh-public-key-file").val() // ssh 공개 key 파일
+                                                                                                                ,'--hostname',host_name
+                                                                                                                ,'-hns', all_host_name
+                                                                                                                ,'--mgmt-nic','enp0s20'
+                                                                                                                ,'--mgmt-ip',mgmt_ip
+                                                                                                                ,'--mgmt-prefix',mgmt_prefix
+                                                                                                            ];
+                                                                                        //GATEWAY가 공백이 아닐 시 삽입
+                                                                                        if(mngt_gw != ""){
+                                                                                            create_ccvm_cloudinit_cmd.push('--mgmt-gw',mngt_gw);
+                                                                                        }
+                                                                                        // DNS가 공백이 아닐 시 삽입
+                                                                                        if(dns != ""){
+                                                                                            create_ccvm_cloudinit_cmd.push('--dns',dns);
+                                                                                        }
+                                                                                        var svc_bool = $('input[type=checkbox][id="form-checkbox-svc-network"]').is(":checked");
+                                                                                        if(svc_bool){
+                                                                                            var sn_ip = $('#form-input-cloud-vm-svc-nic-ip').val().split("/")[0];
+                                                                                            var sn_prefix = $('#form-input-cloud-vm-svc-nic-ip').val().split("/")[1];
+                                                                                            var sn_gw = $('#form-input-cloud-vm-svc-gw').val();
+                                                                                            var sn_dns = $('#form-input-cloud-vm-svc-dns').val();
+                                                                                            create_ccvm_cloudinit_cmd.push('--sn-nic','enp0s21','--sn-ip',sn_ip,'--sn-prefix',sn_prefix,'--sn-gw',sn_gw,'--sn-dns',sn_dns);
+                                                                                        }
+                                                                                        if(console_log){console.log(create_ccvm_cloudinit_cmd);}
+                                                                                        cockpit.spawn(create_ccvm_cloudinit_cmd)
+                                                                                            .then(function(data){
+                                                                                                //결과 값 json으로 return
+                                                                                                var create_ccvm_cloudinit_result = JSON.parse(data);
+                                                                                                if(create_ccvm_cloudinit_result.code=="200"){
+                                                                                                    // if(host_names.length == 2){
+                                                                                                    //     gfs_mount_point = "/mnt"
+                                                                                                    // }
+                                                                                                    //=========== 4. 클라우드센터 가상머신 구성 ===========
+                                                                                                    setProgressStep("span-ccvm-progress-step3",2);
+                                                                                                    setProgressStep("span-ccvm-progress-step4",1);
+                                                                                                    xml_create_cmd.push("-hns",all_host_name, "-gmp", gfs_mount_point);
+                                                                                                    if(console_log){console.log(xml_create_cmd);}
+                                                                                                    cockpit.spawn(xml_create_cmd)
+                                                                                                        .then(function(data){
+                                                                                                            //결과 값 json으로 return
+                                                                                                            var create_ccvm_xml_result = JSON.parse(data);
+                                                                                                            if(create_ccvm_xml_result.code=="200"){
+                                                                                                                //=========== 5. 클러스터 구성 및 클라우드센터 가상머신 배포 ===========
+                                                                                                                //클러스터 생성
+                                                                                                                setProgressStep("span-ccvm-progress-step4",2);
+                                                                                                                setProgressStep("span-ccvm-progress-step5",1);
+                                                                                                                var pcs_config = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--create-ccvm-cluster', '--gfs-name', gfs_name, '--mount-point', gfs_mount_point, '--cluster-name', gfs_cluster_name, '--list-ip', all_host_name];
+                                                                                                                if(console_log){console.log(pcs_config);}
+                                                                                                                cockpit.spawn(pcs_config)
                                                                                                                     .then(function(data){
-                                                                                                                        var cluster_sync_mechanism_result = JSON.parse(data);
-                                                                                                                        if (cluster_sync_mechanism_result.code == "200"){
-                                                                                                                            createLoggerInfo("deployCloudCenterVM success");
-                                                                                                                            setProgressStep("span-ccvm-progress-step5",2);
-                                                                                                                            //최종 화면 호출
-                                                                                                                            showDivisionCloudVMConfigFinish();
-                                                                                                                        }
-                                                                                                                        else{
-                                                                                                                             setProgressFail(5);
-                                                                                                                             createLoggerInfo(cluster_sync_mechanism_result.val);
-                                                                                                                             alert(cluster_sync_mechanism_result.val);
+                                                                                                                        //결과 값 json으로 return
+                                                                                                                        var ccvm_result = JSON.parse(data);
+                                                                                                                        if(ccvm_result.code=="200"){
+                                                                                                                            var cluster_sync_mechanism_cmd = ['python3', pluginpath + '/python/pcs/main.py', 'sync', '--time', cluster_sync_mechanism];
+                                                                                                                            if(console_log){console.log(cluster_sync_mechanism_cmd);}
+                                                                                                                            cockpit.spawn(cluster_sync_mechanism_cmd)
+                                                                                                                            .then(function(data){
+                                                                                                                                var cluster_sync_mechanism_result = JSON.parse(data);
+                                                                                                                                if (cluster_sync_mechanism_result.code == "200"){
+                                                                                                                                    createLoggerInfo("deployCloudCenterVM success");
+                                                                                                                                    setProgressStep("span-ccvm-progress-step5",2);
+                                                                                                                                    //최종 화면 호출
+                                                                                                                                    showDivisionCloudVMConfigFinish();
+                                                                                                                                }
+                                                                                                                                else{
+                                                                                                                                     setProgressFail(5);
+                                                                                                                                     createLoggerInfo(cluster_sync_mechanism_result.val);
+                                                                                                                                     alert(cluster_sync_mechanism_result.val);
 
+                                                                                                                                }
+                                                                                                                            })
+                                                                                                                            .catch(function(data){
+                                                                                                                                setProgressFail(5);
+                                                                                                                                createLoggerInfo("Cluster configuration and cloud center virtual machine deployment failed");
+                                                                                                                                alert("클러스터 구성 및 클라우드센터 가상머신 배포 및 클러스터 민감도 설정 실패 : "+data);
+                                                                                                                            });
+                                                                                                                        } else {
+                                                                                                                            setProgressFail(5);
+                                                                                                                            createLoggerInfo(ccvm_result.val);
+                                                                                                                            alert(ccvm_result.val);
                                                                                                                         }
                                                                                                                     })
                                                                                                                     .catch(function(data){
                                                                                                                         setProgressFail(5);
                                                                                                                         createLoggerInfo("Cluster configuration and cloud center virtual machine deployment failed");
-                                                                                                                        alert("클러스터 구성 및 클라우드센터 가상머신 배포 및 클러스터 민감도 설정 실패 : "+data);
+                                                                                                                        alert("클러스터 구성 및 클라우드센터 가상머신 배포 실패 : "+data);
                                                                                                                     });
-                                                                                                                } else {
-                                                                                                                    setProgressFail(5);
-                                                                                                                    createLoggerInfo(ccvm_result.val);
-                                                                                                                    alert(ccvm_result.val);
-                                                                                                                }
-                                                                                                            })
-                                                                                                            .catch(function(data){
-                                                                                                                setProgressFail(5);
-                                                                                                                createLoggerInfo("Cluster configuration and cloud center virtual machine deployment failed");
-                                                                                                                alert("클러스터 구성 및 클라우드센터 가상머신 배포 실패 : "+data);
-                                                                                                            });
-                                                                                                    } else {
-                                                                                                        setProgressFail(4);
-                                                                                                        createLoggerInfo(create_ccvm_xml_result.val);
-                                                                                                        alert(create_ccvm_xml_result.val);
-                                                                                                    }
-                                                                                                })
-                                                                                                .catch(function(data){
-                                                                                                    setProgressFail(4);
-                                                                                                    createLoggerInfo("Cloud Center Virtual Machine XML Creation Failed");
-                                                                                                    alert("클라우드센터 가상머신 XML 생성 실패 : "+data);
-                                                                                                });
-                                                                                        } else {
-                                                                                            setProgressFail(3);
-                                                                                            createLoggerInfo(create_ccvm_cloudinit_result.val);
-                                                                                            alert(create_ccvm_cloudinit_result.val);
-                                                                                        }
-                                                                                    })
-                                                                                    .catch(function(data){
-                                                                                        setProgressFail(3);
-                                                                                        createLoggerInfo("Failed to create cloudinit iso file");
-                                                                                        alert("cloudinit iso 파일 생성 실패 : "+data);
-                                                                                    });
+                                                                                                            } else {
+                                                                                                                setProgressFail(4);
+                                                                                                                createLoggerInfo(create_ccvm_xml_result.val);
+                                                                                                                alert(create_ccvm_xml_result.val);
+                                                                                                            }
+                                                                                                        })
+                                                                                                        .catch(function(data){
+                                                                                                            setProgressFail(4);
+                                                                                                            createLoggerInfo("Cloud Center Virtual Machine XML Creation Failed");
+                                                                                                            alert("클라우드센터 가상머신 XML 생성 실패 : "+data);
+                                                                                                        });
+                                                                                                } else {
+                                                                                                    setProgressFail(3);
+                                                                                                    createLoggerInfo(create_ccvm_cloudinit_result.val);
+                                                                                                    alert(create_ccvm_cloudinit_result.val);
+                                                                                                }
+                                                                                            })
+                                                                                            .catch(function(data){
+                                                                                                setProgressFail(3);
+                                                                                                createLoggerInfo("Failed to create cloudinit iso file");
+                                                                                                alert("cloudinit iso 파일 생성 실패 : "+data);
+                                                                                            });
+                                                                                    }else{
+                                                                                        setProgressFail(2);
+                                                                                        createLoggerInfo(create_gfs_result.val);
+                                                                                        alert(create_gfs_result.val);
+                                                                                    }
+                                                                                }).catch(function(data){
+                                                                                    setProgressFail(2);
+                                                                                    createLoggerInfo("GFS configuration settings and Pcs task Pcs resource settings failed");
+                                                                                    alert("GFS 구성 설정 및 Pcs 작업 7. Pcs 리소스 설정 실패 : "+data);
+                                                                                });
                                                                             }else{
                                                                                 setProgressFail(2);
-                                                                                createLoggerInfo(create_gfs_result.val);
-                                                                                alert(create_gfs_result.val);
+                                                                                createLoggerInfo(set_alert_result.val);
+                                                                                alert(set_alert_result.val);
                                                                             }
                                                                         }).catch(function(data){
                                                                             setProgressFail(2);
-                                                                            createLoggerInfo("GFS configuration settings and Pcs task Pcs resource settings failed");
-                                                                            alert("GFS 구성 설정 및 Pcs 작업 6. Pcs 리소스 설정 실패 : "+data);
+                                                                            createLoggerInfo("GFS configuration setup and Pcs Alert setup failed");
+                                                                            alert("GFS 구성 설정 및 Pcs 작업 6. PCS 알림 설정 실패 : "+data);
                                                                         });
+
                                                                     }else{
                                                                         setProgressFail(2);
                                                                         createLoggerInfo(set_configure_stonith_result.val);

@@ -83,29 +83,13 @@ $(document).ready(function(){
     // 서버 가상화일 경우 화면 변환
     screenConversion();
 
-    cockpit.spawn(['python3', pluginpath + '/python/pcs/pcsExehost.py'])
-    .then(function (data) {
-        let retVal = JSON.parse(data);
-        pcs_exe_host = retVal.val;
+    ribbonWorker();
+    //30초마다 화면 정보 갱신
+    setInterval(() => {
+        createLoggerInfo("Start collecting ablestack status information : setInterval()");
+        // 배포상태 조회(비동기)완료 후 배포상태에 따른 요약리본 UI 설정
         ribbonWorker();
-        //30초마다 화면 정보 갱신
-        setInterval(() => {
-            createLoggerInfo("Start collecting ablestack status information : setInterval()");
-            // 배포상태 조회(비동기)완료 후 배포상태에 따른 요약리본 UI 설정
-            ribbonWorker();
-        }, 30000);
-    })
-    .catch(function (err) {
-        ribbonWorker();
-        //30초마다 화면 정보 갱신
-        setInterval(() => {
-            createLoggerInfo("Start collecting ablestack status information : setInterval()");
-            // 배포상태 조회(비동기)완료 후 배포상태에 따른 요약리본 UI 설정
-            ribbonWorker();
-        }, 30000);
-        createLoggerInfo("pcsExeHost err");
-        console.log("pcsExeHost err : " + err);
-    });
+    }, 30000);
 
     // 라이센스 관련 이벤트 핸들러
     initializeLicenseHandlers();
@@ -1764,7 +1748,15 @@ function ribbonWorker() {
             })
             .finally(function () {
                 checkDeployStatus();
+                // checkHostandStonithrecovery();
             });
+    }else if (os_type == "PowerFlex"){
+        Promise.all([pcsExeHost(), checkConfigStatus(), checkStorageClusterStatus(),
+            checkStorageVmStatus(), CardCloudClusterStatus(), new CloudCenterVirtualMachine().checkCCVM()]).then(function(){
+                scanHostKey();
+                checkDeployStatus();
+                // checkHostandStonithrecovery();
+        });
     }else{
         Promise.all([pcsExeHost(), checkConfigStatus(), checkStorageClusterStatus(),
             checkStorageVmStatus(), CardCloudClusterStatus(), new CloudCenterVirtualMachine().checkCCVM()]).then(function(){
@@ -3190,6 +3182,23 @@ function updateLicenseStatus() {
             `);
         });
 }
+// /**
+//  * Meathod Name : checkHostandStonithrecovery
+//  * Date Created : 2025.03.31
+//  * Writer  : 정민철
+//  * Description : 정전 및 전원이 나갔을 경우, PCS 및 GFS 스토리지 안정화 스크립트
+//  * Parameter : 없음
+//  * Return  : 없음
+//  * History  : 2025.02.28 최초 작성
+//  */
+// function checkHostandStonithrecovery(){
+//     var result = ['python3', pluginpath + '/python/gfs/gfs_alert_manage.py'];
+//     cockpit.spawn(result)
+//     .then(function(data){
+//         var result = JSON.parse(data);
+//         console.log(result);
+//     });
+// }
 
 // 라이센스 등록 버튼 클릭 이벤트
 $('#button-execution-modal-license-register').on('click', function(){

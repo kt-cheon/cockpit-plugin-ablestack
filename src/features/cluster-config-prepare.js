@@ -520,12 +520,31 @@ $('#button-next-step-modal-wizard-cluster-config-prepare').on('click', function 
                                         .then(function(data){
                                             var retVal = JSON.parse(data);
                                             if(retVal.code == "200"){
-                                                setClusterProgressStep("span-cluster-progress-step3",2);
-                                                // 해당 호스트의 수정된 cluster.json 파일을 다운로드 링크로 만드는 함수 호출
-                                                createClusterJsonLink();
+                                                var set_alert_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--set-alert', '--list-ip', all_host_name];
+                                                console.log(set_alert_cmd);
+                                                cockpit.spawn(set_alert_cmd)
+                                                .then(function(data){
+                                                    var retVal = JSON.parse(data);
+                                                    if(retVal.code == "200"){
+                                                        setClusterProgressStep("span-cluster-progress-step3",2);
+                                                        // 해당 호스트의 수정된 cluster.json 파일을 다운로드 링크로 만드는 함수 호출
+                                                        createClusterJsonLink();
 
-                                                // 마무리 작업 및 최종 화면 호출
-                                                showDivisionClusterConfigFinish();
+                                                        // 마무리 작업 및 최종 화면 호출
+                                                        showDivisionClusterConfigFinish();
+                                                    }else{
+                                                        // 실패
+                                                        setClusterProgressFail(3);
+                                                        createLoggerInfo(retVal.val);
+                                                        alert(retVal.val);
+                                                    }
+                                                })
+                                                .catch(function(data){
+                                                    setClusterProgressFail(3);
+                                                    createLoggerInfo(":::Please check the pcs alert setup.:::");
+                                                    console.log(":::Please check the pcs alert setup.::: "+ data);
+
+                                                });
                                             }else{
                                                 // 실패
                                                 setClusterProgressFail(3);
