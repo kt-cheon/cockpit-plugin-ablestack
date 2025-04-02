@@ -138,32 +138,28 @@ $(document).ready(function(){
 
     // 라이센스 상태 확인 함수
     function checkLicenseStatus() {
-        // superuser 권한으로 실행
-        return cockpit.spawn(['python3', '/usr/share/cockpit/ablestack/python/license/register_license.py', '--status'], { superuser: true })
+        cockpit.spawn(['/usr/share/cockpit/ablestack/python/license/register_license.py', '--status'])
             .then(function(data) {
                 const result = JSON.parse(data);
-                
-                // 라이센스 상태에 따른 UI 업데이트
-                updateLicenseUI(result);
-                
-                // 라이센스 버튼은 항상 표시되도록 수정
-                $('#button-open-modal-license-register').show();
-                
-                return result;
+                if (result.code === '200') {
+                    const licenseInfo = result.val;
+                    $('#license-status').text('활성화');
+                    $('#license-expired').text(licenseInfo.expired);
+                    $('#license-issued').text(licenseInfo.issued);  // 시작일 표시 추가
+                    $('#license-file-path').text(licenseInfo.file_path);
+                } else {
+                    $('#license-status').text('비활성화');
+                    $('#license-expired').text('-');
+                    $('#license-issued').text('-');  // 시작일 표시 추가
+                    $('#license-file-path').text('-');
+                }
             })
             .catch(function(error) {
-                console.error("라이센스 상태 확인 실패:", error);
-                // 에러 시에도 버튼은 표시
-                $('#button-open-modal-license-register').show();
-                
-                // 에러 UI 업데이트
-                $('#div-license-description').html(`
-                    <div class="license-info error">
-                        <p><i class="fas fa-exclamation-triangle" style="color: var(--pf-global--danger-color--100);"></i> 라이센스 상태를 확인할 수 없습니다.</p>
-                        <p>시스템 오류가 발생했습니다.</p>
-                    </div>
-                `);
-                throw error;
+                console.error('라이센스 상태 확인 중 오류:', error);
+                $('#license-status').text('오류');
+                $('#license-expired').text('-');
+                $('#license-issued').text('-');  // 시작일 표시 추가
+                $('#license-file-path').text('-');
             });
     }
 
@@ -176,6 +172,7 @@ $(document).ready(function(){
             licenseDescription = `
                 <div class="license-info">
                     <p><i class="fas fa-check-circle" style="color: var(--pf-global--success-color--100);"></i> 라이센스가 등록되어 있습니다.</p>
+                    <p><strong>시작일:</strong> ${result.val.issued}</p>
                     <p><strong>만료일:</strong> ${result.val.expired}</p>
                     <hr>
                     <p class="text-muted">새로운 라이센스를 등록하면 기존 라이센스가 교체됩니다.</p>
@@ -3147,6 +3144,7 @@ function updateLicenseStatus() {
                 licenseDescription = `
                     <div class="license-info">
                         <p><i class="fas fa-check-circle" style="color: var(--pf-global--success-color--100);"></i> 라이센스가 등록되어 있습니다.</p>
+                        <p><strong>시작일:</strong> ${result.val.issued}</p>
                         <p><strong>만료일:</strong> ${result.val.expired}</p>
                         <hr>
                         <p class="text-muted">새로운 라이센스를 등록하면 기존 라이센스가 교체됩니다.</p>
