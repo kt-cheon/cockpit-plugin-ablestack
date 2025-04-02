@@ -13,6 +13,7 @@ import sys
 import os
 import json
 import socket
+import subprocess
 
 from ablestack import *
 from sh import python3
@@ -75,6 +76,15 @@ os_type = json_data["clusterConfig"]["type"]
 # 파라미터로 받은 json 값으로 cluster_config.py 무조건 바꾸는 함수 (동일한 값이 있으면 변경, 없으면 추가)
 def insert(args):
     try:
+        # Network Filter 적용
+        subprocess.run(["virsh", "nwfilter-define", "--file", "/usr/local/sbin/nwfilter-allow-all.xml"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(["modprobe", "br_netfilter"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run('echo -e "\\nnet.bridge.bridge-nf-call-arptables=1" >> /etc/sysctl.conf', shell=True)
+        subprocess.run('echo -e "\\nnet.bridge.bridge-nf-call-iptables=1" >> /etc/sysctl.conf', shell=True)
+        subprocess.run('echo -e "\\nnet.bridge.bridge-nf-call-ip6tables=1" >> /etc/sysctl.conf', shell=True)
+        subprocess.run("sysctl", "-p", shell=True)
+
+
     # 수정할 cluster.json 파일 읽어오
         # 기존 file json 데이터를 param 데이터로 교체
         if args.type is not None :
@@ -180,9 +190,6 @@ def insert(args):
 
         else:
             return createReturn(code=200, val="Cluster Config insert Success")
-
-        os.system("virsh nwfilter-define --file /usr/local/sbin/nwfilter-allow-all.xml")
-        os.system("modprobe br_netfilter")
 
     except Exception as e:
         # 결과값 리턴
