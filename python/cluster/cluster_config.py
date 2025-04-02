@@ -177,8 +177,12 @@ def insert(args):
 
         if result["code"] != 200:
             return createReturn(code=500, val=return_val + " : " + p_val3["ablecube"])
+
         else:
             return createReturn(code=200, val="Cluster Config insert Success")
+
+        os.system("virsh nwfilter-define --file /usr/local/sbin/nwfilter-allow-all.xml")
+        os.system("modprobe br_netfilter")
 
     except Exception as e:
         # 결과값 리턴
