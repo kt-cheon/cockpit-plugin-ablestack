@@ -7,6 +7,7 @@ import paramiko
 import subprocess
 import os
 import json
+import concurrent.futures
 
 from ablestack import *
 
@@ -334,6 +335,40 @@ def delete_gfs(disks, gfs_name, lv_name, vg_name):
     except Exception as e:
         ret = createReturn(code=500, val=f"Error: {str(e)}")
         return print(json.dumps(json.loads(ret), indent=4))
+
+def list_hba_wwn():
+    try:
+        hosts = json_data["clusterConfig"]["hosts"]
+
+        def get_hba_wwn(host):
+            """개별 호스트에서 HBA WWN 정보를 가져오는 내부 함수"""
+            try:
+                ip = host["ablecube"]
+                hostname = host["hostname"]
+                ssh_client = connect_to_host(ip)
+
+                hba_check = run_command("lspci | grep -i fibre", ssh_client)
+                wwn_list = []
+                if hba_check:
+                    wwn_list = run_command("cat /sys/class/fc_host/host*/port_name", ssh_client).split()
+
+                ssh_client.close()
+                return {"hostname": hostname, "wwn": wwn_list}
+
+            except Exception as e:
+                return {"hostname": host["hostname"], "wwn": [], "error": str(e)}
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            results = list(executor.map(get_hba_wwn, hosts))
+
+        ret = createReturn(code=200, val=results)
+        print(json.dumps(json.loads(ret), indent=4))
+
+    except Exception as e:
+        ret = createReturn(code=500, val=f"Error: {str(e)}")
+        print(json.dumps(json.loads(ret), indent=4))
+
+
 def main():
     parser = argparse.ArgumentParser(description="Cluster configuration script")
 
@@ -342,6 +377,7 @@ def main():
     parser.add_argument('--list-gfs', action='store_true', help='List GFS Volume Groups.')
     parser.add_argument('--delete-clvm', action='store_true', help='Delete CLVM Volume Group.')
     parser.add_argument('--delete-gfs', action='store_true', help='Delete GFS Disk.')
+    parser.add_argument('--list-hba-wwn', action='store_true', help='List HBA WWN.')
     parser.add_argument('--disks', help='Comma separated list of disks to use.')
     parser.add_argument('--gfs-name', help='GFS Name')
     parser.add_argument('--lv-names', help='Serveral LV Name.')
@@ -383,6 +419,9 @@ def main():
         else:
             disks = args.disks.split(',')
             delete_gfs(disks, args.gfs_name, args.lv_names, args.vg_names)
+
+    if args.list_hba_wwn:
+        list_hba_wwn()
 
 if __name__ == "__main__":
     main()

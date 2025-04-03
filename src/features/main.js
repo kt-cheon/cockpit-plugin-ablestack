@@ -141,32 +141,35 @@ $(document).ready(function(){
         cockpit.spawn(['/usr/share/cockpit/ablestack/python/license/register_license.py', '--status'])
             .then(function(data) {
                 const result = JSON.parse(data);
-                if (result.code === '200') {
-                    const licenseInfo = result.val;
-                    $('#license-status').text('활성화');
-                    $('#license-expired').text(licenseInfo.expired);
-                    $('#license-issued').text(licenseInfo.issued);  // 시작일 표시 추가
-                    $('#license-file-path').text(licenseInfo.file_path);
-                } else {
-                    $('#license-status').text('비활성화');
-                    $('#license-expired').text('-');
-                    $('#license-issued').text('-');  // 시작일 표시 추가
-                    $('#license-file-path').text('-');
-                }
+
+                // 라이센스 상태에 따른 UI 업데이트
+                updateLicenseUI(result);
+
+                // 라이센스 버튼은 항상 표시되도록 수정
+                $('#button-open-modal-license-register').show();
+
+                return result;
             })
             .catch(function(error) {
-                console.error('라이센스 상태 확인 중 오류:', error);
-                $('#license-status').text('오류');
-                $('#license-expired').text('-');
-                $('#license-issued').text('-');  // 시작일 표시 추가
-                $('#license-file-path').text('-');
+                console.error("라이센스 상태 확인 실패:", error);
+                // 에러 시에도 버튼은 표시
+                $('#button-open-modal-license-register').show();
+
+                // 에러 UI 업데이트
+                $('#div-license-description').html(`
+                    <div class="license-info error">
+                        <p><i class="fas fa-exclamation-triangle" style="color: var(--pf-global--danger-color--100);"></i> 라이센스 상태를 확인할 수 없습니다.</p>
+                        <p>시스템 오류가 발생했습니다.</p>
+                    </div>
+                `);
+                throw error;
             });
     }
 
     // 라이센스 상태에 따른 UI 업데이트 함수
     function updateLicenseUI(result) {
         let licenseDescription = '';
-        
+
         if(result.code == "200" && result.val && result.val.status === 'active') {
             // 유효한 라이센스가 있는 경우
             licenseDescription = `
@@ -195,7 +198,7 @@ $(document).ready(function(){
                 </div>
             `;
         }
-        
+
         $('#div-license-description').html(licenseDescription);
     }
 
@@ -235,7 +238,7 @@ $(document).ready(function(){
             reader.onload = function(e) {
                 const fileContent = e.target.result;
                 const base64Content = btoa(fileContent);
-                
+
                 // 라이센스 등록 API 호출
                 cockpit.spawn([
                     'python3',
@@ -2332,15 +2335,75 @@ function setDiskAction(type, action){
                         </div>
                     `;
                 }
-            } else {
+            }else {
                 output = '데이터가 존재하지 않습니다.<br>';
             }
 
             $('#gfs-disk-delete-list').append(output);
         });
 
+    }else if (type == "hba" && action == "list") {
+        var cmd = ["python3", pluginpath + "/python/clvm/disk_manage.py", "--list-hba-wwn"];
+
+        cockpit.spawn(cmd).then(function(data) {
+            // 초기화
+            $('#hba-wwn-list').empty();
+
+            // JSON 데이터 파싱
+            var result = JSON.parse(data);
+
+            // 결과 리스트 가져오기
+            var wwnList = result.val;
+
+            // 테이블 생성
+            var output = `
+                <table border="1" style="width: 100%; border-collapse: collapse; text-align: left;">
+                    <thead>
+                        <tr>
+                            <th style="padding: 8px; background-color: #f2f2f2;">호스트명</th>
+                            <th style="padding: 8px; background-color: #f2f2f2;">WWN</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            if (wwnList.length > 0) {
+                // 데이터를 순회하면서 테이블 행 추가
+                for (var i = 0; i < wwnList.length; i++) {
+                    var wwn = wwnList[i];
+                    output += `
+                        <tr>
+                            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${wwn.hostname}</td>
+                            <td style="padding: 8px; border-bottom: 1px solid #ddd;">
+                                ${wwn.wwn.join('<br>')}
+                            </td>
+                        </tr>
+                    `;
+                }
+            } else {
+                output += `
+                    <tr>
+                        <td colspan="2" style="padding: 8px; text-align: center;">데이터가 존재하지 않습니다.</td>
+                    </tr>
+                `;
+            }
+
+            // 테이블 닫기
+            output += `
+                    </tbody>
+                </table>
+            `;
+
+            // 출력 데이터 추가
+            $('#hba-wwn-list').append(output);
+
+        }).catch(function() {
+            createLoggerInfo("setDiskAction error");
+        });
     }
+
 }
+
 $('#menu-item-set-gfs-clvm-disk-add').on('click',function(){
     setDiskAction("clvm","add")
     $('#div-modal-clvm-disk-add').show();
@@ -2352,6 +2415,9 @@ $('#menu-item-set-hci-clvm-disk-add').on('click',function(){
 $('#button-close-modal-clvm-disk-add, #button-cancel-modal-clvm-disk-add').on('click',function(){
     $('#div-modal-clvm-disk-add').hide();
 });
+$('#button-close-modal-hba-wwn-list, #button-execution-modal-hba-wwn-list').on('click', function(){
+    $('#div-modal-hba-wwn-list').hide();
+})
 $('#button-execution-modal-clvm-disk-add').on('click',function(){
     $('#div-modal-clvm-disk-add').hide();
     $('#div-modal-spinner-header-txt').text("CLVM 디스크 논리 볼륨을 구성 중입니다.")
@@ -2446,12 +2512,20 @@ $('#div-modal-clvm-disk-delete').on('change', 'input[type=checkbox][name="form-c
     $('#button-execution-modal-clvm-disk-delete').prop('disabled', !isChecked);
 });
 $('#menu-item-set-gfs-clvm-disk-info').on('click',function(){
-    setDiskAction("clvm", "list")
+    setDiskAction("clvm", "list");
     $('#div-modal-clvm-disk-info').show();
 });
 $('#menu-item-set-hci-clvm-disk-info').on('click',function(){
-    setDiskAction("clvm", "list")
+    setDiskAction("clvm", "list");
     $('#div-modal-clvm-disk-info').show();
+});
+$('#menu-item-hci-hba-wwn-list').on('click',function(){
+    setDiskAction("hba", "list");
+    $('#div-modal-hba-wwn-list').show();
+});
+$('#menu-item-gfs-hba-wwn-list').on('click', function(){
+    setDiskAction("hba", "list");
+    $('#div-modal-hba-wwn-list').show();
 });
 $('#button-execution-modal-clvm-disk-info, #button-close-modal-clvm-disk-info').on('click',function(){
     $('#div-modal-clvm-disk-info').hide();
@@ -3138,7 +3212,7 @@ function updateLicenseStatus() {
         .then(function(data) {
             const result = JSON.parse(data);
             let licenseDescription = '';
-            
+
             if(result.code == "200" && result.val && result.val.status === 'active') {
                 // 유효한 라이센스가 있는 경우
                 licenseDescription = `
@@ -3167,7 +3241,7 @@ function updateLicenseStatus() {
                     </div>
                 `;
             }
-            
+
             $('#div-license-description').html(licenseDescription);
         })
         .catch(function(error) {
@@ -3250,7 +3324,7 @@ function initializeLicenseHandlers() {
         reader.onload = function(e) {
             const fileContent = e.target.result;
             const base64Content = btoa(fileContent);
-            
+
             // 라이센스 등록 API 호출
             cockpit.spawn([
                 'python3',

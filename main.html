@@ -75,6 +75,11 @@
                                                     type="button">외부 스토리지 동기화</button>
                                                 </li>
                                                 <li class="pf-c-divider" role="separator"></li>
+                                                <li>
+                                                    <button class="pf-c-dropdown__menu-item" type="button"
+                                                        id="menu-item-gfs-hba-wwn-list">WWN 목록 조회</button>
+                                                </li>
+                                                <li class="pf-c-divider" role="separator"></li>
                                                 <li id="gfs-host-remove">
                                                     <button id="button-gfs-host-remove"
                                                     class="pf-c-dropdown__menu-item"
@@ -223,6 +228,11 @@
                                                 <li>
                                                     <button class="pf-c-dropdown__menu-item" type="button"
                                                         id="menu-item-set-hci-clvm-disk-info">CLVM 디스크 정보</button>
+                                                </li>
+                                                <li class="pf-c-divider" role="separator"></li>
+                                                <li>
+                                                    <button class="pf-c-dropdown__menu-item" type="button"
+                                                        id="menu-item-hci-hba-wwn-list">WWN 목록 조회</button>
                                                 </li>
                                                 <li class="pf-c-divider" role="separator"></li>
                                                 <li>
@@ -1938,6 +1948,38 @@
     </div>
 </div>
 <!-- 외부 스토리지 동기화 : Modal 영역 끝 -->
+<!-- WWN 목록 조회 : Modal 영역 시작 -->
+<div id="div-modal-hba-wwn-list" class="pf-c-backdrop" style="display:none">
+    <div class="pf-l-bullseye">
+        <div class="pf-c-modal-box pf-m-md" role="dialog" aria-modal="true" aria-label="GFS CLVM Disk Info">
+            <button id="button-close-modal-hba-wwn-list" aria-disabled="false" aria-label="Close"
+                class="pf-c-button pf-m-plain" type="button">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <header class="pf-c-modal-box__header">
+                <h1 class="pf-c-modal-box__title">
+                    <span class="pf-c-modal-box__title-text">WWN 목록</span>
+                </h1>
+            </header>
+            <div class="pf-c-modal-box__body">
+                <form novalidate class="pf-c-form pf-m-horizontal">
+                    <section class="pf-c-form__section">
+                        <div class="pf-c-form__group" style="display: block;">
+                            <div class="pf-c-form__group-control pf-m-stack" id="hba-wwn-list"
+                                style="margin-top:8px;max-height: 400px;overflow-y: auto;">
+                            </div>
+                        </div>
+                    </section>
+                </form>
+            </div>
+            <footer class="pf-c-modal-box__footer">
+                <button id="button-execution-modal-hba-wwn-list" aria-disabled="false"
+                    class="pf-c-button pf-m-primary" type="button" data-ouia-safe="true">확인</button>
+            </footer>
+        </div>
+    </div>
+</div>
+<!-- WWN 목록 조회 : Modal 영역 끝 -->
 <!-- 모달 영역 끝  -->
 
 <!-- 클라우드센터VM 용량 변경에 관한 modal : ./src/features/cloud-vm-change.html을 내용으로 load -->
