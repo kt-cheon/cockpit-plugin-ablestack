@@ -138,8 +138,7 @@ $(document).ready(function(){
 
     // 라이센스 상태 확인 함수
     function checkLicenseStatus() {
-        // superuser 권한으로 실행
-        return cockpit.spawn(['python3', '/usr/share/cockpit/ablestack/python/license/register_license.py', '--status'], { superuser: true })
+        cockpit.spawn(['/usr/share/cockpit/ablestack/python/license/register_license.py', '--status'])
             .then(function(data) {
                 const result = JSON.parse(data);
 
@@ -176,6 +175,7 @@ $(document).ready(function(){
             licenseDescription = `
                 <div class="license-info">
                     <p><i class="fas fa-check-circle" style="color: var(--pf-global--success-color--100);"></i> 라이센스가 등록되어 있습니다.</p>
+                    <p><strong>시작일:</strong> ${result.val.issued}</p>
                     <p><strong>만료일:</strong> ${result.val.expired}</p>
                     <hr>
                     <p class="text-muted">새로운 라이센스를 등록하면 기존 라이센스가 교체됩니다.</p>
@@ -3218,6 +3218,7 @@ function updateLicenseStatus() {
                 licenseDescription = `
                     <div class="license-info">
                         <p><i class="fas fa-check-circle" style="color: var(--pf-global--success-color--100);"></i> 라이센스가 등록되어 있습니다.</p>
+                        <p><strong>시작일:</strong> ${result.val.issued}</p>
                         <p><strong>만료일:</strong> ${result.val.expired}</p>
                         <hr>
                         <p class="text-muted">새로운 라이센스를 등록하면 기존 라이센스가 교체됩니다.</p>

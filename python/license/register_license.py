@@ -82,15 +82,17 @@ def get_license_status():
             # 복호화된 내용에서 만료일 파싱
             license_info = json.loads(decrypted_content.decode('utf-8'))
             expired = license_info.get('expired')
+            issued = license_info.get('issued')
             
-            if not expired:
-                raise ValueError("만료일을 찾을 수 없습니다")
+            if not expired or not issued:
+                raise ValueError("만료일 또는 시작일을 찾을 수 없습니다")
             
             return {
                 'code': '200',
                 'val': {
                     'status': 'active',
                     'expired': expired,
+                    'issued': issued,
                     'file_path': license_file
                 }
             }
@@ -164,9 +166,10 @@ def process_license_content(content=None, original_filename=None):
             # 복호화된 내용에서 만료일 파싱
             license_info = json.loads(decrypted_content.decode('utf-8'))
             expired = license_info.get('expired')
+            issued = license_info.get('issued')
             
-            if not expired:
-                raise ValueError("만료일을 찾을 수 없습니다")
+            if not expired or not issued:
+                raise ValueError("만료일 또는 시작일을 찾을 수 없습니다")
 
         except Exception as e:
             return {'code': '500', 'val': f'라이센스 내용을 처리할 수 없습니다: {str(e)}'}
