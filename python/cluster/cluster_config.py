@@ -79,11 +79,12 @@ def insert(args):
         # Network Filter 적용
         subprocess.run(["virsh", "nwfilter-define", "--file", "/usr/local/sbin/nwfilter-allow-all.xml"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         subprocess.run(["modprobe", "br_netfilter"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        subprocess.run('echo -e "\\nnet.bridge.bridge-nf-call-arptables=1" >> /etc/sysctl.conf', shell=True)
-        subprocess.run('echo -e "\\nnet.bridge.bridge-nf-call-iptables=1" >> /etc/sysctl.conf', shell=True)
-        subprocess.run('echo -e "\\nnet.bridge.bridge-nf-call-ip6tables=1" >> /etc/sysctl.conf', shell=True)
-        subprocess.run("sysctl", "-p", shell=True)
+        with open("/etc/sysctl.conf", "a") as sysctl_file:
+            sysctl_file.write("\nnet.bridge.bridge-nf-call-arptables=1")
+            sysctl_file.write("\nnet.bridge.bridge-nf-call-iptables=1")
+            sysctl_file.write("\nnet.bridge.bridge-nf-call-ip6tables=1")
 
+        subprocess.run(["sysctl", "-p"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     # 수정할 cluster.json 파일 읽어오
         # 기존 file json 데이터를 param 데이터로 교체
