@@ -1,3 +1,5 @@
+# 4월 이후로 해당 코드 사용하지 않음. alert_file.sh 로 전원 절체 진행중
+
 import json
 import os
 import re
