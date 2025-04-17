@@ -83,6 +83,18 @@ case $CRM_alert_kind in
         # CRM_alert_rc
         #
         echo "${tstamp}Fencing ${CRM_alert_desc}" >> "${CRM_alert_recipient}"
+        if [[ "$CRM_alert_desc" == *"Error"* ]]; then
+            sleep 7
+            hostname=$(grep -w $CRM_alert_node /etc/hosts | awk '{print $2}')
+
+            echo "${tstamp}Confirming stonith for $CRM_alert_node" >> "${CRM_alert_recipient}"
+            pcs stonith confirm "$CRM_alert_node" --force >> "${CRM_alert_recipient}"
+
+            echo "${tstamp}Disabling fence-$hostname" >> "${CRM_alert_recipient}"
+            pcs stonith disable "fence-$hostname" >> "${CRM_alert_recipient}"
+
+            echo "${tstamp}Executing stonith for $CRM_alert_node ($hostname)" >> "${CRM_alert_recipient}"
+        fi
         ;;
     resource)
         # Other keys:
@@ -121,17 +133,17 @@ case $CRM_alert_kind in
         ;;
 esac
 
-case $CRM_alert_desc in
-    lost)
-        sleep 7
-        hostname=$(grep -w $CRM_alert_node /etc/hosts | awk '{print $2}')
+# case $CRM_alert_desc in
+#     lost)
+#         sleep 7
+#         hostname=$(grep -w $CRM_alert_node /etc/hosts | awk '{print $2}')
 
-        echo "${tstamp}Confirming stonith for $CRM_alert_node" >> "${CRM_alert_recipient}"
-        pcs stonith confirm "$CRM_alert_node" --force >> "${CRM_alert_recipient}"
+#         echo "${tstamp}Confirming stonith for $CRM_alert_node" >> "${CRM_alert_recipient}"
+#         pcs stonith confirm "$CRM_alert_node" --force >> "${CRM_alert_recipient}"
 
-        echo "${tstamp}Disabling fence-$hostname" >> "${CRM_alert_recipient}"
-        pcs stonith disable "fence-$hostname" >> "${CRM_alert_recipient}"
+#         echo "${tstamp}Disabling fence-$hostname" >> "${CRM_alert_recipient}"
+#         pcs stonith disable "fence-$hostname" >> "${CRM_alert_recipient}"
 
-        echo "${tstamp}Executing stonith for $CRM_alert_node ($hostname)" >> "${CRM_alert_recipient}"
-        ;;
-esac
+#         echo "${tstamp}Executing stonith for $CRM_alert_node ($hostname)" >> "${CRM_alert_recipient}"
+#         ;;
+# esac
