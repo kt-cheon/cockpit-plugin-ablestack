@@ -303,7 +303,7 @@ def delete_gfs(disks, gfs_name, lv_name, vg_name):
                     ssh_client = connect_to_host(host["ablecube"])
                     escaped_disk = disk.replace('/', '\\/')
                     escaped_partition = partition.replace('/', '\\/')
-                    sed_cmd = f"sed -i '/partprobe {escaped_disk}/{{N; /lvmdevices --adddev {escaped_partition}/d;}}' /etc/rc.local /etc/rc.d/rc.local"
+                    sed_cmd = f"sed -i '/partprobe {escaped_disk}/{{N; /lvmdevices --adddev -y {escaped_partition}/d;}}' /etc/rc.local /etc/rc.d/rc.local"
 
                     # lvm.conf 초기화
                     run_command(f"partprobe {disk}",ssh_client,ignore_errors=True)
@@ -322,7 +322,7 @@ def delete_gfs(disks, gfs_name, lv_name, vg_name):
                         single_partition = f"/dev/{single_disk}1"
                         escaped_disk = single_disk.replace('/', '\\/')
                         escaped_partition = single_partition.replace('/', '\\/')
-                        sed_cmd = f"sed -i '/partprobe /dev/{escaped_disk}/{{N; /lvmdevices --adddev /dev/{escaped_partition}/d;}}' /etc/rc.local /etc/rc.d/rc.local"
+                        sed_cmd = f"sed -i '/partprobe /dev/{escaped_disk}/{{N; /lvmdevices --adddev -y /dev/{escaped_partition}/d;}}' /etc/rc.local /etc/rc.d/rc.local"
 
                         # lvm.conf 초기화
                         run_command(f"partprobe /dev/{single_disk}",ssh_client,ignore_errors=True)
