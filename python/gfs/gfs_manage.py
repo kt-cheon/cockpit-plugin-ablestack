@@ -346,7 +346,7 @@ def create_gfs(disks, vg_name, lv_name, gfs_name, mount_point, cluster_name, num
                         run_command(f"partprobe /dev/{single_disk}", ssh_client, ignore_errors=True)
                         run_command(f"lvmdevices --adddev /dev/{single_partition} ", ssh_client, ignore_errors=True)
                         run_command(f"grep -qxF 'partprobe /dev/{single_disk}' /etc/rc.local || echo 'partprobe /dev/{single_disk}' >> /etc/rc.local", ssh_client, ignore_errors=True)
-                        run_command(f"grep -qxF 'lvmdevices --adddev /dev/{single_partition}' /etc/rc.local || echo 'lvmdevices --adddev /dev/{single_partition}' >> /etc/rc.local", ssh_client, ignore_errors=True)
+                        run_command(f"grep -qxF 'lvmdevices --adddev /dev/{single_partition}' /etc/rc.local || echo 'lvmdevices --adddev -y /dev/{single_partition}' >> /etc/rc.local", ssh_client, ignore_errors=True)
                 else:
                         partition = f"{disk}1"
 
@@ -548,7 +548,7 @@ def extend_pcs_cluster(username,password,stonith_info,mount_point,list_ips):
                     run_command(f"lvmdevices --adddev /dev/{partition}", ssh_client, ignore_errors=True)
                     if ip == list_ips[-1]:
                         run_command(f"grep -qxF 'partprobe /dev/{disk}' /etc/rc.local || echo 'partprobe /dev/{disk}' >> /etc/rc.local", ssh_client, ignore_errors=True)
-                        run_command(f"grep -qxF 'lvmdevices --adddev /dev/{partition}' /etc/rc.local || echo 'lvmdevices --adddev /dev/{partition}' >> /etc/rc.local", ssh_client, ignore_errors=True)
+                        run_command(f"grep -qxF 'lvmdevices --adddev -y /dev/{partition}' /etc/rc.local || echo 'lvmdevices --adddev -y /dev/{partition}' >> /etc/rc.local", ssh_client, ignore_errors=True)
 
                 ssh_client.close()
 
