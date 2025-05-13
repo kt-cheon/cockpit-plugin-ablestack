@@ -76,7 +76,6 @@ os_type = json_data["clusterConfig"]["type"]
 # 파라미터로 받은 json 값으로 cluster_config.py 무조건 바꾸는 함수 (동일한 값이 있으면 변경, 없으면 추가)
 def insert(args):
     try:
-        openvswitch_service_check = os.system("systemctl is-active openvswitch > /dev/null")
         # Network Filter 적용
         subprocess.run(["virsh", "nwfilter-define", "--file", "/usr/local/sbin/nwfilter-allow-all.xml"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         subprocess.run(["modprobe", "br_netfilter"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -85,8 +84,7 @@ def insert(args):
             sysctl_file.write("\nnet.bridge.bridge-nf-call-iptables=1")
             sysctl_file.write("\nnet.bridge.bridge-nf-call-ip6tables=1")
 
-        if openvswitch_service_check != 0:
-            subprocess.run(["sysctl", "-p"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(["sysctl", "-p"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     # 수정할 cluster.json 파일 읽어오
         # 기존 file json 데이터를 param 데이터로 교체
