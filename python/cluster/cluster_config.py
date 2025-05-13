@@ -78,33 +78,35 @@ def insert(args):
     try:
         # Network Filter 적용
         # 1. virsh nwfilter 확인 후 정의
-        result = subprocess.run(["virsh", "nwfilter-list"], capture_output=True, text=True)
-        if "allow-all" not in result.stdout:
-            subprocess.run(["virsh", "nwfilter-define", "--file", "/usr/local/sbin/nwfilter-allow-all.xml"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        openvswitch_service_check = os.system("systemctl is-active openvswitch > /dev/null")
+        if openvswitch_service_check != 0:
+            result = subprocess.run(["virsh", "nwfilter-list"], capture_output=True, text=True)
+            if "allow-all" not in result.stdout:
+                subprocess.run(["virsh", "nwfilter-define", "--file", "/usr/local/sbin/nwfilter-allow-all.xml"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # 2. br_netfilter 모듈이 로드되지 않았으면 로드
-        lsmod_result = subprocess.run(["lsmod"], capture_output=True, text=True)
-        if "br_netfilter" not in lsmod_result.stdout:
-            subprocess.run(["modprobe", "br_netfilter"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            # 2. br_netfilter 모듈이 로드되지 않았으면 로드
+            lsmod_result = subprocess.run(["lsmod"], capture_output=True, text=True)
+            if "br_netfilter" not in lsmod_result.stdout:
+                subprocess.run(["modprobe", "br_netfilter"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # 3. sysctl.conf에 설정이 없을 때만 추가
-        settings = [
-            "net.bridge.bridge-nf-call-arptables=1",
-            "net.bridge.bridge-nf-call-iptables=1",
-            "net.bridge.bridge-nf-call-ip6tables=1"
-        ]
+            # 3. sysctl.conf에 설정이 없을 때만 추가
+            settings = [
+                "net.bridge.bridge-nf-call-arptables=1",
+                "net.bridge.bridge-nf-call-iptables=1",
+                "net.bridge.bridge-nf-call-ip6tables=1"
+            ]
 
-        try:
-            with open("/etc/sysctl.conf", "r") as f:
-                existing_lines = f.read()
-        except FileNotFoundError:
-            existing_lines = ""
+            try:
+                with open("/etc/sysctl.conf", "r") as f:
+                    existing_lines = f.read()
+            except FileNotFoundError:
+                existing_lines = ""
 
-        with open("/etc/sysctl.conf", "a") as sysctl_file:
-            for line in settings:
-                if line not in existing_lines:
-                    sysctl_file.write(f"\n{line}")
-        subprocess.run(["sysctl", "-p"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            with open("/etc/sysctl.conf", "a") as sysctl_file:
+                for line in settings:
+                    if line not in existing_lines:
+                        sysctl_file.write(f"\n{line}")
+            subprocess.run(["sysctl", "-p"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     # 수정할 cluster.json 파일 읽어오
         # 기존 file json 데이터를 param 데이터로 교체
