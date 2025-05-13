@@ -87,7 +87,7 @@ def remove(args):
             outfile.write('{\n')
             outfile.write('    "bootstrap": {\n')
             outfile.write('        "scvm": "false",\n')
-            outfile.write('        "ccvm": "false"\n')
+            outfile.write('        "ccvm": "false",\n')
             outfile.write('        "pfmp": "false"\n')
             outfile.write('    },\n')
             outfile.write('    "monitoring": {\n')
@@ -98,6 +98,7 @@ def remove(args):
             with open(cluster_file_path, 'w') as outfile:
                 outfile.write('{\n')
                 outfile.write('    "clusterConfig": {\n')
+                outfile.write('        "type" : "",\n')
                 outfile.write('        "ccvm": {\n')
                 outfile.write('            "ip": ""\n')
                 outfile.write('            "pn": ""\n')
@@ -129,6 +130,7 @@ def remove(args):
             with open(cluster_file_path, 'w') as outfile:
                 outfile.write('{\n')
                 outfile.write('    "clusterConfig": {\n')
+                outfile.write('        "type": "",\n')
                 outfile.write('        "ccvm": {\n')
                 outfile.write('            "ip": ""\n')
                 outfile.write('        },\n')
