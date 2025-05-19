@@ -9,6 +9,7 @@ import os
 import json
 import concurrent.futures
 
+from sh import python3
 from ablestack import *
 
 json_file_path = pluginpath + "/tools/properties/cluster.json"
@@ -368,7 +369,153 @@ def list_hba_wwn():
         ret = createReturn(code=500, val=f"Error: {str(e)}")
         print(json.dumps(json.loads(ret), indent=4))
 
+def rescan_and_extend_gfs_disk(action, vg_name, lv_name, mount_point, mpath_disks, gfs_name, non_stop_check):
+    try:
+        if action == "rescan":
+            for i in range(len(json_data["clusterConfig"]["hosts"])):
+                host = json_data["clusterConfig"]["hosts"][i]
+                ip = host["ablecube"]
+                ssh_client = connect_to_host(ip)
+                disk_list = run_command(f"python3 {pluginpath}/python/disk/disk_action.py mpath-list", ssh_client)
+                disk_list = json.loads(disk_list)
+                gfs_disks = []
+                mpath_name = []
+                mpath_path = []
 
+                for bd in disk_list['val']['blockdevices']:
+                    if 'children' in bd and bd['children']:
+                        first_level = bd['children'][0]
+                        if 'children' in first_level and first_level['children']:
+                            second_level = first_level['children'][0]
+                            if 'children' in second_level and second_level['children']:
+                                third_level = second_level['children'][0]
+                                if third_level.get('name') == vg_name+"-"+lv_name:
+                                    if bd['name'] not in gfs_disks:
+                                        gfs_disks.append(bd['name'])
+
+                                    if first_level['name'] not in mpath_name:
+                                        mpath_name.append(first_level['name'])
+
+                                    if first_level['path'] not in mpath_path:
+                                        mpath_path.append(first_level['path'])
+                for disk in gfs_disks:
+                    run_command(f"echo 1 > /sys/block/{disk}/device/rescan", ssh_client)
+                for mpath in mpath_name:
+                    run_command(f'multipathd -k"resize map {mpath}"', ssh_client)
+                ssh_client.close()
+
+            ret = createReturn(code=200, val="Success to scan GFS Disk")
+            print(json.dumps(json.loads(ret), indent=4))
+
+        elif action == "extend":
+            if non_stop_check == "true":
+                run_command("pcs property set maintenance-mode=true")
+
+            disk_list = run_command(f"python3 {pluginpath}/python/disk/disk_action.py mpath-list")
+            disk_list = json.loads(disk_list)
+            gfs_disks = []
+            mpath_name = []
+            mpath_path = []
+            mpath_path_partition = []
+            lv_path = []
+            for bd in disk_list['val']['blockdevices']:
+                if 'children' in bd and bd['children']:
+                    first_level = bd['children'][0]
+                    if 'children' in first_level and first_level['children']:
+                        second_level = first_level['children'][0]
+                        if 'children' in second_level and second_level['children']:
+                            third_level = second_level['children'][0]
+                            if third_level.get('name') == vg_name+"-"+lv_name:
+                                if bd['name'] not in gfs_disks:
+                                    gfs_disks.append(bd['name'])
+
+                                if first_level['name'] not in mpath_name:
+                                    mpath_name.append(first_level['name'])
+
+                                if first_level['path'] not in mpath_path:
+                                    mpath_path.append(first_level['path'])
+
+                                partition_path = first_level['path'] + "1"
+                                if partition_path not in mpath_path_partition:
+                                    mpath_path_partition.append(partition_path)
+
+                                if third_level['path'] not in lv_path:
+                                    lv_path.append(third_level['path'])
+
+            for path in mpath_path:
+                run_command(f"parted -s {path} resizepart 1 100% -f")
+                for i in range(len(json_data["clusterConfig"]["hosts"])):
+                    host = json_data["clusterConfig"]["hosts"][i]
+                    ip = host["ablecube"]
+                    ssh_client = connect_to_host(ip)
+                    run_command(f"partprobe {path}", ssh_client)
+                ssh_client.close()
+
+            for path_partition in mpath_path_partition:
+                run_command(f"pvresize {path_partition}")
+
+            run_command(f"lvextend -l +100%FREE {vg_name}/{lv_name}")
+            run_command(f"gfs2_grow {mount_point}")
+
+            for path in mpath_path:
+                for i in range(len(json_data["clusterConfig"]["hosts"])):
+                    host = json_data["clusterConfig"]["hosts"][i]
+                    ip = host["ablecube"]
+                    ssh_client = connect_to_host(ip)
+                    run_command(f"partprobe {path}", ssh_client)
+                ssh_client.close()
+
+            if non_stop_check == "true":
+                run_command("pcs property set maintenance-mode=false")
+
+            ret = createReturn(code=200, val=f"Success to extend GFS Disk")
+            print(json.dumps(json.loads(ret), indent=4))
+
+        elif action == "scan":
+            for i in range(len(json_data["clusterConfig"]["hosts"])):
+                host = json_data["clusterConfig"]["hosts"][i]
+                ip = host["ablecube"]
+                ssh_client = connect_to_host(ip)
+                run_command("for host in /sys/class/scsi_host/*; do echo '- - -' > '$host/scan'; done", ssh_client)
+            ssh_client.close()
+
+            ret = createReturn(code=200, val=f"Success to scan GFS Disk")
+            print(json.dumps(json.loads(ret), indent=4))
+
+        elif action == "add-extend":
+            if non_stop_check == "true":
+                run_command("pcs property set maintenance-mode=true")
+
+            mpath_partition = []
+
+            for mpath in mpath_disks:
+                mpath_partition.append(mpath + "1")
+                run_command(f"parted -s {mpath} mklabel gpt mkpart {gfs_name} 0% 100% set 1 lvm on")
+                run_command(f"pvcreate {mpath}1")
+
+            for mpath in mpath_disks:
+                for i in range(len(json_data["clusterConfig"]["hosts"])):
+                    host = json_data["clusterConfig"]["hosts"][i]
+                    ip = host["ablecube"]
+                    ssh_client = connect_to_host(ip)
+                    run_command(f"partprobe {mpath}", ssh_client)
+                    run_command(f"lvmdevices --adddev {mpath}1", ssh_client)
+                ssh_client.close()
+
+            run_command(f"vgextend {vg_name} {' '.join(mpath_partition)}")
+            run_command(f"lvextend -l +100%FREE /dev/{vg_name}/{lv_name}")
+
+            run_command(f"gfs2_grow {mount_point}")
+
+            if non_stop_check == "true":
+                run_command("pcs property set maintenance-mode=false")
+
+            ret = createReturn(code=200, val=f"Success to Extend Add GFS Disk")
+            print(json.dumps(json.loads(ret), indent=4))
+
+    except Exception as e:
+        ret = createReturn(code=500, val=f"Failed to Rescan and Extend GFS Disk: {str(e)}")
+        print(json.dumps(json.loads(ret), indent=4))
 def main():
     parser = argparse.ArgumentParser(description="Cluster configuration script")
 
@@ -383,6 +530,12 @@ def main():
     parser.add_argument('--lv-names', help='Serveral LV Name.')
     parser.add_argument('--vg-names', help='Serveral VG Name.')
     parser.add_argument('--pv-names', help='Serveral PV Name.')
+    parser.add_argument('--mount-point', help='Mount point for GFS Disk.')
+    parser.add_argument('--rescan', action='store_true',help='Rescan GFS Disk.')
+    parser.add_argument('--extend', action='store_true',help='Extend GFS Disk.')
+    parser.add_argument('--scan', action='store_true',help='Scan HBA GFS Disk.')
+    parser.add_argument('--add-extend', action='store_true',help='Add Disk Extend GFS Disk.')
+    parser.add_argument('--non-stop-check', help='Non-stop check for GFS Disk.')
     args = parser.parse_args()
 
     if len(sys.argv) == 1:
@@ -422,6 +575,28 @@ def main():
 
     if args.list_hba_wwn:
         list_hba_wwn()
+
+    if args.rescan:
+        if not all ([args.vg_names, args.lv_names, args.mount_point]):
+            print("Please provide both '--vg-names' and '--lv-names' and '--mount-point' when using '--rescan'.")
+            parser.print_help()
+        else:
+            rescan_and_extend_gfs_disk("rescan", args.vg_names, args.lv_names, args.mount_point, None, None, None)
+    elif args.extend:
+        if not all ([args.vg_names, args.lv_names, args.mount_point]):
+            print("Please provide both '--vg-names' and '--lv-names' and '--mount-point', '--non-stop-check' when using '--extend'.")
+            parser.print_help()
+        else:
+            rescan_and_extend_gfs_disk("extend", args.vg_names, args.lv_names, args.mount_point, None, None, args.non_stop_check)
+    elif args.scan:
+        rescan_and_extend_gfs_disk("scan", None, None, None, None, None, None)
+    elif args.add_extend:
+        if not all ([args.vg_names, args.lv_names, args.mount_point, args.disks, args.gfs_name, args.non_stop_check]):
+            print("Please provide both '--vg-names' and '--lv-names' and '--mount-point', '--disks', '--gfs-name', '--non-stop-check' when using '--add-extend'.")
+            parser.print_help()
+        else:
+            mpath_disks = args.disks.split(',')
+            rescan_and_extend_gfs_disk("add-extend", args.vg_names, args.lv_names, args.mount_point, mpath_disks, args.gfs_name, args.non_stop_check)
 
 if __name__ == "__main__":
     main()
