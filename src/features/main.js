@@ -1937,6 +1937,7 @@ function gfsDiskStatus(){
                 $('#menu-item-set-gfs-clvm-disk-info').removeClass('pf-m-disabled');
                 $('#menu-item-set-gfs-disk-add').removeClass('pf-m-disabled');
                 $('#menu-item-set-gfs-disk-delete').removeClass('pf-m-disabled');
+                $('#menu-item-set-gfs-disk-extend').removeClass('pf-m-disabled');
                 // Add click event to show detailed information in a modal
                 $('.gfs-mount-link').on('click', function() {
                     var mountPoint = $(this).data('mountpoint');
@@ -2034,7 +2035,7 @@ $('#button-cancel-modal-gfs-disk-info').on('click', function() {
  * Return  : 없음
  * History  : 2025.01.07 최초 작성
  */
-function setDiskAction(type, action){
+function setDiskAction(type, action, extend){
     if (type == "clvm" && action == "add"){
         var cmd = ["python3", pluginpath + "/python/disk/disk_action.py", "gfs-list"];
 
@@ -2199,7 +2200,11 @@ function setDiskAction(type, action){
 
         cockpit.spawn(cmd).then(function(data) {
             // 초기화
-            $('#gfs-disk-add-list').empty();
+            if (extend == "true"){
+                $('#gfs-disk-extend-add-list').empty();
+            }else{
+                $('#gfs-disk-add-list').empty();
+            }
 
             var el = '';
             var multipathElements = ''; // MultiPath 정보를 저장할 변수
@@ -2229,11 +2234,19 @@ function setDiskAction(type, action){
                                 // MultiPath가 이미 표시된 경우 스킵
                                 if (!displayedMultipaths.has(mpathName)) {
                                     var mpathHtml = '';
-                                    mpathHtml += '<div class="pf-c-check">';
-                                    mpathHtml += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].children[j].path + '" ' + check_disable + ' />';
-                                    // mpathHtml += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].children[j].path + '" />';
-                                    mpathHtml += '<label class="pf-c-check__label" style="margin-top:5px" for="form-gfs-checkbox-disk-add' + i + '">' + gfs_list[i].children[j].path + ' ' + gfs_list[i].children[j].state + ' (' + gfs_list[i].children[j].type + ') ' + gfs_list[i].children[j].size + ' ' + ' ' + gfs_list[i].vendor + ' ' + gfs_list[i].wwn  + ' ' + partition_text + '</label>';
-                                    mpathHtml += '</div>';
+                                    if (extend == "true"){
+                                        mpathHtml += '<div class="pf-c-check">';
+                                        mpathHtml += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-extend-add' + i + '" name="form-gfs-checkbox-disk-extend-add" value="' + gfs_list[i].children[j].path + '" ' + check_disable + ' />';
+                                        // mpathHtml += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-extend-add' + i + '" name="form-gfs-checkbox-disk-extend-add" value="' + gfs_list[i].children[j].path + '" />';
+                                        mpathHtml += '<label class="pf-c-check__label" style="margin-top:5px" for="form-gfs-checkbox-disk-extend-add' + i + '">' + gfs_list[i].children[j].path + ' ' + gfs_list[i].children[j].state + ' (' + gfs_list[i].children[j].type + ') ' + gfs_list[i].children[j].size + ' ' + ' ' + gfs_list[i].vendor + ' ' + gfs_list[i].wwn  + ' ' + partition_text + '</label>';
+                                        mpathHtml += '</div>';
+                                    }else{
+                                        mpathHtml += '<div class="pf-c-check">';
+                                        mpathHtml += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].children[j].path + '" ' + check_disable + ' />';
+                                        // mpathHtml += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].children[j].path + '" />';
+                                        mpathHtml += '<label class="pf-c-check__label" style="margin-top:5px" for="form-gfs-checkbox-disk-add' + i + '">' + gfs_list[i].children[j].path + ' ' + gfs_list[i].children[j].state + ' (' + gfs_list[i].children[j].type + ') ' + gfs_list[i].children[j].size + ' ' + ' ' + gfs_list[i].vendor + ' ' + gfs_list[i].wwn  + ' ' + partition_text + '</label>';
+                                        mpathHtml += '</div>';
+                                    }
 
                                     multipathElements += mpathHtml; // MultiPath 요소를 multipathElements에 저장
 
@@ -2245,11 +2258,19 @@ function setDiskAction(type, action){
 
                                 var disk_name = gfs_list[i].name;
                                 if (!displayedName.has(disk_name)) {
-                                    el += '<div class="pf-c-check">';
-                                    el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].path + '" ' + check_disable + ' />';
-                                    // el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].path + '" />';
-                                    el += '<label class="pf-c-check__label" style="margin-top:5px" for="form-gfs-checkbox-disk-add' + i + '">' + gfs_list[i].path + ' ' + gfs_list[i].state + ' (' + gfs_list[i].tran + ') ' + gfs_list[i].size + ' ' + gfs_list[i].model + ' ' + gfs_list[i].wwn + partition_text + '</label>';
-                                    el += '</div>';
+                                    if (extend == "true"){
+                                        el += '<div class="pf-c-check">';
+                                        el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-extend-add' + i + '" name="form-gfs-checkbox-disk-extend-add" value="' + gfs_list[i].path + '" ' + check_disable + ' />';
+                                        // el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-extend-add' + i + '" name="form-gfs-checkbox-disk-extend-add" value="' + gfs_list[i].path + '" />';
+                                        el += '<label class="pf-c-check__label" style="margin-top:5px" for="form-gfs-checkbox-disk-extend-add' + i + '">' + gfs_list[i].path + ' ' + gfs_list[i].state + ' (' + gfs_list[i].tran + ') ' + gfs_list[i].size + ' ' + gfs_list[i].model + ' ' + gfs_list[i].wwn + partition_text + '</label>';
+                                        el += '</div>';
+                                    }else{
+                                        el += '<div class="pf-c-check">';
+                                        el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].path + '" ' + check_disable + ' />';
+                                        // el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].path + '" />';
+                                        el += '<label class="pf-c-check__label" style="margin-top:5px" for="form-gfs-checkbox-disk-add' + i + '">' + gfs_list[i].path + ' ' + gfs_list[i].state + ' (' + gfs_list[i].tran + ') ' + gfs_list[i].size + ' ' + gfs_list[i].model + ' ' + gfs_list[i].wwn + partition_text + '</label>';
+                                        el += '</div>';
+                                    }
 
                                     displayedName.add(disk_name);
                                 }
@@ -2259,11 +2280,19 @@ function setDiskAction(type, action){
                         if (!gfs_list[i].wwn) {
                             gfs_list[i].wwn = ""; // 값을 공백으로 설정
                         }
-                        el += '<div class="pf-c-check">';
-                        el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].path + '" ' + check_disable + ' />';
-                        // el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].path + '" />';
-                        el += '<label class="pf-c-check__label" style="margin-top:5px" for="form-gfs-checkbox-disk-add' + i + '">' + gfs_list[i].path + ' ' + gfs_list[i].state + ' (' + gfs_list[i].tran + ') ' + gfs_list[i].size + ' ' + gfs_list[i].model + ' ' + gfs_list[i].wwn + partition_text + '</label>';
-                        el += '</div>';
+                        if (extend == "true"){
+                            el += '<div class="pf-c-check">';
+                            el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-extend-add' + i + '" name="form-gfs-checkbox-disk-extend-add" value="' + gfs_list[i].path + '" ' + check_disable + ' />';
+                            // el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-extend-add' + i + '" name="form-gfs-checkbox-disk-extend-add" value="' + gfs_list[i].path + '" />';
+                            el += '<label class="pf-c-check__label" style="margin-top:5px" for="form-gfs-checkbox-disk-extend-add' + i + '">' + gfs_list[i].path + ' ' + gfs_list[i].state + ' (' + gfs_list[i].tran + ') ' + gfs_list[i].size + ' ' + gfs_list[i].model + ' ' + gfs_list[i].wwn + partition_text + '</label>';
+                            el += '</div>';
+                        }else{
+                            el += '<div class="pf-c-check">';
+                            el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].path + '" ' + check_disable + ' />';
+                            // el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].path + '" />';
+                            el += '<label class="pf-c-check__label" style="margin-top:5px" for="form-gfs-checkbox-disk-add' + i + '">' + gfs_list[i].path + ' ' + gfs_list[i].state + ' (' + gfs_list[i].tran + ') ' + gfs_list[i].size + ' ' + gfs_list[i].model + ' ' + gfs_list[i].wwn + partition_text + '</label>';
+                            el += '</div>';
+                        }
                     }
                 }
             }else {
@@ -2273,8 +2302,11 @@ function setDiskAction(type, action){
             }
 
             // 일반 장치 정보를 먼저 추가하고, 마지막에 MultiPath 정보를 추가
-            $('#gfs-disk-add-list').append(multipathElements + el);
-
+            if (extend == "true"){
+                $('#gfs-disk-extend-add-list').append(multipathElements + el);
+            }else{
+                $('#gfs-disk-add-list').append(multipathElements + el);
+            }
         }).catch(function() {
             createLoggerInfo("setDiskAction error");
         });
@@ -2342,6 +2374,69 @@ function setDiskAction(type, action){
             $('#gfs-disk-delete-list').append(output);
         });
 
+    } else if (type == "gfs" && action == "extend"){
+        var cmd = ["python3", pluginpath + "/python/gfs/gfs_disk_status.py"];
+
+        cockpit.spawn(cmd).then(function(data) {
+            $('#gfs-disk-extend-list').empty();
+
+            // JSON 데이터 파싱
+            var result = JSON.parse(data);
+            var gfsList = result.val.blockdevices;
+
+            var output = '';
+
+            if (gfsList.length > 0) {
+                for (var i = 0; i < gfsList.length; i++) {
+                    var gfs_disk = gfsList[i];
+                    var multipaths = gfs_disk.multipaths.join(', ');
+                    var [vg_name, lv_name] = gfs_disk.lvm.split("/").pop().split(/-(.+)/);
+                    var gfs_name = gfs_disk.mountpoint.split("/").pop();
+                    var formattedMultipaths = '';
+
+                    // multipaths 배열을 여러 줄로 표시하도록 수정
+                    for (var j = 0; j < gfs_disk.multipaths.length; j += 2) {
+                        formattedMultipaths += `
+                            <div style="display: flex; gap: 10px; font-family: monospace;">
+                                <span>${gfs_disk.multipaths[j]}</span>
+                                ${gfs_disk.multipaths[j + 1] ? `<span>${gfs_disk.multipaths[j + 1]}</span>` : ''}
+                            </div>
+                        `;
+                    }
+
+                    output += `
+                        <div style="display: flex; align-items: center; font-family: monospace;">
+                            <input type="checkbox" class="gfs-disk-extend-checkbox" id="gfs-disk-checkbox-extend-${i}"
+                                name="form-gfs-checkbox-disk-extend" data-mountpoint="${gfs_disk.mountpoint}"
+                                data-multipaths="${multipaths}" data-size="${gfs_disk.size}" data-lvm="${gfs_disk.lvm}"
+                                data-vg_name="${vg_name}" data-lv_name="${lv_name}" data-gfs_name="${gfs_name}"
+                                style="margin-left:5px; transform: scale(1.3); margin-right:10px;">
+
+                            <label for="gfs-disk-checkbox-extend-${i}"
+                                style="display: inline-block; min-width:200px; overflow: hidden; text-overflow: ellipsis;">
+                                ${gfs_disk.mountpoint}
+                            </label>
+
+                            <label for="gfs-disk-checkbox-extend-${i}"
+                                style="display: inline-block; min-width:300px; overflow: hidden; text-overflow: ellipsis;">
+                                ${vg_name}      ${lv_name}
+                            </label>
+
+                            <label for="gfs-disk-checkbox-extend-${i}"
+                                style="display: inline-block; width: 100px;">
+                                ${gfs_disk.size}
+                            </label>
+
+                        </div>
+                    `;
+                }
+            }else {
+                output = '데이터가 존재하지 않습니다.<br>';
+            }
+
+            $('#gfs-disk-extend-list').append(output);
+        });
+
     }else if (type == "hba" && action == "list") {
         var cmd = ["python3", pluginpath + "/python/clvm/disk_manage.py", "--list-hba-wwn"];
 
@@ -2403,7 +2498,181 @@ function setDiskAction(type, action){
     }
 
 }
+function applyExtendMethodStyles() {
+    const checkedRadio = document.querySelector('input[name="extend-method"]:checked');
+    const lunSection = document.getElementById('lun-selection-section');
 
+    // 확장 방식에 따라 LUN 선택 영역 표시/숨김
+    if (checkedRadio && lunSection) {
+      lunSection.style.display = checkedRadio.value === 'add-lun' ? 'block' : 'none';
+    }
+
+    // 모든 라디오 버튼 초기화
+    document.querySelectorAll('input[name="extend-method"]').forEach((r) => {
+      r.style.backgroundColor = 'transparent';
+      r.style.boxShadow = 'none';
+    });
+
+    // 선택된 라디오 버튼 강조
+    if (checkedRadio) {
+      checkedRadio.style.backgroundColor = '#007BBA';
+      checkedRadio.style.boxShadow = 'inset 0 0 0 3px white';
+    }
+    console.log($('input[name="extend-method"]:checked').val())
+  }
+
+  // 초기 상태에도 적용
+  applyExtendMethodStyles();
+
+  // 변경 이벤트에 적용
+  document.querySelectorAll('input[name="extend-method"]').forEach((radio) => {
+    radio.addEventListener('change', applyExtendMethodStyles);
+  });
+$('#div-modal-gfs-disk-extend').on('change', 'input[type=checkbox][name="form-gfs-checkbox-disk-extend"], input[type=radio][id="method-resize"], input[type=radio][id="method-add-lun"], input[type=checkbox][name="form-gfs-checkbox-disk-extend-add"]', function() {
+    // 체크박스와 라디오 버튼의 상태 확인
+    var isCheckboxChecked = $('input[type=checkbox][name="form-gfs-checkbox-disk-extend"]:checked').length > 0;
+    var isResizeSelected = $('input[type=radio][id="method-resize"]:checked').length > 0;
+    var isAddLunSelected = $('input[type=radio][id="method-add-lun"]:checked').length > 0;
+    var isAddLunDiskSelected = $('input[type=checkbox][name="form-gfs-checkbox-disk-extend-add"]:checked').length > 0;
+
+    // 버튼을 활성화할 조건들
+    var isResizeChecked = isCheckboxChecked && isResizeSelected;
+    var isAddLunChecked = isCheckboxChecked && isAddLunSelected && isAddLunDiskSelected;
+
+    // 두 가지 조건 중 하나라도 만족하면 버튼 활성화
+    var isChecked = isResizeChecked || isAddLunChecked;
+
+    // 버튼의 disabled 속성 설정
+    $('#button-execution-modal-gfs-disk-extend').prop('disabled', !isChecked);
+});
+$('#button-execution-modal-gfs-disk-extend').on('click',function(){
+    $('#div-modal-gfs-disk-extend').hide();
+    $('#div-modal-spinner-header-txt').text("GFS 디스크를 스캔 중입니다.")
+    $('#div-modal-spinner').show();
+
+    var extend_method = $('input[name="extend-method"]:checked').val();
+    var non_stop_check = $('#modal-input-gfs-extend-no-downtime').prop('checked');
+
+    var vg_name = $('input[type=checkbox][name="form-gfs-checkbox-disk-extend"]:checked')
+    .map(function () {
+        return $(this).data('vg_name');
+    })
+    .get().join(',');
+
+    var lv_name = $('input[type=checkbox][name="form-gfs-checkbox-disk-extend"]:checked')
+    .map(function () {
+        return $(this).data('lv_name');
+    })
+    .get().join(',');
+
+    var mount_point = $('input[type=checkbox][name="form-gfs-checkbox-disk-extend"]:checked')
+    .map(function () {
+        return $(this).data('mountpoint');
+    })
+    .get().join(',');
+
+    var disks = $('input[type=checkbox][name="form-gfs-checkbox-disk-extend-add"]:checked')
+    .map(function () {
+        return $(this).val();
+    })
+    .get()
+    .join(',');
+
+    var gfs_name = $('input[type=checkbox][name="form-gfs-checkbox-disk-extend"]:checked')
+    .map(function(){
+         var name = $(this).data('mountpoint');
+         return name.split("/").pop();
+    })
+    .get().join(',');
+
+    console.log(vg_name, lv_name, mount_point, disks, gfs_name,non_stop_check);
+
+    if (extend_method == "resize"){
+        cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--rescan', '--vg-names', vg_name, '--lv-names', lv_name, '--mount-point', mount_point];
+        console.log(cmd);
+        cockpit.spawn(cmd).then(function(data){
+            var retVal = JSON.parse(data);
+            console.log(retVal);
+            if (retVal.code == "200"){
+                $('#div-modal-spinner-header-txt').text("GFS 디스크 논리 볼륨을 확장 중입니다.")
+                cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--extend', '--vg-names', vg_name, '--lv-names', lv_name, '--mount-point', mount_point, '--non-stop-check', non_stop_check];
+                console.log(cmd);
+                cockpit.spawn(cmd).then(function(data){
+                    var retVal = JSON.parse(data);
+                    console.log(retVal);
+                    if (retVal.code == "200"){
+                        $('#div-modal-spinner').hide();
+                        $('#modal-status-alert-title').html("GFS 디스크 확장");
+                        $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 확장했습니다.");
+                        $('#div-modal-status-alert').show();
+                    }else{
+                        $('#div-modal-spinner').hide();
+                        $('#modal-status-alert-title').html("GFS 디스크 확장");
+                        $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 실패했습니다.");
+                        $('#div-modal-status-alert').show();
+                    }
+                }).catch(function(){
+                    $('#div-modal-spinner').hide();
+                    $('#modal-status-alert-title').html("GFS 디스크 확장");
+                    $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 실패했습니다.");
+                    $('#div-modal-status-alert').show();
+                });
+            }else{
+                $('#div-modal-spinner').hide();
+                $('#modal-status-alert-title').html("GFS 디스크 확장");
+                $("#modal-status-alert-body").html("GFS 디스크 스캔을 실패했습니다.");
+                $('#div-modal-status-alert').show();
+            }
+        }).catch(function(){
+            $('#div-modal-spinner').hide();
+            $('#modal-status-alert-title').html("GFS 디스크 확장");
+            $("#modal-status-alert-body").html("GFS 디스크 스캔을 실패했습니다.");
+            $('#div-modal-status-alert').show();
+        })
+    }else if (extend_method == "add-lun"){
+        cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--scan'];
+        console.log(cmd);
+        cockpit.spawn(cmd).then(function(data){
+            var retVal = JSON.parse(data);
+            console.log(retVal);
+            if (retVal.code == "200"){
+                $('#div-modal-spinner-header-txt').text("GFS 디스크 논리 볼륨을 확장 중입니다.")
+                cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--add-extend', '--vg-names', vg_name, '--lv-names', lv_name, '--mount-point', mount_point, '--disks', disks, '--gfs-name', gfs_name, '--non-stop-check', non_stop_check];
+                console.log(cmd);
+                cockpit.spawn(cmd).then(function(data){
+                    var retVal = JSON.parse(data);
+                    console.log(retVal);
+                    if (retVal.code == "200"){
+                        $('#div-modal-spinner').hide();
+                        $('#modal-status-alert-title').html("GFS 디스크 확장");
+                        $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 확장했습니다.");
+                        $('#div-modal-status-alert').show();
+                    }else{
+                        $('#div-modal-spinner').hide();
+                        $('#modal-status-alert-title').html("GFS 디스크 확장");
+                        $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 실패했습니다.");
+                        $('#div-modal-status-alert').show();
+                    }
+                }).catch(function(){
+                    $('#div-modal-spinner').hide();
+                    $('#modal-status-alert-title').html("GFS 디스크 확장");
+                    $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 실패했습니다.");
+                    $('#div-modal-status-alert').show();
+                });
+            }else{
+                $('#div-modal-spinner').hide();
+                $('#modal-status-alert-title').html("GFS 디스크 확장");
+                $("#modal-status-alert-body").html("GFS 디스크 스캔을 실패했습니다.");
+                $('#div-modal-status-alert').show();
+            }
+        }).catch(function(){
+            $('#div-modal-spinner').hide();
+            $('#modal-status-alert-title').html("GFS 디스크 확장");
+            $("#modal-status-alert-body").html("GFS 디스크 스캔을 실패했습니다.");
+            $('#div-modal-status-alert').show();
+        });
+    }
+});
 $('#menu-item-set-gfs-clvm-disk-add').on('click',function(){
     setDiskAction("clvm","add")
     $('#div-modal-clvm-disk-add').show();
@@ -2417,7 +2686,7 @@ $('#button-close-modal-clvm-disk-add, #button-cancel-modal-clvm-disk-add').on('c
 });
 $('#button-close-modal-hba-wwn-list, #button-execution-modal-hba-wwn-list').on('click', function(){
     $('#div-modal-hba-wwn-list').hide();
-})
+});
 $('#button-execution-modal-clvm-disk-add').on('click',function(){
     $('#div-modal-clvm-disk-add').hide();
     $('#div-modal-spinner-header-txt').text("CLVM 디스크 논리 볼륨을 구성 중입니다.")
@@ -2639,8 +2908,18 @@ $('#button-close-modal-multipath-sync, #button-cancel-modal-multipath-sync').on(
 });
 
 $('#menu-item-set-gfs-disk-add').on('click',function(){
-    setDiskAction("gfs","add")
+    setDiskAction("gfs","add");
     $('#div-modal-gfs-disk-add').show();
+});
+$('#menu-item-set-gfs-disk-extend').on('click', function(){
+    $('#button-execution-modal-gfs-disk-extend').attr('disabled',true);
+    $('#method-resize').is(":checked");
+    setDiskAction("gfs", "extend");
+    setDiskAction("gfs", "add", "true");
+    $('#div-modal-gfs-disk-extend').show();
+});
+$('#button-close-modal-gfs-disk-extend, #button-cancel-modal-gfs-disk-extend').on('click',function(){
+    $('#div-modal-gfs-disk-extend').hide();
 });
 $('#button-close-modal-gfs-disk-add, #button-cancel-modal-gfs-disk-add').on('click',function(){
     $('#div-modal-gfs-disk-add').hide();
@@ -2743,7 +3022,7 @@ $('#button-close-modal-gfs-disk-info,#button-cancel-modal-gfs-disk-info').on('cl
     $('#div-modal-gfs-disk-info').hide();
 });
 $('#menu-item-set-gfs-disk-delete').on('click', function(){
-    setDiskAction("gfs","delete")
+    setDiskAction("gfs","delete");
     $('#div-modal-gfs-disk-delete').show();
 });
 $('#button-cancel-modal-gfs-disk-delete , #button-close-modal-gfs-disk-delete').on('click', function(){

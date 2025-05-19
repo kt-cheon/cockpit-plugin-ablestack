@@ -685,6 +685,10 @@
                                                     <button class="pf-c-dropdown__menu-item pf-m-disabled" type="button"
                                                         id="menu-item-set-gfs-disk-delete">GFS 디스크 삭제</button>
                                                 </li>
+                                                <li>
+                                                    <button class="pf-c-dropdown__menu-item pf-m-disabled" type="button"
+                                                        id="menu-item-set-gfs-disk-extend">GFS 디스크 확장</button>
+                                                </li>
                                                 <li class="pf-c-divider" role="separator"></li>
                                                 <li>
                                                     <button class="pf-c-dropdown__menu-item pf-m-disabled" type="button"
@@ -1786,7 +1790,96 @@
     </div>
 </div>
 <!-- GFS 디스크 삭제 : Modal 영역 끝 -->
-<!-- GFS 디스크 추가 : Modal 영역 시작 -->
+<!-- GFS 디스크 확장 : Modal 영역 시작 -->
+<div id="div-modal-gfs-disk-extend" class="pf-c-backdrop" style="display: none;">
+    <div class="pf-l-bullseye">
+      <div class="pf-c-modal-box pf-m-md" role="dialog" aria-modal="true" aria-label="GFS Disk extend"
+        style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); padding: 0;">
+
+        <!-- 닫기 버튼 -->
+        <button id="button-close-modal-gfs-disk-extend" aria-label="Close"
+          class="pf-c-button pf-m-plain pf-c-modal-box__close"
+          style="top: 16px; right: 16px;">
+          <i class="fas fa-times" aria-hidden="true"></i>
+        </button>
+
+        <!-- 헤더 -->
+        <header class="pf-c-modal-box__header" style="padding: 24px 24px 10px 24px;">
+          <h1 class="pf-c-modal-box__title" style="font-size: 25px; font-weight: 600;">
+            <span class="pf-c-modal-box__title-text">GFS 디스크 확장</span>
+          </h1>
+        </header>
+        <!-- 본문 -->
+        <div class="pf-c-modal-box__body" style="padding: 16px 24px 8px 24px;">
+          <form class="pf-c-form">
+            <!-- 디스크 목록 -->
+            <div class="pf-c-form__group">
+              <label class="pf-c-form__label" for="gfs-disk-extend-list">
+                <span class="pf-c-form__label-text" style="font-weight: 600; font-size:large;">1. 확장할 GFS 디스크 및 마운트 이름</span>
+              </label>
+              <div id="gfs-disk-extend-list" class="pf-c-form__group-control pf-m-stack"
+                style="margin-top:8px;padding:12px; background-color: #f5f5f5; border-radius: 6px; max-height: 200px; overflow-y: auto;">
+              </div>
+            </div>
+            <!-- 확장 방식 -->
+            <div class="pf-c-form__group">
+                <label class="pf-c-form__label">
+                  <span class="pf-c-form__label-text" style="font-weight: 600;font-size:large">2. 확장 방식 선택</span>
+                </label>
+                <div class="pf-c-form__group-control" style="margin-top: 8px;">
+                  <label style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 6px; transition: background 0.2s;"
+                    onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='transparent'">
+                    <input type="radio" name="extend-method" id="method-resize" value="resize" checked
+                      style="appearance: none; width: 18px; height: 18px; border: 2px solid #007BBA; border-radius: 50%; position: relative; cursor: pointer;">
+                    <span style="font-size: 15px;">기존 디스크 사이즈만 확장</span>
+                  </label>
+
+                  <label style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 6px; transition: background 0.2s;"
+                    onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='transparent'">
+                    <input type="radio" name="extend-method" id="method-add-lun" value="add-lun"
+                      style="appearance: none; width: 18px; height: 18px; border: 2px solid #007BBA; border-radius: 50%; position: relative; cursor: pointer;">
+                    <span style="font-size: 15px;">새로운 LUN 디스크 추가</span>
+                  </label>
+                </div>
+              </div>
+            <!-- LUN 디스크 선택 영역 -->
+            <div id="lun-selection-section" class="pf-c-form__group" style="display: none; margin-bottom: 20px;">
+              <label class="pf-c-form__label">
+                <span class="pf-c-form__label-text" style="font-weight: 600;">추가할 LUN 디스크 선택</span>
+              </label>
+              <div class="pf-c-form__group-control pf-m-stack" id="gfs-disk-extend-add-list"
+                style="margin-top: 8px; padding: 8px 12px; background-color: #f0f0f0; border-radius: 6px; max-height: 250px; overflow-y: auto;">
+                <!-- JS로 디스크 삽입 예정 -->
+              </div>
+            </div>
+            <div id="modal-div-gfs-extend-no-downtime" class="pf-c-modal-box__body pf-l-flex pf-m-align-items-center">
+                <p>무중단 확장</p>
+                <label class="pf-c-switch">
+                    <input id="modal-input-gfs-extend-no-downtime" class="pf-c-switch__input" type="checkbox" aria-label="무중단 확장 체크">
+                    <span class="pf-c-switch__toggle">
+                        <div id="modal-switch-gfs-extend-no-downtime" class="pf-c-switch__toggle-icon" aria-hidden="true"></div>
+                    </span>
+                </label>
+            </div>
+          </form>
+        </div>
+        <!-- 푸터 -->
+        <footer class="pf-c-modal-box__footer" style="padding: 16px 24px 24px 24px; display: flex; justify-content: flex-end; gap: 12px;">
+          <button id="button-execution-modal-gfs-disk-extend" class="pf-c-button pf-m-primary" type="button"
+            style="padding: 6px 16px;" disabled>
+            확장
+          </button>
+          <button id="button-cancel-modal-gfs-disk-extend" class="pf-c-button pf-m-link" type="button"
+            style="color: #0066cc;">
+            취소
+          </button>
+        </footer>
+      </div>
+    </div>
+  </div>
+  <!-- GFS 디스크 확장 : Modal 영역 끝 -->
+
+<!-- GFS 디스크 정보 : Modal 영역 시작 -->
 <div id="div-modal-gfs-disk-info" class="pf-c-backdrop" style="display:none">
     <div class="pf-l-bullseye">
         <div class="pf-c-modal-box pf-m-md" role="dialog" aria-modal="true" aria-label="GFS Disk Info">
@@ -1872,7 +1965,7 @@
         </div>
     </div>
 </div>
-<!-- GFS 디스크 추가 : Modal 영역 끝 -->
+<!-- GFS 디스크 정보 : Modal 영역 끝 -->
 <!-- GFS 호스트 제거 : Modal 영역 시작 -->
 <div id="div-modal-gfs-host-remove" class="pf-c-backdrop" style="display:none">
     <div class="pf-l-bullseye">
