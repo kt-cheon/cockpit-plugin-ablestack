@@ -94,7 +94,7 @@ def install_packages(remote_ips):
 def modify_lvm_conf(ips):
     """Modify the LVM configuration file on the remote hosts."""
     try:
-        if os_type == "PowerFlex":
+        if os_type == "powerflex":
             powerflex_disk_name = os.popen("lsblk -d -o name,size | grep scini | grep 512 | awk '{print $1}'").read().strip()
             modify_command = (
                 'sed -i \'s/# types = \\[ "fd", 16 \\]/types = \\[ "scini", 16 \\]/\' /etc/lvm/lvm.conf;'
@@ -229,7 +229,7 @@ def init_pcs_cluster(disks,vg_name,lv_name,list_ips):
             if status == "enabled":
                 run_command(rc_local_init_command, ssh_client, ignore_errors=True)
             # lvm.conf 초기화
-            if os_type == "PowerFlex":
+            if os_type == "powerflex":
                 run_command('sed -i \'s/types = \\[ "scini", 16 \\]/# types = \\[ "fd", 16 \\]/\' /etc/lvm/lvm.conf',ssh_client,ignore_errors=True)
             ssh_client.close()
 

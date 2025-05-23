@@ -835,7 +835,7 @@ function checkStorageClusterStatus(){
         cockpit.spawn(["cat", pluginpath+"/tools/properties/cluster.json"])
         .then(function(data){
             var retVal = JSON.parse(data);
-            if (retVal.clusterConfig.type == "PowerFlex"){
+            if (retVal.clusterConfig.type == "powerflex"){
                 setPfmpStatus();
                 //bootstrap.sh을 실행했는지 여부 확인
                 cockpit.spawn(["python3", pluginpath+"/python/ablestack_json/ablestackJson.py", "status"])
@@ -850,7 +850,7 @@ function checkStorageClusterStatus(){
                         $("#scvm-after-bootstrap-run").html("<a class='pf-c-dropdown__menu-item' href='#' id='menu-item-linkto-storage-center' onclick='scc_link_go()'>스토리지센터 연결</a>");
                         $("#scvm-before-bootstrap-run").html("");
                     }
-                    //PowerFlex PFMP의 bootstrap 실행전
+                    //powerflex PFMP의 bootstrap 실행전
                     if(retVal.val.bootstrap.pfmp == "false"){
                         sessionStorage.setItem("pfmp_bootstrap_status","false");
                         $("#pfmp-bootstrap-run").html("");
@@ -1217,7 +1217,7 @@ function checkStorageVmStatus(){
                     }else{ //가상머신 상태 running && sc상태 ok, warn 일때
                         $("#menu-item-set-storage-center-vm-delete").addClass('pf-m-disabled');
                     }
-                    if (os_type == "ABLESTACK-HCI"){
+                    if (os_type == "ablestack-hci"){
                         if(sessionStorage.getItem("storage_cluster_maintenance_status") == "true"){ //가상머신 상태 running && sc 유지보수모드일때
                             $("#menu-item-set-storage-center-vm-stop").removeClass('pf-m-disabled');
                         }else{//가상머신 상태 running && sc 유지보수모드 아닐때
@@ -1319,12 +1319,12 @@ function checkDeployStatus(){
         const step7 = sessionStorage.getItem("ccvm_bootstrap_status");
         const step8 = sessionStorage.getItem("wall_monitoring_status");
 
-        // PowerFlex용 sessionStorage
+        // powerflex용 sessionStorage
         const step9 = sessionStorage.getItem("pfmp_status");
         const step10 = sessionStorage.getItem("pfmp_bootstrap_status");
 
         // 배포 상태조회
-        if (os_type == "ABLESTACK-HCI"){
+        if (os_type == "ablestack-hci"){
             console.log("step1 :: " + step1 + ", step2 :: " + step2 + " , step3 :: " + step3 + ", step4 :: " + step4 + ", step5 :: " + step5 + ", step6 :: " + step6 + ", step7 :: " + step7 + ", step8 :: " + step8);
 
             if(step1!="true"){
@@ -1406,7 +1406,7 @@ function checkDeployStatus(){
                     }
                 }
             }
-        }else if (os_type == "PowerFlex"){
+        }else if (os_type == "powerflex"){
             console.log("step1 :: " + step1 + ", step2 :: " + step2 + " , step3 :: " + step3 + ", step4 :: " + step4 + ", step5 :: " + step5 + ", step6 :: " + step6 + ", step7 :: " + step7 + ", step8 :: " + step8 + ", stpe9 :: " + step9 + ", step10 :: " + step10);
             if(step1!="true"){
                 // 클러스터 구성준비 버튼 show
@@ -1758,7 +1758,7 @@ function ribbonWorker() {
                 license_check();
                 // checkHostandStonithrecovery();
             });
-    }else if (os_type == "PowerFlex"){
+    }else if (os_type == "powerflex"){
         Promise.all([pcsExeHost(), checkConfigStatus(), checkStorageClusterStatus(),
             checkStorageVmStatus(), CardCloudClusterStatus(), new CloudCenterVirtualMachine().checkCCVM()]).then(function(){
                 scanHostKey();

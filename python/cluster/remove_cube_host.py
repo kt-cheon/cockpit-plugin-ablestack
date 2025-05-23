@@ -98,7 +98,7 @@ def remove(args):
             outfile.write('        "type": ""\n')
             outfile.write('    },\n')
             outfile.write('}')
-        if os_type == 'PowerFlex':
+        if os_type == 'powerflex':
             with open(cluster_file_path, 'w') as outfile:
                 outfile.write('{\n')
                 outfile.write('    "clusterConfig": {\n')
@@ -130,7 +130,7 @@ def remove(args):
                 outfile.write('    }\n')
                 outfile.write('}\n')
 
-        else:   #os_type == "ABLESTACK-HCI"
+        else:   #os_type == "ablestack-hci"
             with open(cluster_file_path, 'w') as outfile:
                 outfile.write('{\n')
                 outfile.write('    "clusterConfig": {\n')

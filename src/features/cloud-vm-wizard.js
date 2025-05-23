@@ -127,7 +127,7 @@ $('#nav-button-cloud-vm-appliance').on('click',function(){
     $('#div-modal-wizard-cloud-vm-cluster-sync-mechanism').show();
     $('#nav-button-cloud-vm-appliance').addClass('pf-m-current');
 
-    if (os_type == "ABLESTACK-HCI"){
+    if (os_type == "ablestack-hci"){
         $('#nav-button-cloud-vm-compute').addClass('pf-m-current');
     }else{
         $('#nav-button-cloud-vm-cluster-sync-mechanism').addClass('pf-m-current');
@@ -163,7 +163,7 @@ $('#nav-button-cloud-vm-compute').on('click',function(){
     $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
     $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
     $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-    if (os_type == "ABLESTACK-HCI"){
+    if (os_type == "ablestack-hci"){
         cur_step_wizard_cloud_vm = "2";
     }else{
         cur_step_wizard_cloud_vm = "3";
@@ -180,7 +180,7 @@ $('#nav-button-cloud-vm-network').on('click',function(){
     $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
     $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
     $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-    if (os_type == "ABLESTACK-HCI"){
+    if (os_type == "ablestack-hci"){
         cur_step_wizard_cloud_vm = "3";
     }else{
         cur_step_wizard_cloud_vm = "4";
@@ -198,7 +198,7 @@ $('#nav-button-cloud-vm-disk').on('click',function(){
     $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
     $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
     $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-    if (os_type == "ABLESTACK-HCI"){
+    if (os_type == "ablestack-hci"){
         cur_step_wizard_cloud_vm = "4";
     }else{
         cur_step_wizard_cloud_vm = "5";
@@ -249,7 +249,7 @@ $('#nav-button-cloud-vm-ssh-key').on('click',function(){
     $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
     $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
 
-    if (os_type == "PowerFlex"){
+    if (os_type == "powerflex"){
         cur_step_wizard_cloud_vm = "7";
     }else if(os_type == "ablestack-vm"){
         cur_step_wizard_cloud_vm = "8";
@@ -268,7 +268,7 @@ $('#nav-button-cloud-vm-cluster').on('click',function(){
     $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
     $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
 
-    if (os_type == "PowerFlex"){
+    if (os_type == "powerflex"){
         cur_step_wizard_cloud_vm = "8";
     }else if(os_type == "ablestack-vm"){
         cur_step_wizard_cloud_vm = "9";
@@ -292,7 +292,7 @@ $('#nav-button-cloud-vm-review').on('click',function(){
     $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
     $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
 
-    if (os_type == "PowerFlex"){
+    if (os_type == "powerflex"){
         cur_step_wizard_cloud_vm = "9";
     }else if(os_type == "ablestack-vm"){
         cur_step_wizard_cloud_vm = "10";
@@ -312,7 +312,7 @@ $('#nav-button-cloud-vm-finish').on('click',function(){
     $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', true);
     $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
 
-    if (os_type == "PowerFlex"){
+    if (os_type == "powerflex"){
         cur_step_wizard_cloud_vm = "10";
     }else if(os_type == "ablestack-vm"){
         cur_step_wizard_cloud_vm = "11";
@@ -326,8 +326,8 @@ $('#nav-button-cloud-vm-finish').on('click',function(){
 /* Footer 영역에서 발생하는 이벤트 처리 시작 */
 
 $('#button-next-step-modal-wizard-cloud-vm').on('click', function(){
-    // OS Type이  PowerFlex일 때의 다음버튼의 행동 처리
-    if (os_type == "PowerFlex"){
+    // OS Type이  powerflex일 때의 다음버튼의 행동 처리
+    if (os_type == "powerflex"){
         if (cur_step_wizard_cloud_vm == "1") {
             resetCloudVMWizard();
 
@@ -689,7 +689,7 @@ $('#button-next-step-modal-wizard-cloud-vm').on('click', function(){
         else if (cur_step_wizard_cloud_vm == "11"){
             $('#div-modal-wizard-cloud-vm').hide();
         }
-    }else{ // OS Type이 ABLESTACK-HCI 일 경우의 다음버튼의 행동 처리
+    }else{ // OS Type이 ablestack-hci 일 경우의 다음버튼의 행동 처리
 
         if (cur_step_wizard_cloud_vm == "1") {
             resetCloudVMWizard();
@@ -781,7 +781,7 @@ $('#button-next-step-modal-wizard-cloud-vm').on('click', function(){
 
 $('#button-before-step-modal-wizard-cloud-vm').on('click', function(){
         // OS Type이 ABLESTACK이 아닐 때의 이전버튼의 행동 처리
-    if (os_type == "PowerFlex"){
+    if (os_type == "powerflex"){
         if (cur_step_wizard_cloud_vm == "1") {
             // 이벤트 처리 없음
         }
@@ -1332,7 +1332,7 @@ $('#button-execution-modal-cloud-wizard-confirm').on('click', function () {
     $('#div-modal-cloud-wizard-confirm').hide();
     if(validateCloudCenterVm()){
         deployCloudCenterVM();
-        if(os_type == "PowerFlex"){
+        if(os_type == "powerflex"){
             cur_step_wizard_cloud_vm = "10";
         }else if(os_type == "ablestack-vm"){
             cur_step_wizard_cloud_vm = "11";
@@ -1474,7 +1474,7 @@ function deployCloudCenterVM() {
 
     let ret_json_string = tableToClusterConfigJsonString(host_file_type, option_ccvm, os_type);
 
-    if (os_type == "ABLESTACK-HCI"){
+    if (os_type == "ablestack-hci"){
     //=========== 1. 클러스터 구성 host 네트워크 연결 테스트 ===========
     setProgressStep("span-ccvm-progress-step1",1);
     var console_log = true;
@@ -1621,8 +1621,8 @@ function deployCloudCenterVM() {
             createLoggerInfo("Failed to check connection status of host to configure cluster");
             alert("클러스터 구성할 host 연결 상태 확인 및 cluster.json config 실패 : "+data);
         });
-    }else if(os_type == "PowerFlex"){
-            // PowerFlex 서버 가상화 GFS용 일 때
+    }else if(os_type == "powerflex"){
+            // powerflex 서버 가상화 GFS용 일 때
     var all_host_name = "";
     var host_names = [];
     for (let i = 1; i <= $('#form-table-tbody-cluster-config-existing-host-profile-ccvm tr').length ; i++) {
@@ -2747,7 +2747,7 @@ function validateCloudCenterVm(){
     } else if ( $('#form-textarea-cloud-vm-ssh-public-key-file').val() == "") { //SSH 공개 Key 정보
         alert("SSH 공개 Key 파일을 입력해주세요.");
         validate_check = false;
-    } else if(os_type == "PowerFlex"){
+    } else if(os_type == "powerflex"){
         if (pcs_host1.val() == "") {
             alert("PCS 호스트1 PN IP를 입력해주세요.");
             validate_check = false;
@@ -2976,7 +2976,7 @@ function resetIpmiValues() {
  * History  : 2024.09.05 최초 작성
  */
 function setTypeByChange(){
-    if (os_type == "PowerFlex"){
+    if (os_type == "powerflex"){
         // 루트 디스크
         $('#form-select-cloud-vm-root-disk-size').text("500 GiB (THIN Provisioning)");
         $('#span-cloud-vm-root-disk-size').text("500 GiB");

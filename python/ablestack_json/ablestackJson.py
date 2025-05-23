@@ -108,7 +108,7 @@ def jsonAllUpdate():
         json_data = openAblestackJson()
         if os_type != "ablestack-vm":
             json_data["bootstrap"]["scvm"] = "true"
-        elif os_type == "PowerFlex":
+        elif os_type == "powerflex":
             json_data["bootstrap"]["pfmp"] = "true"
 
         json_data["bootstrap"]["ccvm"] = "true"

@@ -252,7 +252,7 @@ def insertScvmHost(args):
                         return createReturn(code=500, val=return_val + " : " + p_val2["scvmMngt"])
 
                 # 원격 ablecube 호스트 및 scvm의 hosts 정보를 수정하는 명령 수행
-                if os_type != "PowerFlex":
+                if os_type != "powerflex":
                     return_val = "insertScvmHost Failed to modify cluster_config.py and hosts file."
                     for p_val3 in param_json:
                         cmd_str = "python3 /usr/share/cockpit/ablestack/python/cluster/cluster_config.py insert"

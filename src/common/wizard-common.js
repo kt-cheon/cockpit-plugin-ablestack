@@ -911,7 +911,7 @@ function tableToHostsText(table_tr_obj, option, os_type){
 
 
         let temp_text = "";
-        if (os_type == "PowerFlex"){
+        if (os_type == "powerflex"){
             let idx = $(this).find('td').eq(0).text().trim();
             let host_name = $(this).find('td').eq(1).text().trim();
             let host_ip = $(this).find('td').eq(2).text().trim();
