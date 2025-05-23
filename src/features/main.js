@@ -138,20 +138,28 @@ $(document).ready(function(){
 
     // 라이센스 상태 확인 함수
     function checkLicenseStatus() {
-        cockpit.spawn(['/usr/share/cockpit/ablestack/python/license/register_license.py', '--status'])
+        cockpit.spawn(['python3', pluginpath + '/python/license/register_license.py', '--status'])
             .then(function(data) {
-                const result = JSON.parse(data);
+                var result = JSON.parse(data);
+                if (result.code == 200){
+                    updateLicenseUI(result);
 
-                // 라이센스 상태에 따른 UI 업데이트
-                updateLicenseUI(result);
+                    // 라이센스 버튼은 항상 표시되도록 수정
+                    $('#button-open-modal-license-register').show();
+                }else{
+                    // 에러 시에도 버튼은 표시
+                    $('#button-open-modal-license-register').show();
 
-                // 라이센스 버튼은 항상 표시되도록 수정
-                $('#button-open-modal-license-register').show();
-
-                return result;
+                    // 에러 UI 업데이트
+                    $('#div-license-description').html(`
+                        <div class="license-info error">
+                            <p><i class="fas fa-exclamation-triangle" style="color: var(--pf-global--danger-color--100);"></i> 라이센스 상태를 확인할 수 없습니다.</p>
+                            <p>시스템 오류가 발생했습니다.</p>
+                        </div>
+                    `);
+                }
             })
-            .catch(function(error) {
-                console.error("라이센스 상태 확인 실패:", error);
+            .catch(function() {
                 // 에러 시에도 버튼은 표시
                 $('#button-open-modal-license-register').show();
 
@@ -162,7 +170,6 @@ $(document).ready(function(){
                         <p>시스템 오류가 발생했습니다.</p>
                     </div>
                 `);
-                throw error;
             });
     }
 
@@ -1748,6 +1755,7 @@ function ribbonWorker() {
             })
             .finally(function () {
                 checkDeployStatus();
+                license_check();
                 // checkHostandStonithrecovery();
             });
     }else if (os_type == "PowerFlex"){
@@ -1755,6 +1763,7 @@ function ribbonWorker() {
             checkStorageVmStatus(), CardCloudClusterStatus(), new CloudCenterVirtualMachine().checkCCVM()]).then(function(){
                 scanHostKey();
                 checkDeployStatus();
+                license_check();
                 // checkHostandStonithrecovery();
         });
     }else{
@@ -1762,6 +1771,7 @@ function ribbonWorker() {
             checkStorageVmStatus(), CardCloudClusterStatus(), new CloudCenterVirtualMachine().checkCCVM()]).then(function(){
                 scanHostKey();
                 checkDeployStatus();
+                license_check();
         });
     }
 }

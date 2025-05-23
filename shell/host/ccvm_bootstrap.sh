@@ -21,6 +21,9 @@ firewall-cmd --permanent --zone=public --add-service=mysql 2>&1 | tee -a $LOGFIL
 firewall-cmd --reload
 firewall-cmd --list-all 2>&1 | tee -a $LOGFILE
 
+# 라이선스 종류에 따라 설정 $1="hv" or "ablestack" or "clostack"
+sh /usr/share/cloudstack-common/scripts/util/update-mold-theme-from-license.sh $1
+
 # Crushmap 설정 추가 (ceph autoscale)
 scvm=$(grep scvm-mngt /etc/hosts | awk {'print $1'})
 ssh -o StrictHostKeyChecking=no $scvm /usr/local/sbin/setCrushmap.sh

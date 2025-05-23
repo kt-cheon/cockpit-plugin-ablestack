@@ -92,7 +92,11 @@ def remove(args):
             outfile.write('    },\n')
             outfile.write('    "monitoring": {\n')
             outfile.write('        "wall": "false"\n')
-            outfile.write('    }\n')
+            outfile.write('    },\n')
+            outfile.write('    "license": {\n')
+            outfile.write('        "status": "false",\n')
+            outfile.write('        "type": ""\n')
+            outfile.write('    },\n')
             outfile.write('}')
         if os_type == 'PowerFlex':
             with open(cluster_file_path, 'w') as outfile:
