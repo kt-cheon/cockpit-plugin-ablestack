@@ -669,7 +669,7 @@ function CardCloudClusterStatus(){
                         sessionStorage.setItem("ccvm_bootstrap_status","false");
                         console.log('ccvm false in')
                         $('#ccvm-after-bootstrap-run').html('');
-                        $('#ccvm-before-bootstrap-run').html('<a class="pf-c-dropdown__menu-item" href="#" id="menu-item-bootstrap-run-ccvm" onclick="ccvm_bootstrap_run()">클라우드센터 구성하기</a>');
+                        $('#ccvm-before-bootstrap-run').html('<a class="pf-c-dropdown__menu-item pf-m-disabled" href="#" id="menu-item-bootstrap-run-ccvm" onclick="ccvm_bootstrap_run()">클라우드센터 구성하기</a>');
                     }else if (ccvmStatus.ccvm == 'true'){
                         sessionStorage.setItem("ccvm_bootstrap_status","true");
                         console.log('ccvm true in')
@@ -792,7 +792,81 @@ function CardCloudClusterStatus(){
         });
     });
 }
-
+/**
+ * Meathod Name : license_check
+ * Date Created : 2025.05.19
+ * Writer  : 정민철
+ * Description : 라이선스 유무 판단하여 ccvm bootstrap 활성화
+ * Parameter : 없음
+ * Return  : 없음
+ * History  : 2025.05.19 최초 작성
+ */
+function license_check(){
+    cmd = ["curl", "-s", "-k", "https://localhost:8080/api/v1/license"];
+    cockpit.spawn(cmd).then(function(data){
+        var retVal = JSON.parse(data);
+        if(retVal.code == 500){
+            var license_type = "";
+            cmd = ['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update', '--depth1', 'license', '--depth2', 'status', '--value', 'false'];
+            cockpit.spawn(cmd).then(function(data){
+                var retVal = JSON.parse(data);
+                if(retVal.code == 200){
+                    cmd = ['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update', '--depth1', 'license', '--depth2', 'type', '--value', license_type];
+                    cockpit.spawn(cmd).then(function(data){
+                        var retVal = JSON.parse(data);
+                        if(retVal.code == 200){
+                            console.log("License check result: No license found");
+                        }
+                    })
+                }
+            })
+            sessionStorage.setItem("license_type", license_type);
+            $('#ccvm-before-bootstrap-run').show();
+            $('#menu-item-bootstrap-run-ccvm').removeClass('pf-m-disabled');
+            $('#ccvm-before-bootstrap-run').hide();
+            if (!$('#menu-item-bootstrap-run-ccvm').hasClass('pf-m-disabled')) {
+                $('#menu-item-bootstrap-run-ccvm').addClass('pf-m-disabled');
+            }
+        }else{
+            var date = new Date();
+            var local_date = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+            var retVal = JSON.parse(retVal);
+            var license_type = retVal.oem;
+            var expired_date_str = retVal.expired;
+            var expired_date_parts = expired_date_str.split("-");
+            var expired_date = new Date(
+                parseInt(expired_date_parts[0]),
+                parseInt(expired_date_parts[1]) - 1,
+                parseInt(expired_date_parts[2])
+            );
+            if (local_date > expired_date){
+                $('#ccvm-before-bootstrap-run').hide();
+                if (!$('#menu-item-bootstrap-run-ccvm').hasClass('pf-m-disabled')) {
+                    $('#menu-item-bootstrap-run-ccvm').addClass('pf-m-disabled');
+                }
+            }else{
+                cmd = ['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update', '--depth1', 'license', '--depth2', 'status', '--value', 'true'];
+                cockpit.spawn(cmd).then(function(data){
+                    var retVal = JSON.parse(data);
+                    if(retVal.code == 200){
+                        cmd = ['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update', '--depth1', 'license', '--depth2', 'type', '--value', license_type];
+                        cockpit.spawn(cmd).then(function(data){
+                            var retVal = JSON.parse(data);
+                            if(retVal.code == 200){
+                                console.log("license check update success");
+                            }else{
+                                console.log("license check update error");
+                            }
+                        })
+                    }
+                })
+                sessionStorage.setItem("license_type", license_type);
+                $('#ccvm-before-bootstrap-run').show();
+                $('#menu-item-bootstrap-run-ccvm').removeClass('pf-m-disabled');
+            }
+        }
+    });
+}
 /**
  * Meathod Name : scvm_bootstrap_run
  * Date Created : 2021.04.13

@@ -6,5 +6,9 @@
     },
     "monitoring": {
         "wall": "false"
+    },
+    "license": {
+        "status": "false",
+        "type": ""
     }
 }

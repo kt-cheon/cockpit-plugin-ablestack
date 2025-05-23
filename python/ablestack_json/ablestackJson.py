@@ -108,6 +108,8 @@ def jsonAllUpdate():
         json_data = openAblestackJson()
         if os_type != "ablestack-vm":
             json_data["bootstrap"]["scvm"] = "true"
+        elif os_type == "PowerFlex":
+            json_data["bootstrap"]["pfmp"] = "true"
 
         json_data["bootstrap"]["ccvm"] = "true"
         json_data["monitoring"]["wall"] = "true"
@@ -128,6 +130,7 @@ def jsonAllReset():
 
         json_data["bootstrap"]["scvm"] = "false"
         json_data["bootstrap"]["ccvm"] = "false"
+        json_data["bootstrap"]["pfmp"] = "false"
         json_data["monitoring"]["wall"] = "false"
 
         with open(file_path, 'w') as outfile:

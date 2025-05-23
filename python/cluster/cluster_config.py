@@ -102,10 +102,13 @@ def insert(args):
             except FileNotFoundError:
                 existing_lines = ""
 
+            # net.bridge.bridge* 의 key가 없을 경우에만 추가
             with open("/etc/sysctl.conf", "a") as sysctl_file:
-                for line in settings:
-                    if line not in existing_lines:
-                        sysctl_file.write(f"\n{line}")
+                for setting in settings:
+                    key = setting.split("=")[0]
+                    if key not in existing_lines:
+                        sysctl_file.write(f"\n{setting}")
+
             subprocess.run(["sysctl", "-p"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     # 수정할 cluster.json 파일 읽어오
