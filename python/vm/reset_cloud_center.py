@@ -62,7 +62,7 @@ def resetCloudCenter(args):
 
     success_bool = True
 
-    if os_type == "ABLESTACK-HCI":
+    if os_type == "ablestack-hci":
         #=========== pcs cluster 초기화 ===========
         # 리소스 삭제
         result = json.loads(python3(pluginpath + '/python/pcs/main.py', 'remove', '--resource', 'cloudcenter_res'))
@@ -98,7 +98,7 @@ def resetCloudCenter(args):
         else:
             return createReturn(code=500, val="cloud center reset fail")
 
-    elif os_type == "PowerFlex":
+    elif os_type == "powerflex":
         pcs_list = []
 
         for i in range(len(json_data["clusterConfig"]["pcsCluster"])):

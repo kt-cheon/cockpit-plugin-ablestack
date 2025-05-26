@@ -84,14 +84,14 @@ def changeHosts(args):
         for f_val in json_data["clusterConfig"]["hosts"]:
             json_ips = {}
             hostname_arry = []
-            if args.type == "PowerFlex":
-                # PowerFlex용 SCVM 호스트 파일
+            if args.type == "powerflex":
+                # powerflex용 SCVM 호스트 파일
                 my_hosts.remove_all_matching(address=f_val["ablecube"])
                 my_hosts.remove_all_matching(address=f_val["scvmMngt"])
                 my_hosts.remove_all_matching(address=f_val["ablecubePn"])
                 my_hosts.remove_all_matching(address=f_val["scvm"])
                 my_hosts.remove_all_matching(address=f_val["scvmCn"])
-                # PowerFlex용 SCVM 호스트 파일
+                # powerflex용 SCVM 호스트 파일
                 my_hosts.remove_all_matching(name=f_val["hostname"])
                 my_hosts.remove_all_matching(name="scvm"+f_val["index"])
                 my_hosts.remove_all_matching(name="pn-"+"ablecube"+f_val["index"])
@@ -118,8 +118,8 @@ def changeHosts(args):
 
             if hostname == f_val["hostname"]:
 
-                if args.type == "PowerFlex":
-                    # PowerFlex용 SCVM 호스트 파일
+                if args.type == "powerflex":
+                    # powerflex용 SCVM 호스트 파일
                     entry = HostsEntry(entry_type='ipv4', address=f_val["ablecube"], names=[f_val["hostname"], 'ablecube'])
                     my_hosts.add([entry])
                     entry = HostsEntry(entry_type='ipv4', address=f_val["scvmMngt"], names=["scvm"+f_val["index"], 'scvm'])
@@ -146,8 +146,8 @@ def changeHosts(args):
                     my_hosts.add([entry])
 
             else:
-                if args.type == "PowerFlex":
-                    # PowerFlex용 SCVM 호스트 파일
+                if args.type == "powerflex":
+                    # powerflex용 SCVM 호스트 파일
                     entry = HostsEntry(entry_type='ipv4', address=f_val["ablecube"], names=[f_val["hostname"]])
                     my_hosts.add([entry])
                     entry = HostsEntry(entry_type='ipv4', address=f_val["scvmMngt"], names=["scvm"+f_val["index"]])
@@ -188,7 +188,7 @@ def hostOnly(args):
 
 def withScvm(args):
     ret = changeHosts(args)
-    if os_type == "ABLESTACK-HCI":
+    if os_type == "ablestack-hci":
         os.system("scp -q -o StrictHostKeyChecking=no " + hosts_file_path + " root@scvm-mngt:/etc/hosts")
     # os.system("scp -q "+ hosts_file_path +" root@scvm-mngt:/etc/hosts")
     return ret

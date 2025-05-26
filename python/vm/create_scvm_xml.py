@@ -122,7 +122,7 @@ def createScvmXml(args):
         br_num = 0
         openvswitch_service_check = os.system("systemctl is-active openvswitch > /dev/null")
         # 생성할 가상머신 xml 템플릿
-        if os_type == "PowerFlex":
+        if os_type == "powerflex":
             os.system("/usr/bin/cp -f "+pluginpath+"/tools/xml-template/powerflex-scvm-xml-template.xml "+pluginpath+"/tools/vmconfig/scvm/scvm-temp.xml")
         else:
             os.system("/usr/bin/cp -f "+pluginpath+"/tools/xml-template/scvm-xml-template.xml "+pluginpath+"/tools/vmconfig/scvm/scvm-temp.xml")
