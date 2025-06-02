@@ -47,11 +47,21 @@ mysqladmin -uroot password $DATABASE_PASSWD
 systemctl enable --now mold-usage.service
 cloudstack-setup-databases cloud:$DATABASE_PASSWD --deploy-as=root:$DATABASE_PASSWD  2>&1 | tee -a $LOGFILE
 
-for i in "${global_settings[@]}"
-do
-  key=$(echo $i | cut -d "=" -f 1)
-  value=$(echo $i | cut -d "=" -f 2)
-  mysql --user=root --password=$DATABASE_PASSWD -e "use cloud; UPDATE configuration SET value='$value' where name='$key';"  2>&1 | tee -a $LOGFILE
+# 글로벌설정 DB 업데이트
+global_settings=(
+  "enable.vm.network.filter.allow.all.traffic=true"
+)
+
+for i in "${global_settings[@]}"; do
+  IFS='=' read -r key value <<< "$i"
+
+  if [[ -n "$key" && -n "$value" ]]; then
+    mysql --user=root --password="$DATABASE_PASSWD" -e \
+      "USE cloud; UPDATE configuration SET value='$value' WHERE name='$key';" \
+      2>/dev/null | tee -a "$LOGFILE"
+  else
+    echo "잘못된 설정 항목: $i" | tee -a "$LOGFILE"
+  fi
 done
 
 cloudstack-setup-management  2>&1 | tee -a $LOGFILE
