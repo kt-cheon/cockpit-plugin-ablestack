@@ -1480,17 +1480,12 @@ function checkDeployStatus(){
                                         $('#button-link-storage-center-dashboard').show();
                                         showRibbon('warning','클라우드센터 VM이 배포되지 않았습니다. 클라우드센터 VM 배포를 진행하십시오.');
                                     }else{
-                                        if(step0!="active"){
-                                            showRibbon('warning','라이선스가 등록되어 있지 않습니다. 클라우드센터를 구성하기 전에 반드시 라이선스를 등록해주세요.');
-                                        }else if(step0=="inactive"){
-                                            showRibbon('warning','현재 등록된 라이선스가 만료되었습니다. 새로운 라이선스를 등록해주세요.');
+                                        if(step8!="true" && step7!="true"){
+                                            showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
                                         }else{
-                                            if(step8!="true" && step7!="true"){
-                                                showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
-                                            }else{
-                                                // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
-                                                $('#button-link-storage-center-dashboard').show();
-                                                $('#button-link-cloud-center').show();
+                                            // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
+                                            $('#button-link-storage-center-dashboard').show();
+                                            $('#button-link-cloud-center').show();
 
                                                 if(step8!="true"){
                                                     $('#button-open-modal-wizard-monitoring-center').show();
@@ -1546,17 +1541,12 @@ function checkDeployStatus(){
                                         $('#button-link-storage-center-dashboard').show();
                                         showRibbon('warning','클라우드센터 VM이 배포되지 않았습니다. 클라우드센터 VM 배포를 진행하십시오.');
                                     }else{
-                                        if(step0!="active"){
-                                            showRibbon('warning','라이선스가 등록되어 있지 않습니다. 클라우드센터를 구성하기 전에 반드시 라이선스를 등록해주세요.');
-                                        }else if(step0=="inactive"){
-                                            showRibbon('warning','현재 등록된 라이선스가 만료되었습니다. 새로운 라이선스를 등록해주세요.');
+                                        if(step8!="true" && step7!="true"){
+                                            showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
                                         }else{
-                                            if(step8!="true" && step7!="true"){
-                                                showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
-                                            }else{
-                                                // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
-                                                $('#button-link-storage-center-dashboard').show();
-                                                $('#button-link-cloud-center').show();
+                                            // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
+                                            $('#button-link-storage-center-dashboard').show();
+                                            $('#button-link-cloud-center').show();
 
                                                 if(step8!="true"){
                                                     $('#button-open-modal-wizard-monitoring-center').show();
@@ -1620,16 +1610,11 @@ function checkDeployStatus(){
                         $('#button-open-modal-wizard-cloud-vm').show();
                         showRibbon('warning','클라우드센터 VM이 배포되지 않았습니다. 클라우드센터 VM 배포를 진행하십시오.');
                     }else{
-                        if(step0!="active"){
-                            showRibbon('warning','라이선스가 등록되어 있지 않습니다. 클라우드센터를 구성하기 전에 반드시 라이선스를 등록해주세요.');
-                        }else if(step0=="inactive"){
-                            showRibbon('warning','현재 등록된 라이선스가 만료되었습니다. 새로운 라이선스를 등록해주세요.');
+                        if(step8!="true" && step7!="true"){
+                            showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
                         }else{
-                            if(step8!="true" && step7!="true"){
-                                showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
-                            }else{
-                                // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
-                                $('#button-link-cloud-center').show();
+                            // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
+                            $('#button-link-cloud-center').show();
 
                                 if(step8!="true"){
                                     $('#button-open-modal-wizard-monitoring-center').show();

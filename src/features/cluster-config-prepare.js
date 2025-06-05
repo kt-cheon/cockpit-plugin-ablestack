@@ -1607,30 +1607,30 @@ async function modifyTimeServer(timeserver_confirm_ip_text, file_type, timeserve
                     chrony_text +="server " + timeserver_confirm_ip_text.slice(-1) + " iburst"+"\n";
                 }
                 if ($('#'+tbody_tr).length != 2){
-                    chrony_text +="server " + timeserver_confirm_ip_text[0] + " iburst minpoll 0 maxpoll 0"+"\n";
+                    chrony_text +="server " + timeserver_confirm_ip_text[0] + " iburst minpoll 4 maxpoll 6"+"\n";
                 }
                 else{
-                    chrony_text +="server " + timeserver_confirm_ip_text[1] + " iburst minpoll 0 maxpoll 0"+"\n";
+                    chrony_text +="server " + timeserver_confirm_ip_text[1] + " iburst minpoll 4 maxpoll 6"+"\n";
                 }
 
             } else if (timeserver_current_host_num == 2) {
                 if (external_time_server == "true"){
                     chrony_text +="server " + timeserver_confirm_ip_text.slice(-1) + " iburst"+"\n";
                 }
-                chrony_text +="server " + timeserver_confirm_ip_text[0] + " iburst minpoll 0 maxpoll 0"+"\n";
+                chrony_text +="server " + timeserver_confirm_ip_text[0] + " iburst minpoll 4 maxpoll 6"+"\n";
             } else if (timeserver_current_host_num == 3) {
                 if (external_time_server == "true"){
                     chrony_text +="server " + timeserver_confirm_ip_text.slice(-1) + " iburst"+"\n";
                 }
-                chrony_text +="server " + timeserver_confirm_ip_text[0] + " iburst minpoll 0 maxpoll 0"+"\n";
-                chrony_text +="server " + timeserver_confirm_ip_text[1] + " prefer iburst minpoll 0 maxpoll 0"+"\n";
+                chrony_text +="server " + timeserver_confirm_ip_text[0] + " iburst minpoll 4 maxpoll 6"+"\n";
+                chrony_text +="server " + timeserver_confirm_ip_text[1] + " prefer iburst minpoll 4 maxpoll 6"+"\n";
             } else {
                 // 서버가 4대 이상일 경우 시간 서버 어떻게 해야할 지? 일단 외부시간 서버와 1번 2번 호스트를 바라보게 해놓음
                 if (external_time_server == "true"){
                     chrony_text +="server " + timeserver_confirm_ip_text.slice(-1) + " iburst"+"\n";
                 }
-                chrony_text +="server " + timeserver_confirm_ip_text[0] + " iburst minpoll 0 maxpoll 0"+"\n";
-                chrony_text +="server " + timeserver_confirm_ip_text[1] + " prefer iburst minpoll 0 maxpoll 0"+"\n";
+                chrony_text +="server " + timeserver_confirm_ip_text[0] + " iburst minpoll 4 maxpoll 6"+"\n";
+                chrony_text +="server " + timeserver_confirm_ip_text[1] + " prefer iburst minpoll 4 maxpoll 6"+"\n";
             }
 
     }
