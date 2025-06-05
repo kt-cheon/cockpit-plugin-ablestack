@@ -149,14 +149,14 @@ $(document).ready(function(){
                 }else{
                     // 에러 시에도 버튼은 표시
                     $('#button-open-modal-license-register').show();
-
+                    updateLicenseUI(result);
                     // 에러 UI 업데이트
-                    $('#div-license-description').html(`
-                        <div class="license-info error">
-                            <p><i class="fas fa-exclamation-triangle" style="color: var(--pf-global--danger-color--100);"></i> 라이센스 상태를 확인할 수 없습니다.</p>
-                            <p>시스템 오류가 발생했습니다.</p>
-                        </div>
-                    `);
+                    // $('#div-license-description').html(`
+                    //     <div class="license-info error">
+                    //         <p><i class="fas fa-exclamation-triangle" style="color: var(--pf-global--danger-color--100);"></i> 라이센스 상태를 확인할 수 없습니다.</p>
+                    //         <p>시스템 오류가 발생했습니다.</p>
+                    //     </div>
+                    // `);
                 }
             })
             .catch(function() {
@@ -621,6 +621,31 @@ function checkConfigStatus(){
     });
 }
 
+function checkLicenseStatus(){
+    return new Promise((resolve) => {
+        cockpit.spawn(['python3', pluginpath + '/python/license/register_license.py', '--status'])
+            .then(function(data) {
+                var result = JSON.parse(data);
+                if (result.code == 200){
+                    // 라이센스 상태가 active인 경우
+                    if(result.val && result.val.status === 'active') {
+                        sessionStorage.setItem("license_status", "active");
+                        resolve();
+                    } else {
+                        sessionStorage.setItem("license_status", "inactive");
+                        resolve();
+                    }
+                } else {
+                    sessionStorage.setItem("license_status", "error");
+                    resolve();
+                }
+            })
+            .catch(function() {
+                sessionStorage.setItem("license_status", "error");
+                resolve();
+            });
+    })
+}
 /** all hosts update glue config modal 관련 action start */
 function all_host_glue_config_update_modal(){
     $('#div-modal-update-glue-config').show();
@@ -1310,6 +1335,8 @@ function checkDeployStatus(){
         - 클라우드센터 가상머신 부트스트랩 실행 상태 = false, true
         */
         const os_type = sessionStorage.getItem("os_type");
+
+        const step0 = sessionStorage.getItem("license_status");
         const step1 = sessionStorage.getItem("ccfg_status");
         const step2 = sessionStorage.getItem("scvm_status");
         const step3 = sessionStorage.getItem("scvm_bootstrap_status");
@@ -1325,8 +1352,7 @@ function checkDeployStatus(){
 
         // 배포 상태조회
         if (os_type == "ablestack-hci"){
-            console.log("step1 :: " + step1 + ", step2 :: " + step2 + " , step3 :: " + step3 + ", step4 :: " + step4 + ", step5 :: " + step5 + ", step6 :: " + step6 + ", step7 :: " + step7 + ", step8 :: " + step8);
-
+            console.log("step0 :: " + step0 + ", step1 :: " + step1 + ", step2 :: " + step2 + " , step3 :: " + step3 + ", step4 :: " + step4 + ", step5 :: " + step5 + ", step6 :: " + step6 + ", step7 :: " + step7 + ", step8 :: " + step8);
             if(step1!="true"){
                 // 클러스터 구성준비 버튼 show
                 $('#button-open-modal-wizard-storage-cluster').show();
@@ -1334,6 +1360,8 @@ function checkDeployStatus(){
             }else{
                 $('#button-config-file-download').show();
                 if(step2=="HEALTH_ERR"||step2==null){
+                    // 외부 스토리지 버튼 활성화
+                    $('#button-gfs-multipath-sync').prop('disabled', false);
                     // 클러스터 구성준비 버튼, 스토리지센터 VM 배포 버튼 show
                     $('#button-open-modal-wizard-storage-cluster').show();
                     $('#button-open-modal-wizard-storage-vm').show();
@@ -1364,39 +1392,45 @@ function checkDeployStatus(){
                                     $('#button-link-storage-center-dashboard').show();
                                     showRibbon('warning','클라우드센터 VM이 배포되지 않았습니다. 클라우드센터 VM 배포를 진행하십시오.');
                                 }else{
-                                    if(step8!="true" && step7!="true"){
-                                        showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
+                                    if(step0!="active"){
+                                        showRibbon('warning','라이선스가 등록되어 있지 않습니다. 클라우드센터를 구성하기 전에 반드시 라이선스를 등록해주세요.');
+                                    }else if(step0=="inactive"){
+                                        showRibbon('warning','현재 등록된 라이선스가 만료되었습니다. 새로운 라이선스를 등록해주세요.');
                                     }else{
-                                        // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
-                                        $('#button-link-storage-center-dashboard').show();
-                                        $('#button-link-cloud-center').show();
-
-                                        if(step8!="true"){
-                                            $('#button-open-modal-wizard-monitoring-center').show();
-                                            showRibbon('warning','모니터링센터에 연결할 수 있도록 모니터링센터 구성 작업을 진행하십시오.');
+                                        if(step8!="true" && step7!="true"){
+                                            showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
                                         }else{
-                                            // 모니터링센터 구성 연결 버튼 show
-                                            $('#button-link-monitoring-center').show();
+                                            // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
+                                            $('#button-link-storage-center-dashboard').show();
+                                            $('#button-link-cloud-center').show();
 
-                                            showRibbon('success','ABLESTACK 스토리지센터 및 클라우드센터 VM 배포되었으며 모니터링센터 구성이 완료되었습니다. 가상어플라이언스 상태가 정상입니다.');
-                                            // 운영 상태조회
-                                            let msg ="";
-                                            if(step2!="RUNNING"){
-                                                msg += '스토리지센터 가상머신이 '+step2+' 상태 입니다.\n';
-                                                msg += '스토리지센터 가상머신이 shut off 상태일 경우 스토리지센터 가상머신 카드에서 스토리지센터 VM을 시작해주세요.\n';
-                                                showRibbon('warning', msg);
-                                            }
-                                            if(step4!="HEALTH_OK"){
-                                                msg += '스토리지센터 클러스터가 '+step4+' 상태 입니다.\n';
-                                                msg += 'oout, nobackfill, norecover flag인 경우 의도하지 않은 유지보수 모드일 경우 스토리지센터 클러스터 상태 카드에서 유지보수 모드 해제해주세요.\n';
-                                                msg += '스토리지센터 클러스터 상태가 Monitor clock detected 인 경우 cube host, scvm, ccvm의 ntp 시간 동기화 작업을 해야합니다.';
-                                                showRibbon('warning', msg);
-                                            }
-                                            if(step6!="RUNNING"){
-                                                msg += '클라우드센터 가상머신이 '+step6+' 상태 입니다.\n';
-                                                msg += '클라우드센터 가상머신 Mold 서비스 , DB 상태를 확인하여 정지상태일 경우 서비스 재시작\n';
-                                                msg += '또는 클라우드센터 클러스터 상태 카드에서 가상머신 시작하여 문제를 해결할 수 있습니다.';
-                                                showRibbon('warning', msg);
+                                            if(step8!="true"){
+                                                $('#button-open-modal-wizard-monitoring-center').show();
+                                                showRibbon('warning','모니터링센터에 연결할 수 있도록 모니터링센터 구성 작업을 진행하십시오.');
+                                            }else{
+                                                // 모니터링센터 구성 연결 버튼 show
+                                                $('#button-link-monitoring-center').show();
+
+                                                showRibbon('success','ABLESTACK 스토리지센터 및 클라우드센터 VM 배포되었으며 모니터링센터 구성이 완료되었습니다. 가상어플라이언스 상태가 정상입니다.');
+                                                // 운영 상태조회
+                                                let msg ="";
+                                                if(step2!="RUNNING"){
+                                                    msg += '스토리지센터 가상머신이 '+step2+' 상태 입니다.\n';
+                                                    msg += '스토리지센터 가상머신이 shut off 상태일 경우 스토리지센터 가상머신 카드에서 스토리지센터 VM을 시작해주세요.\n';
+                                                    showRibbon('warning', msg);
+                                                }
+                                                if(step4!="HEALTH_OK"){
+                                                    msg += '스토리지센터 클러스터가 '+step4+' 상태 입니다.\n';
+                                                    msg += 'oout, nobackfill, norecover flag인 경우 의도하지 않은 유지보수 모드일 경우 스토리지센터 클러스터 상태 카드에서 유지보수 모드 해제해주세요.\n';
+                                                    msg += '스토리지센터 클러스터 상태가 Monitor clock detected 인 경우 cube host, scvm, ccvm의 ntp 시간 동기화 작업을 해야합니다.';
+                                                    showRibbon('warning', msg);
+                                                }
+                                                if(step6!="RUNNING"){
+                                                    msg += '클라우드센터 가상머신이 '+step6+' 상태 입니다.\n';
+                                                    msg += '클라우드센터 가상머신 Mold 서비스 , DB 상태를 확인하여 정지상태일 경우 서비스 재시작\n';
+                                                    msg += '또는 클라우드센터 클러스터 상태 카드에서 가상머신 시작하여 문제를 해결할 수 있습니다.';
+                                                    showRibbon('warning', msg);
+                                                }
                                             }
                                         }
                                     }
@@ -1407,7 +1441,7 @@ function checkDeployStatus(){
                 }
             }
         }else if (os_type == "powerflex"){
-            console.log("step1 :: " + step1 + ", step2 :: " + step2 + " , step3 :: " + step3 + ", step4 :: " + step4 + ", step5 :: " + step5 + ", step6 :: " + step6 + ", step7 :: " + step7 + ", step8 :: " + step8 + ", stpe9 :: " + step9 + ", step10 :: " + step10);
+            console.log("step0 :: "+ step0 +", step1 :: " + step1 + ", step2 :: " + step2 + " , step3 :: " + step3 + ", step4 :: " + step4 + ", step5 :: " + step5 + ", step6 :: " + step6 + ", step7 :: " + step7 + ", step8 :: " + step8 + ", stpe9 :: " + step9 + ", step10 :: " + step10);
             if(step1!="true"){
                 // 클러스터 구성준비 버튼 show
                 $('#button-open-modal-wizard-storage-cluster').show();
@@ -1415,6 +1449,8 @@ function checkDeployStatus(){
             }else{
                 $('#button-config-file-download').show();
                 if(step2=="HEALTH_ERR"||step2==null){
+                    // 외부 스토리지 버튼 활성화
+                    $('#button-gfs-multipath-sync').prop('disabled', false);
                     // 클러스터 구성준비 버튼, 스토리지센터 VM 배포 버튼 show
                     $('#button-open-modal-wizard-storage-cluster').show();
                     $('#button-open-modal-wizard-storage-vm').show();
@@ -1444,39 +1480,45 @@ function checkDeployStatus(){
                                         $('#button-link-storage-center-dashboard').show();
                                         showRibbon('warning','클라우드센터 VM이 배포되지 않았습니다. 클라우드센터 VM 배포를 진행하십시오.');
                                     }else{
-                                        if(step8!="true" && step7!="true"){
-                                            showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
+                                        if(step0!="active"){
+                                            showRibbon('warning','라이선스가 등록되어 있지 않습니다. 클라우드센터를 구성하기 전에 반드시 라이선스를 등록해주세요.');
+                                        }else if(step0=="inactive"){
+                                            showRibbon('warning','현재 등록된 라이선스가 만료되었습니다. 새로운 라이선스를 등록해주세요.');
                                         }else{
-                                            // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
-                                            $('#button-link-storage-center-dashboard').show();
-                                            $('#button-link-cloud-center').show();
-
-                                            if(step8!="true"){
-                                                $('#button-open-modal-wizard-monitoring-center').show();
-                                                showRibbon('warning','모니터링센터에 연결할 수 있도록 모니터링센터 구성 작업을 진행하십시오.');
+                                            if(step8!="true" && step7!="true"){
+                                                showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
                                             }else{
-                                                // 모니터링센터 구성 연결 버튼 show
-                                                $('#button-link-monitoring-center').show();
+                                                // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
+                                                $('#button-link-storage-center-dashboard').show();
+                                                $('#button-link-cloud-center').show();
 
-                                                showRibbon('success','ABLESTACK 스토리지센터 및 클라우드센터 VM 배포되었으며 모니터링센터 구성이 완료되었습니다. 가상어플라이언스 상태가 정상입니다.');
-                                                // 운영 상태조회
-                                                let msg ="";
-                                                if(step2!="RUNNING"){
-                                                    msg += '스토리지센터 가상머신이 '+step2+' 상태 입니다.\n';
-                                                    msg += '스토리지센터 가상머신이 shut off 상태일 경우 스토리지센터 가상머신 카드에서 스토리지센터 VM을 시작해주세요.\n';
-                                                    showRibbon('warning', msg);
-                                                }
-                                                if(step4!="HEALTH_OK"){
-                                                    msg += '스토리지센터 클러스터가 '+step4+' 상태 입니다.\n';
-                                                    msg += 'oout, nobackfill, norecover flag인 경우 의도하지 않은 유지보수 모드일 경우 스토리지센터 클러스터 상태 카드에서 유지보수 모드 해제해주세요.\n';
-                                                    msg += '스토리지센터 클러스터 상태가 Monitor clock detected 인 경우 cube host, scvm, ccvm의 ntp 시간 동기화 작업을 해야합니다.';
-                                                    showRibbon('warning', msg);
-                                                }
-                                                if(step6!="RUNNING"){
-                                                    msg += '클라우드센터 가상머신이 '+step6+' 상태 입니다.\n';
-                                                    msg += '클라우드센터 가상머신 Mold 서비스 , DB 상태를 확인하여 정지상태일 경우 서비스 재시작\n';
-                                                    msg += '또는 클라우드센터 클러스터 상태 카드에서 가상머신 시작하여 문제를 해결할 수 있습니다.';
-                                                    showRibbon('warning', msg);
+                                                if(step8!="true"){
+                                                    $('#button-open-modal-wizard-monitoring-center').show();
+                                                    showRibbon('warning','모니터링센터에 연결할 수 있도록 모니터링센터 구성 작업을 진행하십시오.');
+                                                }else{
+                                                    // 모니터링센터 구성 연결 버튼 show
+                                                    $('#button-link-monitoring-center').show();
+
+                                                    showRibbon('success','ABLESTACK 스토리지센터 및 클라우드센터 VM 배포되었으며 모니터링센터 구성이 완료되었습니다. 가상어플라이언스 상태가 정상입니다.');
+                                                    // 운영 상태조회
+                                                    let msg ="";
+                                                    if(step2!="RUNNING"){
+                                                        msg += '스토리지센터 가상머신이 '+step2+' 상태 입니다.\n';
+                                                        msg += '스토리지센터 가상머신이 shut off 상태일 경우 스토리지센터 가상머신 카드에서 스토리지센터 VM을 시작해주세요.\n';
+                                                        showRibbon('warning', msg);
+                                                    }
+                                                    if(step4!="HEALTH_OK"){
+                                                        msg += '스토리지센터 클러스터가 '+step4+' 상태 입니다.\n';
+                                                        msg += 'oout, nobackfill, norecover flag인 경우 의도하지 않은 유지보수 모드일 경우 스토리지센터 클러스터 상태 카드에서 유지보수 모드 해제해주세요.\n';
+                                                        msg += '스토리지센터 클러스터 상태가 Monitor clock detected 인 경우 cube host, scvm, ccvm의 ntp 시간 동기화 작업을 해야합니다.';
+                                                        showRibbon('warning', msg);
+                                                    }
+                                                    if(step6!="RUNNING"){
+                                                        msg += '클라우드센터 가상머신이 '+step6+' 상태 입니다.\n';
+                                                        msg += '클라우드센터 가상머신 Mold 서비스 , DB 상태를 확인하여 정지상태일 경우 서비스 재시작\n';
+                                                        msg += '또는 클라우드센터 클러스터 상태 카드에서 가상머신 시작하여 문제를 해결할 수 있습니다.';
+                                                        showRibbon('warning', msg);
+                                                    }
                                                 }
                                             }
                                         }
@@ -1504,39 +1546,45 @@ function checkDeployStatus(){
                                         $('#button-link-storage-center-dashboard').show();
                                         showRibbon('warning','클라우드센터 VM이 배포되지 않았습니다. 클라우드센터 VM 배포를 진행하십시오.');
                                     }else{
-                                        if(step8!="true" && step7!="true"){
-                                            showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
+                                        if(step0!="active"){
+                                            showRibbon('warning','라이선스가 등록되어 있지 않습니다. 클라우드센터를 구성하기 전에 반드시 라이선스를 등록해주세요.');
+                                        }else if(step0=="inactive"){
+                                            showRibbon('warning','현재 등록된 라이선스가 만료되었습니다. 새로운 라이선스를 등록해주세요.');
                                         }else{
-                                            // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
-                                            $('#button-link-storage-center-dashboard').show();
-                                            $('#button-link-cloud-center').show();
-
-                                            if(step8!="true"){
-                                                $('#button-open-modal-wizard-monitoring-center').show();
-                                                showRibbon('warning','모니터링센터에 연결할 수 있도록 모니터링센터 구성 작업을 진행하십시오.');
+                                            if(step8!="true" && step7!="true"){
+                                                showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
                                             }else{
-                                                // 모니터링센터 구성 연결 버튼 show
-                                                $('#button-link-monitoring-center').show();
+                                                // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
+                                                $('#button-link-storage-center-dashboard').show();
+                                                $('#button-link-cloud-center').show();
 
-                                                showRibbon('success','ABLESTACK 스토리지센터 및 클라우드센터 VM 배포되었으며 모니터링센터 구성이 완료되었습니다. 가상어플라이언스 상태가 정상입니다.');
-                                                // 운영 상태조회
-                                                let msg ="";
-                                                if(step2!="RUNNING"){
-                                                    msg += '스토리지센터 가상머신이 '+step2+' 상태 입니다.\n';
-                                                    msg += '스토리지센터 가상머신이 shut off 상태일 경우 스토리지센터 가상머신 카드에서 스토리지센터 VM을 시작해주세요.\n';
-                                                    showRibbon('warning', msg);
-                                                }
-                                                if(step4!="HEALTH_OK"){
-                                                    msg += '스토리지센터 클러스터가 '+step4+' 상태 입니다.\n';
-                                                    msg += 'oout, nobackfill, norecover flag인 경우 의도하지 않은 유지보수 모드일 경우 스토리지센터 클러스터 상태 카드에서 유지보수 모드 해제해주세요.\n';
-                                                    msg += '스토리지센터 클러스터 상태가 Monitor clock detected 인 경우 cube host, scvm, ccvm의 ntp 시간 동기화 작업을 해야합니다.';
-                                                    showRibbon('warning', msg);
-                                                }
-                                                if(step6!="RUNNING"){
-                                                    msg += '클라우드센터 가상머신이 '+step6+' 상태 입니다.\n';
-                                                    msg += '클라우드센터 가상머신 Mold 서비스 , DB 상태를 확인하여 정지상태일 경우 서비스 재시작\n';
-                                                    msg += '또는 클라우드센터 클러스터 상태 카드에서 가상머신 시작하여 문제를 해결할 수 있습니다.';
-                                                    showRibbon('warning', msg);
+                                                if(step8!="true"){
+                                                    $('#button-open-modal-wizard-monitoring-center').show();
+                                                    showRibbon('warning','모니터링센터에 연결할 수 있도록 모니터링센터 구성 작업을 진행하십시오.');
+                                                }else{
+                                                    // 모니터링센터 구성 연결 버튼 show
+                                                    $('#button-link-monitoring-center').show();
+
+                                                    showRibbon('success','ABLESTACK 스토리지센터 및 클라우드센터 VM 배포되었으며 모니터링센터 구성이 완료되었습니다. 가상어플라이언스 상태가 정상입니다.');
+                                                    // 운영 상태조회
+                                                    let msg ="";
+                                                    if(step2!="RUNNING"){
+                                                        msg += '스토리지센터 가상머신이 '+step2+' 상태 입니다.\n';
+                                                        msg += '스토리지센터 가상머신이 shut off 상태일 경우 스토리지센터 가상머신 카드에서 스토리지센터 VM을 시작해주세요.\n';
+                                                        showRibbon('warning', msg);
+                                                    }
+                                                    if(step4!="HEALTH_OK"){
+                                                        msg += '스토리지센터 클러스터가 '+step4+' 상태 입니다.\n';
+                                                        msg += 'oout, nobackfill, norecover flag인 경우 의도하지 않은 유지보수 모드일 경우 스토리지센터 클러스터 상태 카드에서 유지보수 모드 해제해주세요.\n';
+                                                        msg += '스토리지센터 클러스터 상태가 Monitor clock detected 인 경우 cube host, scvm, ccvm의 ntp 시간 동기화 작업을 해야합니다.';
+                                                        showRibbon('warning', msg);
+                                                    }
+                                                    if(step6!="RUNNING"){
+                                                        msg += '클라우드센터 가상머신이 '+step6+' 상태 입니다.\n';
+                                                        msg += '클라우드센터 가상머신 Mold 서비스 , DB 상태를 확인하여 정지상태일 경우 서비스 재시작\n';
+                                                        msg += '또는 클라우드센터 클러스터 상태 카드에서 가상머신 시작하여 문제를 해결할 수 있습니다.';
+                                                        showRibbon('warning', msg);
+                                                    }
                                                 }
                                             }
                                         }
@@ -1548,7 +1596,7 @@ function checkDeployStatus(){
                 }
             }
         }else if (os_type == "ablestack-vm"){
-            console.log("step1 :: " + step1 + ", step5 :: " + step5 + ", step6 :: " + step6 + ", step7 :: " + step7 + ", step8 :: " + step8);
+            console.log("step0 :: "+ step0 +", step1 :: " + step1 + ", step5 :: " + step5 + ", step6 :: " + step6 + ", step7 :: " + step7 + ", step8 :: " + step8);
 
             if (step1 != "true"){
                 $('#button-open-modal-wizard-storage-cluster').show();
@@ -1556,6 +1604,8 @@ function checkDeployStatus(){
             }else{
                 $('#button-config-file-download').show();
                 if(step8!="true" && step5=="HEALTH_ERR1"||step5=="HEALTH_ERR2"||step5==null){
+                    // 외부 스토리지 버튼 활성화
+                    $('#button-gfs-multipath-sync').prop('disabled', false);
                     //클라우드센터 VM 배포 버튼
                     $('#button-open-modal-wizard-storage-cluster').show();
                     $('#button-open-modal-wizard-cloud-vm').show();
@@ -1570,28 +1620,34 @@ function checkDeployStatus(){
                         $('#button-open-modal-wizard-cloud-vm').show();
                         showRibbon('warning','클라우드센터 VM이 배포되지 않았습니다. 클라우드센터 VM 배포를 진행하십시오.');
                     }else{
-                        if(step8!="true" && step7!="true"){
-                            showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
+                        if(step0!="active"){
+                            showRibbon('warning','라이선스가 등록되어 있지 않습니다. 클라우드센터를 구성하기 전에 반드시 라이선스를 등록해주세요.');
+                        }else if(step0=="inactive"){
+                            showRibbon('warning','현재 등록된 라이선스가 만료되었습니다. 새로운 라이선스를 등록해주세요.');
                         }else{
-                            // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
-                            $('#button-link-cloud-center').show();
-
-                            if(step8!="true"){
-                                $('#button-open-modal-wizard-monitoring-center').show();
-                                showRibbon('warning','모니터링센터에 연결할 수 있도록 모니터링센터 구성 작업을 진행하십시오.');
+                            if(step8!="true" && step7!="true"){
+                                showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
                             }else{
-                                // 모니터링센터 구성 연결 버튼 show
-                                $('#button-link-monitoring-center').show();
+                                // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
+                                $('#button-link-cloud-center').show();
 
-                                showRibbon('success','ABLESTACK 클라우드센터 VM 배포되었으며 모니터링센터 구성이 완료되었습니다. 가상어플라이언스 상태가 정상입니다.');
-                                // 운영 상태조회
-                                let msg ="";
-                                if (step6 != null){
-                                    if(step6!="RUNNING"){
-                                        msg += '클라우드센터 가상머신이 '+step6+' 상태 입니다.\n';
-                                        msg += '클라우드센터 가상머신 Mold 서비스 , DB 상태를 확인하여 정지상태일 경우 서비스 재시작\n';
-                                        msg += '또는 클라우드센터 클러스터 상태 카드에서 가상머신 시작하여 문제를 해결할 수 있습니다.';
-                                        showRibbon('warning', msg);
+                                if(step8!="true"){
+                                    $('#button-open-modal-wizard-monitoring-center').show();
+                                    showRibbon('warning','모니터링센터에 연결할 수 있도록 모니터링센터 구성 작업을 진행하십시오.');
+                                }else{
+                                    // 모니터링센터 구성 연결 버튼 show
+                                    $('#button-link-monitoring-center').show();
+
+                                    showRibbon('success','ABLESTACK 클라우드센터 VM 배포되었으며 모니터링센터 구성이 완료되었습니다. 가상어플라이언스 상태가 정상입니다.');
+                                    // 운영 상태조회
+                                    let msg ="";
+                                    if (step6 != null){
+                                        if(step6!="RUNNING"){
+                                            msg += '클라우드센터 가상머신이 '+step6+' 상태 입니다.\n';
+                                            msg += '클라우드센터 가상머신 Mold 서비스 , DB 상태를 확인하여 정지상태일 경우 서비스 재시작\n';
+                                            msg += '또는 클라우드센터 클러스터 상태 카드에서 가상머신 시작하여 문제를 해결할 수 있습니다.';
+                                            showRibbon('warning', msg);
+                                        }
                                     }
                                 }
                             }
@@ -1744,6 +1800,7 @@ function ribbonWorker() {
     if (os_type == "ablestack-vm"){
         Promise.all([
             pcsExeHost(),
+            checkLicenseStatus(),
             checkConfigStatus(),
             CardCloudClusterStatus(),
             gfsDiskStatus(),
@@ -1759,7 +1816,7 @@ function ribbonWorker() {
                 // checkHostandStonithrecovery();
             });
     }else if (os_type == "powerflex"){
-        Promise.all([pcsExeHost(), checkConfigStatus(), checkStorageClusterStatus(),
+        Promise.all([pcsExeHost(), checkLicenseStatus(), checkConfigStatus(), checkStorageClusterStatus(),
             checkStorageVmStatus(), CardCloudClusterStatus(), new CloudCenterVirtualMachine().checkCCVM()]).then(function(){
                 scanHostKey();
                 checkDeployStatus();
@@ -1767,7 +1824,7 @@ function ribbonWorker() {
                 // checkHostandStonithrecovery();
         });
     }else{
-        Promise.all([pcsExeHost(), checkConfigStatus(), checkStorageClusterStatus(),
+        Promise.all([pcsExeHost(), checkLicenseStatus(), checkConfigStatus(), checkStorageClusterStatus(),
             checkStorageVmStatus(), CardCloudClusterStatus(), new CloudCenterVirtualMachine().checkCCVM()]).then(function(){
                 scanHostKey();
                 checkDeployStatus();
