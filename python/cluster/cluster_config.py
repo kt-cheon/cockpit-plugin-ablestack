@@ -204,6 +204,11 @@ def insert(args):
         with open(json_file_path, "w") as cluster_json:
             cluster_json.write(json.dumps(json_data, indent=4))
 
+        # 스토리지 연결이 끊겼을 경우 shutdown 하는 서비스 설정
+        if args.type == "ablestack-vm" or args.type == "powerflex":
+            os.system("systemctl enable --now auto-umount.service")
+            os.system("systemctl enable --now auto-umount.timer")
+
         # hosts 파일 복사 실패시 3번 시도까지 하도록 개선
         result = {}
         for i in [1,2,3]:
