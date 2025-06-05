@@ -777,12 +777,10 @@ def alert_setup(list_ips):
         if not os.path.exists(pcmk_log_file):
             for ip in list_ips:
                 ssh_client = connect_to_host(ip)
-                hostname = run_command("hostname", ssh_client)
                 commands = [
                     f"touch {pcmk_log_file}",
                     f"chown hacluster:haclient {pcmk_log_file}",
-                    f"chmod 600 {pcmk_log_file}",
-                    f"(crontab -l 2>/dev/null; echo \"@reboot /usr/bin/sleep 20 && /usr/sbin/pcs stonith enable fence-{hostname}\") | crontab -"
+                    f"chmod 600 {pcmk_log_file}"
                 ]
                 for cmd in commands:
                     run_command(cmd, ssh_client)
