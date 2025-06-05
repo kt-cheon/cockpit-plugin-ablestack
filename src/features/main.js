@@ -1365,7 +1365,7 @@ function checkDeployStatus(){
                                     showRibbon('warning','클라우드센터 VM이 배포되지 않았습니다. 클라우드센터 VM 배포를 진행하십시오.');
                                 }else{
                                     if(step8!="true" && step7!="true"){
-                                        showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
+                                        showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오. 라이센스가 등록되지 않은 경우 다음 단계를 진행할 수 없습니다.');
                                     }else{
                                         // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
                                         $('#button-link-storage-center-dashboard').show();
@@ -1445,7 +1445,7 @@ function checkDeployStatus(){
                                         showRibbon('warning','클라우드센터 VM이 배포되지 않았습니다. 클라우드센터 VM 배포를 진행하십시오.');
                                     }else{
                                         if(step8!="true" && step7!="true"){
-                                            showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
+                                            showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오. 라이센스가 등록되지 않은 경우 다음 단계를 진행할 수 없습니다.');
                                         }else{
                                             // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
                                             $('#button-link-storage-center-dashboard').show();
@@ -1505,7 +1505,7 @@ function checkDeployStatus(){
                                         showRibbon('warning','클라우드센터 VM이 배포되지 않았습니다. 클라우드센터 VM 배포를 진행하십시오.');
                                     }else{
                                         if(step8!="true" && step7!="true"){
-                                            showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
+                                            showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오. 라이센스가 등록되지 않은 경우 다음 단계를 진행할 수 없습니다.');
                                         }else{
                                             // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
                                             $('#button-link-storage-center-dashboard').show();
@@ -1571,7 +1571,7 @@ function checkDeployStatus(){
                         showRibbon('warning','클라우드센터 VM이 배포되지 않았습니다. 클라우드센터 VM 배포를 진행하십시오.');
                     }else{
                         if(step8!="true" && step7!="true"){
-                            showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
+                            showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오. 라이센스가 등록되지 않은 경우 다음 단계를 진행할 수 없습니다.');
                         }else{
                             // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
                             $('#button-link-cloud-center').show();
