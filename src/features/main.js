@@ -1362,11 +1362,14 @@ function checkDeployStatus(){
                 if(step2=="HEALTH_ERR"||step2==null){
                     // 외부 스토리지 버튼 활성화
                     $('#button-gfs-multipath-sync').prop('disabled', false);
+                    $('#button-gfs-storage-rescan').prop('disabled', false);
                     // 클러스터 구성준비 버튼, 스토리지센터 VM 배포 버튼 show
                     $('#button-open-modal-wizard-storage-cluster').show();
                     $('#button-open-modal-wizard-storage-vm').show();
                     showRibbon('warning','스토리지센터 및 클라우드센터 VM이 배포되지 않았습니다. 스토리지센터 VM 배포를 진행하십시오.');
                 }else{
+                    $('#button-gfs-multipath-sync').prop('disabled', false);
+                    $('#button-gfs-storage-rescan').prop('disabled', false);
                     if(step3!="true"){
                         showRibbon('warning','스토리지센터 대시보드에 연결할 수 있도록 스토리지센터 구성하기 작업을 진행하십시오.');
                     }else{
@@ -1445,11 +1448,14 @@ function checkDeployStatus(){
                 if(step2=="HEALTH_ERR"||step2==null){
                     // 외부 스토리지 버튼 활성화
                     $('#button-gfs-multipath-sync').prop('disabled', false);
+                    $('#button-gfs-storage-rescan').prop('disabled', false);
                     // 클러스터 구성준비 버튼, 스토리지센터 VM 배포 버튼 show
                     $('#button-open-modal-wizard-storage-cluster').show();
                     $('#button-open-modal-wizard-storage-vm').show();
                     showRibbon('warning','스토리지센터 및 파워 플렉스 관리 플랫폼 및 클라우드센터 VM이 배포되지 않았습니다. 스토리지센터 VM 배포를 진행하십시오.');
                 }else{
+                    $('#button-gfs-multipath-sync').prop('disabled', false);
+                    $('#button-gfs-storage-rescan').prop('disabled', false);
                     if(step3!="true"){
                         showRibbon('warning','스토리지센터의 설정을 위해 스토리지센터 구성하기 작업을 진행하십시오.');
                     }else{
@@ -1588,6 +1594,7 @@ function checkDeployStatus(){
                 if(step8!="true" && step5=="HEALTH_ERR1"||step5=="HEALTH_ERR2"||step5==null){
                     // 외부 스토리지 버튼 활성화
                     $('#button-gfs-multipath-sync').prop('disabled', false);
+                    $('#button-gfs-storage-rescan').prop('disabled', false);
                     //클라우드센터 VM 배포 버튼
                     $('#button-open-modal-wizard-storage-cluster').show();
                     $('#button-open-modal-wizard-cloud-vm').show();
@@ -1597,6 +1604,8 @@ function checkDeployStatus(){
                         showRibbon('warning','클라우드센터 클러스터는 구성되었으나 리소스 구성이 되지 않았습니다. 리소스 구성을 진행하십시오.');
                     }
                 }else{
+                    $('#button-gfs-multipath-sync').prop('disabled', false);
+                    $('#button-gfs-storage-rescan').prop('disabled', false);
                     if(step8!="true" && (step7!="true" && (step6=="HEALTH_ERR"||step6==null))){
                         //클라우드센터 VM 배포 버튼
                         $('#button-open-modal-wizard-cloud-vm').show();
@@ -2925,17 +2934,36 @@ $('#button-cancel-modal-gfs-maintenance-setting, #button-close-modal-cloud-vm-ma
 $('[name="button-gfs-multipath-sync-name"]').on("click",function(){
     $('#div-modal-multipath-sync').show();
 });
-
+$('[name="button-gfs-storage-rescan-name"]').on("click",function(){
+    $('#div-modal-storage-rescan').show();
+});
 $('#button-execution-modal-multipath-sync').on("click",function(){
     $('#div-modal-multipath-sync').hide();
     $('#div-modal-spinner-header-txt').text('외부 스토리지 장치 동기화하고 있습니다.');
     $('#div-modal-spinner').show();
 
-    cockpit.spawn(["sh", pluginpath + "/shell/host/multipath_sync.sh"])
+    cmd = ["sh", pluginpath + "/shell/host/multipath_sync.sh", "sync"];
+    console.log(cmd);
+    cockpit.spawn(cmd)
     .then(function(){
         $('#div-modal-spinner').hide();
         $("#modal-status-alert-title").html("외부 스토리지 동기화");
-        $("#modal-status-alert-body").html("외부 스토리지 동기화를 완료되었습니다.");
+        $("#modal-status-alert-body").html("외부 스토리지 동기화가 완료되었습니다.");
+        $('#div-modal-status-alert').show();
+    });
+});
+$('#button-execution-modal-storage-rescan').on("click",function(){
+    $('#div-modal-storage-rescan').hide();
+    $('#div-modal-spinner-header-txt').text('외부 스토리지를 재검색하고 있습니다.');
+    $('#div-modal-spinner').show();
+
+    cmd = ["sh", pluginpath + "/shell/host/multipath_sync.sh", "rescan"];
+    console.log(cmd);
+    cockpit.spawn(cmd)
+    .then(function(){
+        $('#div-modal-spinner').hide();
+        $("#modal-status-alert-title").html("외부 스토리지 재검색");
+        $("#modal-status-alert-body").html("외부 스토리지 재검색이 완료되었습니다.");
         $('#div-modal-status-alert').show();
     });
 });
@@ -2943,11 +2971,16 @@ $('#modal-input-multipath-sync').on('click', function(){
     var condition = $("#button-execution-modal-multipath-sync").prop( 'disabled' );
     $("#button-execution-modal-multipath-sync").prop("disabled", condition ? false : true);
 });
-
+$('#modal-input-multipath-connect-check').on('click', function(){
+    var condition = $("#button-execution-modal-storage-rescan").prop( 'disabled' );
+    $("#button-execution-modal-storage-rescan").prop("disabled", condition ? false : true);
+});
 $('#button-close-modal-multipath-sync, #button-cancel-modal-multipath-sync').on("click",function(){
     $('#div-modal-multipath-sync').hide();
 });
-
+$('#button-close-modal-storage-rescan, #button-cancel-modal-storage-rescan').on("click",function(){
+    $('#div-modal-storage-rescan').hide();
+});
 $('#menu-item-set-gfs-disk-add').on('click',function(){
     setDiskAction("gfs","add");
     $('#div-modal-gfs-disk-add').show();
