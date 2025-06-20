@@ -1954,7 +1954,7 @@ function gfsDiskStatus(){
                     var devices = blockDevice.devices.join(", ");
                     var physicalVolume = blockDevice.lvm; // Assuming `lvm` is the physical volume
                     var volumeGroup = blockDevice.lvm.split('-')[0]; // Assuming `lvm` contains volume group info
-                    var diskSize = blockDevice.size;
+                    var diskSize = blockDevice.size + "B";
                     if (i%3 == 0 ){
                         margin = "margin: 6px 0px;margin-right: 10px"
                     }else{
