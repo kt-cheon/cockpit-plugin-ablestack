@@ -93,7 +93,7 @@ $(document).ready(function(){
 
     // 라이센스 관련 이벤트 핸들러
     initializeLicenseHandlers();
-    checkLicenseStatus();
+    checkLicenseStatusConfirm();
 
     // 초기 버튼 비활성화
     $('#button-execution-modal-license-register').prop('disabled', true);
@@ -137,7 +137,7 @@ $(document).ready(function(){
     });
 
     // 라이센스 상태 확인 함수
-    function checkLicenseStatus() {
+    function checkLicenseStatusConfirm() {
         cockpit.spawn(['python3', pluginpath + '/python/license/register_license.py', '--status'])
             .then(function(data) {
                 var result = JSON.parse(data);
@@ -196,7 +196,18 @@ $(document).ready(function(){
                     <p>라이센스 파일을 선택하여 등록해주세요.</p>
                 </div>
             `;
-        } else {
+        } else if(result.code == "200" && result.val.status === 'inactive') {
+            licenseDescription = `
+                <div class="license-info">
+                <p style="font-size: 15.7px; color: crimson;"><i class="fas fa-exclamation-triangle" style="color: var(--pf-global--danger-color--100);"></i> 등록된 라이선스의 유효기간이 만료되었습니다.새로운 라이센스를 등록해 주세요.</p>
+                    <p><strong>시작일:</strong> ${result.val.issued}</p>
+                    <p><strong>만료일:</strong> ${result.val.expired}</p>
+                    <hr>
+                    <p class="text-muted">새로운 라이센스를 등록하면 기존 라이센스가 교체됩니다.</p>
+                </div>
+            `;
+        }
+        else {
             // 오류가 발생한 경우
             licenseDescription = `
                 <div class="license-info error">
@@ -214,7 +225,7 @@ $(document).ready(function(){
         // 라이센스 등록 모달 열기
         $('#button-open-modal-license-register').on('click', function(){
             $('#div-modal-license-register').show();
-            checkLicenseStatus();
+            checkLicenseStatusConfirm();
         });
 
         // 모달 닫기
@@ -280,7 +291,7 @@ $(document).ready(function(){
     }
 
     // 페이지 로드 시 라이센스 상태 확인
-    checkLicenseStatus();
+    checkLicenseStatusConfirm();
 });
 // document.ready 영역 끝
 
@@ -3563,8 +3574,9 @@ function updateLicenseStatus() {
     // superuser 권한으로 실행
     cockpit.spawn(['python3', '/usr/share/cockpit/ablestack/python/license/register_license.py', '--status'], { superuser: true })
         .then(function(data) {
-            const result = JSON.parse(data);
-            let licenseDescription = '';
+            var result = JSON.parse(data);
+            var licenseDescription = '';
+            console.log(result.code, result.val.status)
 
             if(result.code == "200" && result.val && result.val.status === 'active') {
                 // 유효한 라이센스가 있는 경우
@@ -3583,6 +3595,16 @@ function updateLicenseStatus() {
                     <div class="license-info">
                         <p><i class="fas fa-exclamation-circle" style="color: var(--pf-global--warning-color--100);"></i> 등록된 라이센스가 없습니다.</p>
                         <p>라이센스 파일을 선택하여 등록해주세요.</p>
+                    </div>
+                `;
+            } else if(result.code == "200" && result.val.status == 'inactive') {
+                licenseDescription = `
+                    <div class="license-info">
+                    <p style="font-size: 15.7px; color: crimson;"><i class="fas fa-exclamation-triangle" style="color: var(--pf-global--danger-color--100);"></i> 등록된 라이선스의 유효기간이 만료되었습니다.새로운 라이센스를 등록해 주세요.</p>
+                        <p><strong>시작일:</strong> ${result.val.issued}</p>
+                        <p><strong>만료일:</strong> ${result.val.expired}</p>
+                        <hr>
+                        <p class="text-muted">새로운 라이센스를 등록하면 기존 라이센스가 교체됩니다.</p>
                     </div>
                 `;
             } else {
@@ -3646,7 +3668,7 @@ function initializeLicenseHandlers() {
     // 라이센스 등록 모달 열기
     $('#button-open-modal-license-register').on('click', function(){
         $('#div-modal-license-register').show();
-        checkLicenseStatus();
+        checkLicenseStatusConfirm();
     });
 
     // 모달 닫기
