@@ -93,7 +93,7 @@ $(document).ready(function(){
 
     // 라이센스 관련 이벤트 핸들러
     initializeLicenseHandlers();
-    checkLicenseStatus();
+    checkLicenseStatusConfirm();
 
     // 초기 버튼 비활성화
     $('#button-execution-modal-license-register').prop('disabled', true);
@@ -137,7 +137,7 @@ $(document).ready(function(){
     });
 
     // 라이센스 상태 확인 함수
-    function checkLicenseStatus() {
+    function checkLicenseStatusConfirm() {
         cockpit.spawn(['python3', pluginpath + '/python/license/register_license.py', '--status'])
             .then(function(data) {
                 var result = JSON.parse(data);
@@ -196,7 +196,18 @@ $(document).ready(function(){
                     <p>라이센스 파일을 선택하여 등록해주세요.</p>
                 </div>
             `;
-        } else {
+        } else if(result.code == "200" && result.val.status === 'inactive') {
+            licenseDescription = `
+                <div class="license-info">
+                <p style="font-size: 15.7px; color: crimson;"><i class="fas fa-exclamation-triangle" style="color: var(--pf-global--danger-color--100);"></i> 등록된 라이선스의 유효기간이 만료되었습니다.새로운 라이센스를 등록해 주세요.</p>
+                    <p><strong>시작일:</strong> ${result.val.issued}</p>
+                    <p><strong>만료일:</strong> ${result.val.expired}</p>
+                    <hr>
+                    <p class="text-muted">새로운 라이센스를 등록하면 기존 라이센스가 교체됩니다.</p>
+                </div>
+            `;
+        }
+        else {
             // 오류가 발생한 경우
             licenseDescription = `
                 <div class="license-info error">
@@ -214,7 +225,7 @@ $(document).ready(function(){
         // 라이센스 등록 모달 열기
         $('#button-open-modal-license-register').on('click', function(){
             $('#div-modal-license-register').show();
-            checkLicenseStatus();
+            checkLicenseStatusConfirm();
         });
 
         // 모달 닫기
@@ -280,7 +291,7 @@ $(document).ready(function(){
     }
 
     // 페이지 로드 시 라이센스 상태 확인
-    checkLicenseStatus();
+    checkLicenseStatusConfirm();
 });
 // document.ready 영역 끝
 
@@ -1362,11 +1373,14 @@ function checkDeployStatus(){
                 if(step2=="HEALTH_ERR"||step2==null){
                     // 외부 스토리지 버튼 활성화
                     $('#button-gfs-multipath-sync').prop('disabled', false);
+                    $('#button-gfs-storage-rescan').prop('disabled', false);
                     // 클러스터 구성준비 버튼, 스토리지센터 VM 배포 버튼 show
                     $('#button-open-modal-wizard-storage-cluster').show();
                     $('#button-open-modal-wizard-storage-vm').show();
                     showRibbon('warning','스토리지센터 및 클라우드센터 VM이 배포되지 않았습니다. 스토리지센터 VM 배포를 진행하십시오.');
                 }else{
+                    $('#button-gfs-multipath-sync').prop('disabled', false);
+                    $('#button-gfs-storage-rescan').prop('disabled', false);
                     if(step3!="true"){
                         showRibbon('warning','스토리지센터 대시보드에 연결할 수 있도록 스토리지센터 구성하기 작업을 진행하십시오.');
                     }else{
@@ -1445,11 +1459,14 @@ function checkDeployStatus(){
                 if(step2=="HEALTH_ERR"||step2==null){
                     // 외부 스토리지 버튼 활성화
                     $('#button-gfs-multipath-sync').prop('disabled', false);
+                    $('#button-gfs-storage-rescan').prop('disabled', false);
                     // 클러스터 구성준비 버튼, 스토리지센터 VM 배포 버튼 show
                     $('#button-open-modal-wizard-storage-cluster').show();
                     $('#button-open-modal-wizard-storage-vm').show();
                     showRibbon('warning','스토리지센터 및 파워 플렉스 관리 플랫폼 및 클라우드센터 VM이 배포되지 않았습니다. 스토리지센터 VM 배포를 진행하십시오.');
                 }else{
+                    $('#button-gfs-multipath-sync').prop('disabled', false);
+                    $('#button-gfs-storage-rescan').prop('disabled', false);
                     if(step3!="true"){
                         showRibbon('warning','스토리지센터의 설정을 위해 스토리지센터 구성하기 작업을 진행하십시오.');
                     }else{
@@ -1588,6 +1605,7 @@ function checkDeployStatus(){
                 if(step8!="true" && step5=="HEALTH_ERR1"||step5=="HEALTH_ERR2"||step5==null){
                     // 외부 스토리지 버튼 활성화
                     $('#button-gfs-multipath-sync').prop('disabled', false);
+                    $('#button-gfs-storage-rescan').prop('disabled', false);
                     //클라우드센터 VM 배포 버튼
                     $('#button-open-modal-wizard-storage-cluster').show();
                     $('#button-open-modal-wizard-cloud-vm').show();
@@ -1597,6 +1615,8 @@ function checkDeployStatus(){
                         showRibbon('warning','클라우드센터 클러스터는 구성되었으나 리소스 구성이 되지 않았습니다. 리소스 구성을 진행하십시오.');
                     }
                 }else{
+                    $('#button-gfs-multipath-sync').prop('disabled', false);
+                    $('#button-gfs-storage-rescan').prop('disabled', false);
                     if(step8!="true" && (step7!="true" && (step6=="HEALTH_ERR"||step6==null))){
                         //클라우드센터 VM 배포 버튼
                         $('#button-open-modal-wizard-cloud-vm').show();
@@ -1945,7 +1965,7 @@ function gfsDiskStatus(){
                     var devices = blockDevice.devices.join(", ");
                     var physicalVolume = blockDevice.lvm; // Assuming `lvm` is the physical volume
                     var volumeGroup = blockDevice.lvm.split('-')[0]; // Assuming `lvm` contains volume group info
-                    var diskSize = blockDevice.size;
+                    var diskSize = blockDevice.size + "B";
                     if (i%3 == 0 ){
                         margin = "margin: 6px 0px;margin-right: 10px"
                     }else{
@@ -2925,17 +2945,36 @@ $('#button-cancel-modal-gfs-maintenance-setting, #button-close-modal-cloud-vm-ma
 $('[name="button-gfs-multipath-sync-name"]').on("click",function(){
     $('#div-modal-multipath-sync').show();
 });
-
+$('[name="button-gfs-storage-rescan-name"]').on("click",function(){
+    $('#div-modal-storage-rescan').show();
+});
 $('#button-execution-modal-multipath-sync').on("click",function(){
     $('#div-modal-multipath-sync').hide();
     $('#div-modal-spinner-header-txt').text('외부 스토리지 장치 동기화하고 있습니다.');
     $('#div-modal-spinner').show();
 
-    cockpit.spawn(["sh", pluginpath + "/shell/host/multipath_sync.sh"])
+    cmd = ["sh", pluginpath + "/shell/host/multipath_sync.sh", "sync"];
+    console.log(cmd);
+    cockpit.spawn(cmd)
     .then(function(){
         $('#div-modal-spinner').hide();
         $("#modal-status-alert-title").html("외부 스토리지 동기화");
-        $("#modal-status-alert-body").html("외부 스토리지 동기화를 완료되었습니다.");
+        $("#modal-status-alert-body").html("외부 스토리지 동기화가 완료되었습니다.");
+        $('#div-modal-status-alert').show();
+    });
+});
+$('#button-execution-modal-storage-rescan').on("click",function(){
+    $('#div-modal-storage-rescan').hide();
+    $('#div-modal-spinner-header-txt').text('외부 스토리지를 재검색하고 있습니다.');
+    $('#div-modal-spinner').show();
+
+    cmd = ["sh", pluginpath + "/shell/host/multipath_sync.sh", "rescan"];
+    console.log(cmd);
+    cockpit.spawn(cmd)
+    .then(function(){
+        $('#div-modal-spinner').hide();
+        $("#modal-status-alert-title").html("외부 스토리지 재검색");
+        $("#modal-status-alert-body").html("외부 스토리지 재검색이 완료되었습니다.");
         $('#div-modal-status-alert').show();
     });
 });
@@ -2943,11 +2982,16 @@ $('#modal-input-multipath-sync').on('click', function(){
     var condition = $("#button-execution-modal-multipath-sync").prop( 'disabled' );
     $("#button-execution-modal-multipath-sync").prop("disabled", condition ? false : true);
 });
-
+$('#modal-input-multipath-connect-check').on('click', function(){
+    var condition = $("#button-execution-modal-storage-rescan").prop( 'disabled' );
+    $("#button-execution-modal-storage-rescan").prop("disabled", condition ? false : true);
+});
 $('#button-close-modal-multipath-sync, #button-cancel-modal-multipath-sync').on("click",function(){
     $('#div-modal-multipath-sync').hide();
 });
-
+$('#button-close-modal-storage-rescan, #button-cancel-modal-storage-rescan').on("click",function(){
+    $('#div-modal-storage-rescan').hide();
+});
 $('#menu-item-set-gfs-disk-add').on('click',function(){
     setDiskAction("gfs","add");
     $('#div-modal-gfs-disk-add').show();
@@ -3530,8 +3574,9 @@ function updateLicenseStatus() {
     // superuser 권한으로 실행
     cockpit.spawn(['python3', '/usr/share/cockpit/ablestack/python/license/register_license.py', '--status'], { superuser: true })
         .then(function(data) {
-            const result = JSON.parse(data);
-            let licenseDescription = '';
+            var result = JSON.parse(data);
+            var licenseDescription = '';
+            console.log(result.code, result.val.status)
 
             if(result.code == "200" && result.val && result.val.status === 'active') {
                 // 유효한 라이센스가 있는 경우
@@ -3550,6 +3595,16 @@ function updateLicenseStatus() {
                     <div class="license-info">
                         <p><i class="fas fa-exclamation-circle" style="color: var(--pf-global--warning-color--100);"></i> 등록된 라이센스가 없습니다.</p>
                         <p>라이센스 파일을 선택하여 등록해주세요.</p>
+                    </div>
+                `;
+            } else if(result.code == "200" && result.val.status == 'inactive') {
+                licenseDescription = `
+                    <div class="license-info">
+                    <p style="font-size: 15.7px; color: crimson;"><i class="fas fa-exclamation-triangle" style="color: var(--pf-global--danger-color--100);"></i> 등록된 라이선스의 유효기간이 만료되었습니다.새로운 라이센스를 등록해 주세요.</p>
+                        <p><strong>시작일:</strong> ${result.val.issued}</p>
+                        <p><strong>만료일:</strong> ${result.val.expired}</p>
+                        <hr>
+                        <p class="text-muted">새로운 라이센스를 등록하면 기존 라이센스가 교체됩니다.</p>
                     </div>
                 `;
             } else {
@@ -3613,7 +3668,7 @@ function initializeLicenseHandlers() {
     // 라이센스 등록 모달 열기
     $('#button-open-modal-license-register').on('click', function(){
         $('#div-modal-license-register').show();
-        checkLicenseStatus();
+        checkLicenseStatusConfirm();
     });
 
     // 모달 닫기

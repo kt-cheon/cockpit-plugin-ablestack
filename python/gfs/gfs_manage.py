@@ -216,18 +216,18 @@ def init_pcs_cluster(disks,vg_name,lv_name,list_ips):
                             run_command(f"partprobe {disk}",ssh_client,ignore_errors=True)
                             ssh_client.close()
 
-        rc_local_init_command =(
-            'systemctl disable --now rc-local.service;'
-            'sed -i "/^\\[Install\\]/,/^WantedBy=multi-user.target$/d" /usr/lib/systemd/system/rc-local.service;'
-            'sed -i "/^partprobe/,/^lvmdevices --adddev$/d" /etc/rc.local;'
-        )
+        # rc_local_init_command =(
+        #     'systemctl disable --now rc-local.service;'
+        #     'sed -i "/^\\[Install\\]/,/^WantedBy=multi-user.target$/d" /usr/lib/systemd/system/rc-local.service;'
+        #     'sed -i "/^partprobe/,/^lvmdevices --adddev$/d" /etc/rc.local;'
+        # )
 
         for ip in list_ips:
             ssh_client = connect_to_host(ip)
             # rc.local 파일 및 서비스 초기화
-            status = run_command("systemctl is-enabled rc-local.service", ssh_client, ignore_errors=True).strip()
-            if status == "enabled":
-                run_command(rc_local_init_command, ssh_client, ignore_errors=True)
+            # status = run_command("systemctl is-enabled rc-local.service", ssh_client, ignore_errors=True).strip()
+            # if status == "enabled":
+            #     run_command(rc_local_init_command, ssh_client, ignore_errors=True)
             # lvm.conf 초기화
             if os_type == "powerflex":
                 run_command('sed -i \'s/types = \\[ "scini", 16 \\]/# types = \\[ "fd", 16 \\]/\' /etc/lvm/lvm.conf',ssh_client,ignore_errors=True)
@@ -345,21 +345,21 @@ def create_gfs(disks, vg_name, lv_name, gfs_name, mount_point, cluster_name, num
                         single_partition = f"{single_disk}1"
                         run_command(f"partprobe /dev/{single_disk}", ssh_client, ignore_errors=True)
                         run_command(f"lvmdevices --adddev /dev/{single_partition} ", ssh_client, ignore_errors=True)
-                        run_command(f"grep -qxF 'partprobe /dev/{single_disk}' /etc/rc.local || echo 'partprobe /dev/{single_disk}' >> /etc/rc.local", ssh_client, ignore_errors=True)
-                        run_command(f"grep -qxF 'lvmdevices --adddev /dev/{single_partition}' /etc/rc.local || echo 'lvmdevices --adddev -y /dev/{single_partition}' >> /etc/rc.local", ssh_client, ignore_errors=True)
+                        # run_command(f"grep -qxF 'partprobe /dev/{single_disk}' /etc/rc.local || echo 'partprobe /dev/{single_disk}' >> /etc/rc.local", ssh_client, ignore_errors=True)
+                        # run_command(f"grep -qxF 'lvmdevices --adddev /dev/{single_partition}' /etc/rc.local || echo 'lvmdevices --adddev -y /dev/{single_partition}' >> /etc/rc.local", ssh_client, ignore_errors=True)
                 else:
                         partition = f"{disk}1"
 
                         run_command(f"partprobe {disk}", ssh_client, ignore_errors=True)
                         run_command(f"lvmdevices --adddev {partition} ", ssh_client, ignore_errors=True)
-                        run_command(f"echo -e 'partprobe {disk}\nlvmdevices --adddev {partition}' >> /etc/rc.local ", ssh_client, ignore_errors=True)
+                        # run_command(f"echo -e 'partprobe {disk}\nlvmdevices --adddev {partition}' >> /etc/rc.local ", ssh_client, ignore_errors=True)
 
-            status = run_command("systemctl is-active rc-local.service", ssh_client, ignore_errors=True).strip()
+            # status = run_command("systemctl is-active rc-local.service", ssh_client, ignore_errors=True).strip()
             run_command("pcs resource cleanup ", ssh_client, ignore_errors=True)
-            if status != "active":
-                run_command("chmod +x /etc/rc.local /etc/rc.d/rc.local", ssh_client, ignore_errors=True)
-                run_command("echo -e '\n[Install]\nWantedBy=multi-user.target' >> /usr/lib/systemd/system/rc-local.service", ssh_client, ignore_errors=True)
-                run_command("systemctl enable --now rc-local.service", ssh_client, ignore_errors=True)
+            # if status != "active":
+                # run_command("chmod +x /etc/rc.local /etc/rc.d/rc.local", ssh_client, ignore_errors=True)
+                # run_command("echo -e '\n[Install]\nWantedBy=multi-user.target' >> /usr/lib/systemd/system/rc-local.service", ssh_client, ignore_errors=True)
+                # run_command("systemctl enable --now rc-local.service", ssh_client, ignore_errors=True)
             ssh_client.close()
 
         # Configure GFS2 and LVM resources
@@ -536,8 +536,8 @@ def extend_pcs_cluster(username,password,stonith_info,mount_point,list_ips):
                     partition = f"{disk}1"
                     run_command(f"partprobe /dev/mapper/{disk}", ssh_client, ignore_errors=True)
                     run_command(f"lvmdevices --adddev /dev/mapper/{partition}", ssh_client, ignore_errors=True)
-                    if ip == list_ips[-1]:
-                        run_command(f"echo -e 'partprobe /dev/mapper/{disk}\nlvmdevices --adddev /dev/mapper/{partition}' >> /etc/rc.local", ssh_client, ignore_errors=True)
+                    # if ip == list_ips[-1]:
+                    #     run_command(f"echo -e 'partprobe /dev/mapper/{disk}\nlvmdevices --adddev /dev/mapper/{partition}' >> /etc/rc.local", ssh_client, ignore_errors=True)
 
                 ssh_client.close()
             else:
@@ -546,16 +546,16 @@ def extend_pcs_cluster(username,password,stonith_info,mount_point,list_ips):
                     partition = f"{disk}1"
                     run_command(f"partprobe /dev/{disk}", ssh_client, ignore_errors=True)
                     run_command(f"lvmdevices --adddev /dev/{partition}", ssh_client, ignore_errors=True)
-                    if ip == list_ips[-1]:
-                        run_command(f"grep -qxF 'partprobe /dev/{disk}' /etc/rc.local || echo 'partprobe /dev/{disk}' >> /etc/rc.local", ssh_client, ignore_errors=True)
-                        run_command(f"grep -qxF 'lvmdevices --adddev -y /dev/{partition}' /etc/rc.local || echo 'lvmdevices --adddev -y /dev/{partition}' >> /etc/rc.local", ssh_client, ignore_errors=True)
+                    # if ip == list_ips[-1]:
+                    #     run_command(f"grep -qxF 'partprobe /dev/{disk}' /etc/rc.local || echo 'partprobe /dev/{disk}' >> /etc/rc.local", ssh_client, ignore_errors=True)
+                    #     run_command(f"grep -qxF 'lvmdevices --adddev -y /dev/{partition}' /etc/rc.local || echo 'lvmdevices --adddev -y /dev/{partition}' >> /etc/rc.local", ssh_client, ignore_errors=True)
 
                 ssh_client.close()
 
         run_command("pcs resource cleanup", ignore_errors=True)
-        run_command("chmod +x /etc/rc.local /etc/rc.d/rc.local", ignore_errors=True)
-        run_command("echo -e '\n[Install]\nWantedBy=multi-user.target' >> /usr/lib/systemd/system/rc-local.service", ignore_errors=True)
-        run_command("systemctl enable --now rc-local.service", ignore_errors=True)
+        # run_command("chmod +x /etc/rc.local /etc/rc.d/rc.local", ignore_errors=True)
+        # run_command("echo -e '\n[Install]\nWantedBy=multi-user.target' >> /usr/lib/systemd/system/rc-local.service", ignore_errors=True)
+        # run_command("systemctl enable --now rc-local.service", ignore_errors=True)
 
         ret = createReturn(code=200, val="Extend Pcs Cluster Success")
         return print(json.dumps(json.loads(ret), indent=4))

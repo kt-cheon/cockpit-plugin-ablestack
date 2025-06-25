@@ -105,9 +105,11 @@ def create_clvm(disks):
         for vg in output["report"][0]["vg"]:
             vgs_name = vg["vg_name"]
             if "vg_clvm" in vgs_name:
-                num = int(vgs_name.replace("vg_clvm", ""))
-                if num > max_num:
-                    max_num = num
+                suffix = vgs_name.replace("vg_clvm", "")
+                if suffix.isdigit():
+                    num = int(suffix)
+                    if num > max_num:
+                        max_num = num
 
         # 새로운 vg_clvm 번호는 기존 최대값 + 1부터 시작
         next_num = max_num + 1
@@ -118,7 +120,7 @@ def create_clvm(disks):
             name = disk.split('/')[-1]
 
             # 볼륨 그룹 이름 생성
-            vg_name = f"vg_clvm{next_num}"
+            vg_name = f"vg_clvm{next_num:02d}"  # 두 자리 형식으로 포맷
 
             # 디스크에 파티션 생성 및 LVM 설정
             run_command(f"parted -s {disk} mklabel gpt mkpart {name} 0% 100% set 1 lvm on")
@@ -302,13 +304,13 @@ def delete_gfs(disks, gfs_name, lv_name, vg_name):
 
                 for host in json_data["clusterConfig"]["hosts"]:
                     ssh_client = connect_to_host(host["ablecube"])
-                    escaped_disk = disk.replace('/', '\\/')
-                    escaped_partition = partition.replace('/', '\\/')
-                    sed_cmd = f"sed -i '/partprobe {escaped_disk}/{{N; /lvmdevices --adddev -y {escaped_partition}/d;}}' /etc/rc.local /etc/rc.d/rc.local"
+                    # escaped_disk = disk.replace('/', '\\/')
+                    # escaped_partition = partition.replace('/', '\\/')
+                    # sed_cmd = f"sed -i '/partprobe {escaped_disk}/{{N; /lvmdevices --adddev -y {escaped_partition}/d;}}' /etc/rc.local /etc/rc.d/rc.local"
 
                     # lvm.conf 초기화
                     run_command(f"partprobe {disk}",ssh_client,ignore_errors=True)
-                    run_command(sed_cmd, ssh_client, ignore_errors=True)
+                    # run_command(sed_cmd, ssh_client, ignore_errors=True)
 
                     ssh_client.close()
             else:
@@ -320,14 +322,14 @@ def delete_gfs(disks, gfs_name, lv_name, vg_name):
                     ssh_client = connect_to_host(host["ablecube"])
                     single_disk_arr = run_command("lsblk -r -n -o NAME,TYPE -d | grep -v rom | awk '{print $1}'", ssh_client).split()
                     for single_disk in single_disk_arr:
-                        single_partition = f"/dev/{single_disk}1"
-                        escaped_disk = single_disk.replace('/', '\\/')
-                        escaped_partition = single_partition.replace('/', '\\/')
-                        sed_cmd = f"sed -i '/partprobe /dev/{escaped_disk}/{{N; /lvmdevices --adddev -y /dev/{escaped_partition}/d;}}' /etc/rc.local /etc/rc.d/rc.local"
+                        # single_partition = f"/dev/{single_disk}1"
+                        # escaped_disk = single_disk.replace('/', '\\/')
+                        # escaped_partition = single_partition.replace('/', '\\/')
+                        # sed_cmd = f"sed -i '/partprobe /dev/{escaped_disk}/{{N; /lvmdevices --adddev -y /dev/{escaped_partition}/d;}}' /etc/rc.local /etc/rc.d/rc.local"
 
                         # lvm.conf 초기화
                         run_command(f"partprobe /dev/{single_disk}",ssh_client,ignore_errors=True)
-                        run_command(sed_cmd, ssh_client, ignore_errors=True)
+                        # run_command(sed_cmd, ssh_client, ignore_errors=True)
 
                     ssh_client.close()
 
