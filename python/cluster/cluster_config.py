@@ -208,6 +208,9 @@ def insert(args):
         if args.type == "ablestack-vm" or args.type == "powerflex":
             os.system("systemctl enable --now auto-umount.service")
             os.system("systemctl enable --now auto-umount.timer")
+        elif args.type == "ablestack-hci":
+            os.system("systemctl enable --now cleanup-rbd.service")
+            os.system("systemctl enable --now cleanup-rbd.timer")
 
         # hosts 파일 복사 실패시 3번 시도까지 하도록 개선
         result = {}
