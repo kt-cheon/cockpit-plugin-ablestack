@@ -785,8 +785,9 @@ def alert_setup(list_ips):
                 for cmd in commands:
                     run_command(cmd, ssh_client)
                 ssh_client.close()
-            run_command(f"pcs alert create id=alert_file description='Log events to a file.' path={path}")
-            run_command(f"pcs alert recipient add alert_file id=alert_logfile value={pcmk_log_file}")
+
+        run_command(f"pcs alert create id=alert_file description='Log events to a file.' path={path}")
+        run_command(f"pcs alert recipient add alert_file id=alert_logfile value={pcmk_log_file}")
 
         ret = createReturn(code=200, val="Pcs Alert Success")
         return print(json.dumps(json.loads(ret), indent=4))
