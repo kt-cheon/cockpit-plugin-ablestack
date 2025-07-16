@@ -2014,7 +2014,7 @@ function deployCloudCenterVM() {
         // 체크된 디스크 이름들을 동적으로 가져옴
         var general_virtual_disk_name = $('input[type=checkbox][name="form-cloud-checkbox-disk"]:checked')
             .map(function () {
-                return $(this).val(); // 체크된 값 가져오기
+                return $(this).data('disk_id'); // 체크된 값 가져오기
             })
             .get() // jQuery 객체를 배열로 변환
             .join(','); // 쉼표로 연결
@@ -3045,7 +3045,7 @@ function setGfsDiskInfo(){
                             if (!displayedMultipaths.has(mpathName)) {
                                 var mpathHtml = '';
                                 mpathHtml += '<div class="pf-c-check">';
-                                mpathHtml += '<input class="pf-c-check__input" type="checkbox" id="form-cloud-checkbox-disk' + i + '" name="form-cloud-checkbox-disk" value="' + pci_list[i].children[j].path + '" ' + check_disable + ' />';
+                                mpathHtml += '<input class="pf-c-check__input" type="checkbox" id="form-cloud-checkbox-disk' + i + '" name="form-cloud-checkbox-disk" value="' + pci_list[i].children[j].path + '" '+ 'data-disk_id="' + pci_list[i].children[j].id + '" ' + check_disable + ' />';
                                 // mpathHtml += '<input class="pf-c-check__input" type="checkbox" id="form-cloud-checkbox-disk' + i + '" name="form-cloud-checkbox-disk" value="' + pci_list[i].children[j].path + '" />';
                                 mpathHtml += '<label class="pf-c-check__label" style="margin-top:5px" for="form-cloud-checkbox-disk' + i + '">' + pci_list[i].children[j].path + ' ' + pci_list[i].children[j].state + ' (' + pci_list[i].children[j].type + ') ' + pci_list[i].children[j].size + ' ' + ' ' + pci_list[i].vendor + ' ' + pci_list[i].wwn  + ' ' + partition_text + '</label>';
                                 mpathHtml += '</div>';
