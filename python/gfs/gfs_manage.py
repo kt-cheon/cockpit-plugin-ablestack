@@ -206,7 +206,7 @@ def init_pcs_cluster(disks,vg_name,lv_name,list_ips):
                                 run_command(f"partprobe /dev/{single_disk}",ssh_client,ignore_errors=True)
                             ssh_client.close()
                     else:
-                        partition = f"{disk}1"
+                        partition = disk.replace("dm-uuid-mpath-","dm-uuid-part1-mpath-")
                         run_command(f"pvremove {partition}",ignore_errors=True)
                         run_command(f"echo -e 'd\nw\n' | fdisk {disk} >/dev/null 2>&1", ignore_errors=True)
 
@@ -295,7 +295,7 @@ def get_lv_path(vg_name, lv_name):
     raise FileNotFoundError(f"Logical Volume {vg_name}/{lv_name} 경로를 찾을 수 없습니다.")
 
 def create_gfs(disks, vg_name, lv_name, gfs_name, mount_point, cluster_name, num_journals, list_ips):
-    time.sleep(20)
+    time.sleep(25)
     """Create and a single GFS2 file system on the provided disks."""
     try:
         # Prepare a list to store disk devices
@@ -318,7 +318,7 @@ def create_gfs(disks, vg_name, lv_name, gfs_name, mount_point, cluster_name, num
                     ssh_client = connect_to_host(ip)
                     run_command(f"partprobe {disk}", ssh_client, ignore_errors=True)
             # 파티션 이름 확인
-            partition = f"{disk}1"
+            partition = disk.replace("dm-uuid-mpath-","dm-uuid-part1-mpath-")
             # 물리 볼륨 생성
             run_command(f"pvcreate -ff --yes {partition}")
             # PV 디스크 목록에 추가
@@ -348,7 +348,7 @@ def create_gfs(disks, vg_name, lv_name, gfs_name, mount_point, cluster_name, num
                         # run_command(f"grep -qxF 'partprobe /dev/{single_disk}' /etc/rc.local || echo 'partprobe /dev/{single_disk}' >> /etc/rc.local", ssh_client, ignore_errors=True)
                         # run_command(f"grep -qxF 'lvmdevices --adddev /dev/{single_partition}' /etc/rc.local || echo 'lvmdevices --adddev -y /dev/{single_partition}' >> /etc/rc.local", ssh_client, ignore_errors=True)
                 else:
-                        partition = f"{disk}1"
+                        partition = disk.replace("dm-uuid-mpath-","dm-uuid-part1-mpath-")
 
                         run_command(f"partprobe {disk}", ssh_client, ignore_errors=True)
                         run_command(f"lvmdevices --adddev {partition} ", ssh_client, ignore_errors=True)
@@ -367,7 +367,7 @@ def create_gfs(disks, vg_name, lv_name, gfs_name, mount_point, cluster_name, num
         run_command(f"pcs resource clone {gfs_name}_res interleave=true")
         run_command(f"pcs constraint order start glue-locking-clone then {gfs_name}_res-clone")
         run_command(f"pcs constraint colocation add {gfs_name}_res-clone with glue-locking-clone")
-        run_command(f"pcs resource create {gfs_name} --group {gfs_name}-group ocf:heartbeat:Filesystem device=\"{lv_path}\" directory=\"{mount_point}\" fstype=\"gfs2\" options=noatime op monitor timeout=120s interval=10s on-fail=fence > /dev/null")
+        run_command(f"pcs resource create {gfs_name} --group {gfs_name}-group ocf:heartbeat:Filesystem device=\"{lv_path}\" directory=\"{mount_point}\" fstype=\"gfs2\" options=noatime op monitor timeout=120s interval=10s op start timeout=80s op stop timeout=80s on-fail=fence > /dev/null")
         run_command(f"pcs resource clone {gfs_name} interleave=true")
         run_command(f"pcs constraint order start {gfs_name}_res-clone then {gfs_name}-clone")
         run_command(f"pcs constraint colocation add {gfs_name}_res-clone with {gfs_name}-clone")
@@ -383,7 +383,7 @@ def create_gfs(disks, vg_name, lv_name, gfs_name, mount_point, cluster_name, num
                         run_command(f"partprobe /dev/{single_disk}", ssh_client, ignore_errors=True)
                         run_command(f"lvmdevices --adddev /dev/{single_partition} ", ssh_client, ignore_errors=True)
                 else:
-                        partition = f"{disk}1"
+                        partition = disk.replace("dm-uuid-mpath-","dm-uuid-part1-mpath-")
                         run_command(f"partprobe {disk}", ssh_client, ignore_errors=True)
                         run_command(f"lvmdevices --adddev {partition} ", ssh_client, ignore_errors=True)
             run_command("pcs resource cleanup ", ssh_client, ignore_errors=True)
@@ -397,7 +397,7 @@ def create_gfs(disks, vg_name, lv_name, gfs_name, mount_point, cluster_name, num
 
 def create_ccvm_cluster(gfs_name, mount_point, cluster_name, list_ips):
     try:
-        time.sleep(15)
+        time.sleep(80)
 
         run_command("cp "+ pluginpath + f"/tools/vmconfig/ccvm/ccvm.xml {mount_point}/ccvm.xml")
         run_command(f"cp /var/lib/libvirt/images/ablestack-template.qcow2 {mount_point}/ccvm.qcow2")
@@ -543,7 +543,7 @@ def extend_pcs_cluster(username,password,stonith_info,mount_point,list_ips):
             else:
                 single_disk_arr = run_command("lsblk -r -n -o NAME,TYPE -d | grep -v rom | awk '{print $1}'", ssh_client).split()
                 for disk in single_disk_arr:
-                    partition = f"{disk}1"
+                    partition = disk.replace("dm-uuid-mpath-","dm-uuid-part1-mpath-")
                     run_command(f"partprobe /dev/{disk}", ssh_client, ignore_errors=True)
                     run_command(f"lvmdevices --adddev /dev/{partition}", ssh_client, ignore_errors=True)
                     # if ip == list_ips[-1]:
@@ -586,7 +586,7 @@ def check_ipmi(stonith_str):
             username = info["login"]
             password = info["passwd"]
 
-            command = f'ipmitool -I lanplus -H {ip} -U {username} -P "{password}" power status'
+            command = f"ipmitool -I lanplus -H {ip} -U {username} -P '{password}' power status"
             try:
                 result = run_command(command, ignore_errors=False).strip()
                 if not result:  # Check if the result is empty
@@ -785,8 +785,9 @@ def alert_setup(list_ips):
                 for cmd in commands:
                     run_command(cmd, ssh_client)
                 ssh_client.close()
-            run_command(f"pcs alert create id=alert_file description='Log events to a file.' path={path}")
-            run_command(f"pcs alert recipient add alert_file id=alert_logfile value={pcmk_log_file}")
+
+        run_command(f"pcs alert create id=alert_file description='Log events to a file.' path={path}")
+        run_command(f"pcs alert recipient add alert_file id=alert_logfile value={pcmk_log_file}")
 
         ret = createReturn(code=200, val="Pcs Alert Success")
         return print(json.dumps(json.loads(ret), indent=4))
