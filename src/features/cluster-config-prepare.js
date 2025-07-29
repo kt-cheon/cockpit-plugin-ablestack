@@ -1468,36 +1468,30 @@ function saveAsFile(id, str, filename) {
  * Description : 클러스터 준비 마법사에서 완료를 누를 때 설정확인의 정보대로 파일(ssh-key)을 host에 업로드하거나 수정하는 함수
  * Parameter : text1, text2, file_type
  * Return  : 없음
- * History  : 2021.03.11 최초 작성
+ * History  : 2025.07.29 코드가 정상 실행되지 않아 동기화 코드로 변경
  **/
 
 async function writeSshKeyFile(text1, text2) {
-    cockpit.script(["touch /root/.ssh/id_rsa"])
-    cockpit.file("/root/.ssh/id_rsa").replace(text1)
-        .done(function (tag) {
-        })
-        .fail(function (error) {
-        });
-    // 개인 키 파일 권한 변경
-    cockpit.script(["chmod 600 /root/.ssh/id_rsa"])
-    cockpit.script(["touch /root/.ssh/id_rsa.pub"])
-    cockpit.file("/root/.ssh/id_rsa.pub").replace(text2)
-        .done(function (tag) {
-        })
-        .fail(function (error) {
-        });
-    // 공개 키 파일 권한 변경
-    cockpit.script(["chmod 644 /root/.ssh/id_rsa.pub"])
-    // 공개 키 authorized_key 파일에 공개 키 내용 append 및 중복 내용 제거
-    cockpit.script(["cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys"])
-    cockpit.script(["sort /root/.ssh/authorized_keys | uniq > /root/.ssh/authorized_keys.uniq"])
-    cockpit.script(["mv -f /root/.ssh/authorized_keys{.uniq}"])
-    cockpit.script(["chmod 644 /root/.ssh/authorized_keys"])
-    cockpit.script(["rm -f /root/.ssh/authorized_keys.uniq"])
+    try {
+        await cockpit.script("mkdir -p /root/.ssh && touch /root/.ssh/id_rsa");
+        await cockpit.file("/root/.ssh/id_rsa").replace(text1);
+        await cockpit.script("chmod 600 /root/.ssh/id_rsa");
 
-    // 임시 키 파일 삭제
-    cockpit.script(["rm -f /root/.ssh/temp_id_rsa"])
-    cockpit.script(["rm -f /root/.ssh/temp_id_rsa.pub"])
+        await cockpit.script("touch /root/.ssh/id_rsa.pub");
+        await cockpit.file("/root/.ssh/id_rsa.pub").replace(text2);
+        await cockpit.script("chmod 644 /root/.ssh/id_rsa.pub");
+
+        await cockpit.script("cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys");
+        await cockpit.script("sort /root/.ssh/authorized_keys | uniq > /root/.ssh/authorized_keys.uniq");
+        await cockpit.script("mv -f /root/.ssh/authorized_keys.uniq /root/.ssh/authorized_keys");
+        await cockpit.script("chmod 644 /root/.ssh/authorized_keys");
+
+        // 임시 키 삭제
+        await cockpit.script("rm -f /root/.ssh/temp_id_rsa /root/.ssh/temp_id_rsa.pub");
+
+    } catch (err) {
+        console.error("SSH 키 처리 중 오류 발생:", err);
+    }
 }
 
 /**
