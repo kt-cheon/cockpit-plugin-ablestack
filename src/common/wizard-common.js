@@ -313,6 +313,57 @@ function setSshKeyFileReader(input, file_name, callBackFunction) {
     }
 }
 /**
+ * Meathod Name : setGfsProgreeStep
+ * Date Created : 2025.07.17
+ * Writer  : 정민철
+ * Description : span id와 status 입력받아 해당하는 span의 진행상태를 입력받은 status 변경
+ * Parameter : String, String
+ * Return  : 없음
+ * History  : 2025.07.17 최초 작성
+ */
+function setGfsProgressStep(span_id, status){
+    //proceeding or 1: 진행중, completed or 2: 완료됨, aborted or 3: 중단됨 or 4: formatting, 포맷중
+    if(status=="proceeding" || status=="completed" || status=="aborted" || status=="formatting"|| status==1 || status==2 || status==3 || status==4){
+        var span = $('#'+span_id);
+        var icon = $('#'+span_id).children('span').children('span').children("i");
+        var progress_text = $('#'+span_id).children('span').children('p');
+
+        // 초기화
+        span.removeClass('pf-m-blue pf-m-green pf-m-orange pf-m-red pf-m-purple');
+        icon.removeClass('fa-info-circle fa-check-circle fa-play fa-exclamation-circle fa-hourglass-half');
+
+        if(status == "proceeding" || status==1){
+            if(span.attr('id') == "span-gfs-progress-step1"){
+                $('#gfs-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 5단계 중 1단계 진행 중입니다.');
+            } else if(span.attr('id') == "span-gfs-progress-step2"){
+                $('#gfs-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 5단계 중 2단계 진행 중입니다.');
+            } else if(span.attr('id') == "span-gfs-progress-step3"){
+                $('#gfs-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 5단계 중 3단계 진행 중입니다.');
+            } else if(span.attr('id') == "span-gfs-progress-step4"){
+                $('#gfs-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 5단계 중 4단계 진행 중입니다.');
+            }
+
+            span.addClass('pf-m-orange');
+            icon.addClass('fa-play');
+            progress_text.text('진행중');
+        } else if(status=="completed" || status==2){
+            span.addClass('pf-m-green');
+            icon.addClass('fa-check-circle');
+            progress_text.text('완료됨');
+        } else if(status=="aborted" || status==3){
+            span.addClass('pf-m-red');
+            icon.addClass('fa-exclamation-circle');
+            progress_text.text('중단됨');
+        } else if(status=="formatting" || status==4){
+            span.addClass('pf-m-purple');
+            icon.addClass('fa-hourglass-half');
+            progress_text.text('포맷중');
+        }
+    }else{
+        alert("진행 상태를 잘못 입력했습니다.");
+    }
+}
+/**
  * Meathod Name : setPfmpProgressStep
  * Date Created : 2024.09.04
  * Writer  : 정민철
@@ -1094,7 +1145,31 @@ function tableToClusterConfigJsonString(radio_value, option, os_type){
 
     return JSON.stringify(resultArrList);
 }
+/**
+ * Meathod Name : ClusterConfigJsonStringGFS()
+ * Date Created : 2025.07.28
+ * Writer  : 정민철
+ * Description : json 데이터를 json string으로 변환하는 함수
+ * Parameter : clusterConfig
+ * Return  : json string
+ * History  : 2025.07.28 최초 작성
+ **/
+function ClusterConfigJsonStringGFS(clusterConfig) {
+    var resultArrList = [];
 
+    // clusterConfig 객체 안의 hosts 배열 순회
+    clusterConfig.clusterConfig.hosts.forEach(function(host) {
+        var data = {
+            index: host.index,
+            hostname: host.hostname,
+            ablecube: host.ablecube
+        };
+
+        resultArrList.push(data);
+    });
+
+    return JSON.stringify(resultArrList);  // 보기 좋게 포맷팅
+}
 /**
  * Meathod Name : validateClusterConfigProfile()
  * Date Created : 2022.08.29

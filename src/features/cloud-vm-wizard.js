@@ -25,20 +25,15 @@ $(document).ready(function(){
     $('#div-modal-wizard-cloud-vm-review').hide();
     $('#div-modal-wizard-cloud-vm-deploy').hide();
     $('#div-modal-wizard-cloud-vm-finish').hide();
-    // gfs용 화면
-    $('#div-modal-wizard-cloud-vm-disk').hide();
-    $('#div-modal-wizard-cloud-vm-ipmi').hide();
 
     $('#div-form-hosts-file-ccvm').hide();
     $('#div-form-hosts-table-ccvm').hide();
 
     $('#div-accordion-cloud-vm-failover-cluster').hide();
     $('#div-accordion-cloud-vm-compute-network').hide();
-    $('#div-accordion-cloud-vm-ipmi').hide();
     $('#div-accordion-cloud-vm-additional').hide();
     $('#div-accordion-cloud-vm-ssh-key').hide();
 
-    // $('#nav-button-cloud-vm-review').addClass('pf-m-disabled');
     $('#nav-button-cloud-vm-finish').addClass('pf-m-disabled');
 
     $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
@@ -66,17 +61,12 @@ $(document).ready(function(){
         //장애조치 클러스터 동적 셋팅
         updateHostFields(count);
 
-        //IPMI 동적 셋팅
-        updateIPMIcredentials(count,$('input[name="radio-ipmi-ccvm"]:checked').val());
-
         settingProfile(clusterJsonConf, option_ccvm, os_type);
     })
     .catch(function(data){
         createLoggerInfo("cluster.json 파일 읽기 실패");
         console.log("cluster.json 파일 읽기 실패" + data);
     });
-    //gfs용 disk 정보
-    setGfsDiskInfo();
 
     //ssh 개인 key 파일 선택 이벤트 세팅
     setSshKeyFileReader($('#form-input-cloud-vm-ssh-private-key-file'), 'id_rsa', setCcvmSshPrivateKeyInfo);
@@ -188,26 +178,9 @@ $('#nav-button-cloud-vm-network').on('click',function(){
 
 });
 
-$('#nav-button-cloud-vm-disk').on('click',function(){
-    resetCloudVMWizard();
-
-    $('#div-modal-wizard-cloud-vm-disk').show();
-    $('#nav-button-cloud-vm-appliance').addClass('pf-m-current');
-    $('#nav-button-cloud-vm-disk').addClass('pf-m-current');
-
-    $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-    $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-    $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-    if (os_type == "ablestack-hci"){
-        cur_step_wizard_cloud_vm = "4";
-    }else{
-        cur_step_wizard_cloud_vm = "5";
-    }
-});
-
 $('#nav-button-cloud-vm-additional').on('click',function(){
     resetCloudVMWizard();
-    setGfsDiskInfo();
+
     $('#div-modal-wizard-cloud-vm-additional').show();
     $('#nav-button-cloud-vm-additional').addClass('pf-m-current');
 
@@ -216,26 +189,9 @@ $('#nav-button-cloud-vm-additional').on('click',function(){
     $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
 
     if (os_type == "ablestack-vm"){
-        cur_step_wizard_cloud_vm = "6";
-    }else{
         cur_step_wizard_cloud_vm = "5";
-    }
-});
-
-$('#nav-button-cloud-vm-ipmi').on('click',function(){
-    resetCloudVMWizard();
-
-    $('#div-modal-wizard-cloud-vm-ipmi').show();
-    $('#nav-button-cloud-vm-ipmi').addClass('pf-m-current');
-
-    $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-    $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-    $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
-    if (os_type == "ablestack-vm"){
-        cur_step_wizard_cloud_vm = "7";
     }else{
-        cur_step_wizard_cloud_vm = "6";
+        cur_step_wizard_cloud_vm = "4";
     }
 });
 
@@ -249,12 +205,10 @@ $('#nav-button-cloud-vm-ssh-key').on('click',function(){
     $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
     $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
 
-    if (os_type == "powerflex"){
-        cur_step_wizard_cloud_vm = "7";
-    }else if(os_type == "ablestack-vm"){
-        cur_step_wizard_cloud_vm = "8";
-    }else{
+    if(os_type == "ablestack-vm"){
         cur_step_wizard_cloud_vm = "6";
+    }else{
+        cur_step_wizard_cloud_vm = "5";
     }
 });
 
@@ -268,12 +222,10 @@ $('#nav-button-cloud-vm-cluster').on('click',function(){
     $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
     $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
 
-    if (os_type == "powerflex"){
-        cur_step_wizard_cloud_vm = "8";
-    }else if(os_type == "ablestack-vm"){
-        cur_step_wizard_cloud_vm = "9";
-    }else{
+    if(os_type == "ablestack-vm"){
         cur_step_wizard_cloud_vm = "7";
+    }else{
+        cur_step_wizard_cloud_vm = "6";
     }
 });
 
@@ -292,12 +244,10 @@ $('#nav-button-cloud-vm-review').on('click',function(){
     $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
     $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
 
-    if (os_type == "powerflex"){
-        cur_step_wizard_cloud_vm = "9";
-    }else if(os_type == "ablestack-vm"){
-        cur_step_wizard_cloud_vm = "10";
-    }else{
+    if(os_type == "ablestack-vm"){
         cur_step_wizard_cloud_vm = "8";
+    }else{
+        cur_step_wizard_cloud_vm = "7";
     }
 });
 
@@ -312,12 +262,10 @@ $('#nav-button-cloud-vm-finish').on('click',function(){
     $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', true);
     $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
 
-    if (os_type == "powerflex"){
-        cur_step_wizard_cloud_vm = "10";
-    }else if(os_type == "ablestack-vm"){
-        cur_step_wizard_cloud_vm = "11";
-    }else{
+    if(os_type == "ablestack-vm"){
         cur_step_wizard_cloud_vm = "9";
+    }else{
+        cur_step_wizard_cloud_vm = "8";
     }
 });
 
@@ -326,8 +274,8 @@ $('#nav-button-cloud-vm-finish').on('click',function(){
 /* Footer 영역에서 발생하는 이벤트 처리 시작 */
 
 $('#button-next-step-modal-wizard-cloud-vm').on('click', function(){
-    // OS Type이  powerflex일 때의 다음버튼의 행동 처리
-    if (os_type == "powerflex"){
+
+    if(os_type == "ablestack-vm"){ // OS Type이 ablestack-vm 일 경우의 다음버튼의 행동 처리
         if (cur_step_wizard_cloud_vm == "1") {
             resetCloudVMWizard();
 
@@ -377,203 +325,27 @@ $('#button-next-step-modal-wizard-cloud-vm').on('click', function(){
             $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
             $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
 
+
             cur_step_wizard_cloud_vm = "5";
         }
         else if (cur_step_wizard_cloud_vm == "5") {
             resetCloudVMWizard();
-
-            $('#div-modal-wizard-cloud-vm-ipmi').show();
-            $('#nav-button-cloud-vm-ipmi').addClass('pf-m-current');
-
-            $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
-            cur_step_wizard_cloud_vm = "6";
-        }
-        else if (cur_step_wizard_cloud_vm == "6") {
-            resetCloudVMWizard();
+            $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', true);
 
             $('#div-modal-wizard-cloud-vm-ssh-key').show();
             $('#nav-button-cloud-vm-ssh-key').addClass('pf-m-current');
 
-            $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', true);
-            $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-            var host_names = [];
-            for (let i = 1; i <= $('#form-table-tbody-cluster-config-existing-host-profile-ccvm tr').length ; i++) {
-                const hostElement = document.getElementById(`form-input-cloud-vm-failover-cluster-host${i}-name`);
-                if (hostElement) {
-                    const hostName = $(`#form-input-cloud-vm-failover-cluster-host${i}-name`).val();
-                    if (hostName) {
-                        host_names.push(hostName); // 유효한 이름만 배열에 추가
-                    }
-                }
-            }
-            var ipmi_port = "623";
-            var ipmi_check_value = $('input[name="radio-ipmi-ccvm"]:checked').val();
-
-            var ipmi_config = ""; // 최종 IPMI 설정 문자열 초기화
-            var ipmi_data = [];  // IPMI 데이터를 담을 배열
-            if (ipmi_check_value === "individual") {
-                // 개별 자격 증명 처리
-                for (let i = 0; i < host_names.length; i++) {
-                    // 동적으로 각 IPMI 입력값 가져오기
-                    let ip = $(`#form-input-individual-credentials-ipmi-ip${i+1}`).val() || '';
-                    let user = $(`#form-input-individual-credentials-ipmi-user${i+1}`).val() || '';
-                    let password = $(`#form-input-individual-credentials-ipmi-password${i+1}`).val() || '';
-
-                    if (!ip) break; // IP가 없으면 더 이상 처리하지 않음
-                    ipmi_data.push({ ip, user, password }); // 배열에 추가
-                }
-            } else {
-                // 공통 자격 증명 처리
-                for (let i = 0; i < host_names.length; i++) {
-                    // 동적으로 각 IPMI 입력값 가져오기
-                    let ip = $(`#form-input-common-credentials-ipmi-ip${i+1}`).val() || '';
-                    if (!ip) break; // IP가 없으면 더 이상 처리하지 않음
-
-                    // 공통 사용자 정보 추가
-                    let user = $('#form-input-common-credentials-ipmi-user').val();
-                    let password = $('#form-input-common-credentials-ipmi-password').val();
-
-                    ipmi_data.push({ ip, user, password }); // 배열에 추가
-                }
-            }
-            ipmi_data.forEach((entry, index) => {
-                ipmi_config += `${index > 0 ? ";" : ""}${entry.ip},${ipmi_port},${entry.user},${entry.password}`;
-            });
-            check_ipmi_cmd = ['python3',pluginpath + '/python/gfs/gfs_manage.py' , '--check-ipmi', '--stonith', ipmi_config];
-            console.log(check_ipmi_cmd);
-            cockpit.spawn(check_ipmi_cmd)
-            .then(function(data){
-                var retVal = JSON.parse(data);
-                console.log(retVal)
-                if (retVal.code == "200"){
-                    $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-                    $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-                    $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
-                    cur_step_wizard_cloud_vm = "7";
-                }else{
-                    $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', true);
-                    cur_step_wizard_cloud_vm = "7";
-                    alert(retVal.val.message + " 이전으로 돌아가 정확한 자격증명을 입력하시길 바랍니다.");
-                }
-            })
-            .catch(function(){
-                $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', true);
-                cur_step_wizard_cloud_vm = "7";
-                alert("이전으로 돌아가 정확한 자격증명을 입력하시길 바랍니다.");
-            })
-            cur_step_wizard_cloud_vm = "6";
-        }
-        else if (cur_step_wizard_cloud_vm == "7") {
-            resetCloudVMWizard();
-
-            $('#div-modal-wizard-cloud-vm-failover-cluster').show();
-            $('#nav-button-cloud-vm-cluster').addClass('pf-m-current');
-
             $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
             $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
             $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
-            cur_step_wizard_cloud_vm = "8";
-        }
-        else if (cur_step_wizard_cloud_vm == "8") {
-            resetCloudVMWizard();
-
-            setCcvmReviewInfo();
-
-            $('#div-modal-wizard-cloud-vm-review').show();
-            $('#nav-button-cloud-vm-review').addClass('pf-m-current');
-            //$('#nav-button-cloud-vm-finish').removeClass('pf-m-disabled');
-
-            $('#button-next-step-modal-wizard-cloud-vm').html('배포');
-            $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
-            cur_step_wizard_cloud_vm = "9";
-        }
-        else if (cur_step_wizard_cloud_vm == "9") {
-            $('#div-modal-cloud-wizard-confirm').show();
-        }
-        else if (cur_step_wizard_cloud_vm == "10") {
-            $('#div-modal-wizard-cloud-vm').hide();
-        }
-    }else if(os_type == "ablestack-vm"){ // OS Type이 ablestack-vm 일 경우의 다음버튼의 행동 처리
-        if (cur_step_wizard_cloud_vm == "1") {
-            resetCloudVMWizard();
-
-            $('#div-modal-wizard-cloud-vm-cluster-sync-mechanism').show();
-            $('#nav-button-cloud-vm-appliance').addClass('pf-m-current');
-            $('#nav-button-cloud-vm-cluster-sync-mechanism').addClass('pf-m-current');
-
-            $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
-            cur_step_wizard_cloud_vm = "2";
-        }
-        else if (cur_step_wizard_cloud_vm == "2") {
-            resetCloudVMWizard();
-
-            $('#div-modal-wizard-cloud-vm-compute').show();
-            $('#nav-button-cloud-vm-appliance').addClass('pf-m-current');
-            $('#nav-button-cloud-vm-compute').addClass('pf-m-current');
-
-            $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
-            cur_step_wizard_cloud_vm = "3";
-        }
-        else if (cur_step_wizard_cloud_vm == "3") {
-            resetCloudVMWizard();
-
-            $('#div-modal-wizard-cloud-vm-network').show();
-            $('#nav-button-cloud-vm-appliance').addClass('pf-m-current');
-            $('#nav-button-cloud-vm-network').addClass('pf-m-current');
-
-            $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
-            cur_step_wizard_cloud_vm = "4";
-        }
-        else if (cur_step_wizard_cloud_vm == "4") {
-            resetCloudVMWizard();
-            setGfsDiskInfo();
-            $('#div-modal-wizard-cloud-vm-disk').show();
-            $('#nav-button-cloud-vm-appliance').addClass('pf-m-current');
-            $('#nav-button-cloud-vm-disk').addClass('pf-m-current');
-
-            $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
-            cur_step_wizard_cloud_vm = "5";
-
-        }
-        else if (cur_step_wizard_cloud_vm == "5") {
-            resetCloudVMWizard();
-
-            $('#div-modal-wizard-cloud-vm-additional').show();
-            $('#nav-button-cloud-vm-additional').addClass('pf-m-current');
-
-            $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
 
             cur_step_wizard_cloud_vm = "6";
         }
         else if (cur_step_wizard_cloud_vm == "6") {
             resetCloudVMWizard();
 
-            $('#div-modal-wizard-cloud-vm-ipmi').show();
-            $('#nav-button-cloud-vm-ipmi').addClass('pf-m-current');
+            $('#div-modal-wizard-cloud-vm-failover-cluster').show();
+            $('#nav-button-cloud-vm-cluster').addClass('pf-m-current');
 
             $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
             $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
@@ -583,93 +355,6 @@ $('#button-next-step-modal-wizard-cloud-vm').on('click', function(){
         }
         else if (cur_step_wizard_cloud_vm == "7") {
             resetCloudVMWizard();
-            $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', true);
-
-            $('#div-modal-wizard-cloud-vm-ssh-key').show();
-            $('#nav-button-cloud-vm-ssh-key').addClass('pf-m-current');
-
-            var host_names = [];
-            for (let i = 1; i <= $('#form-table-tbody-cluster-config-existing-host-profile-ccvm tr').length ; i++) {
-                const hostElement = document.getElementById(`form-input-cloud-vm-failover-cluster-host${i}-name`);
-                if (hostElement) {
-                    const hostName = $(`#form-input-cloud-vm-failover-cluster-host${i}-name`).val();
-                    if (hostName) {
-                        host_names.push(hostName); // 유효한 이름만 배열에 추가
-                    }
-                }
-            }
-            var ipmi_port = "623";
-            var ipmi_check_value = $('input[name="radio-ipmi-ccvm"]:checked').val();
-
-            var ipmi_config = ""; // 최종 IPMI 설정 문자열 초기화
-            var ipmi_data = [];  // IPMI 데이터를 담을 배열
-            if (ipmi_check_value === "individual") {
-                // 개별 자격 증명 처리
-                for (let i = 0; i < host_names.length; i++) {
-                    // 동적으로 각 IPMI 입력값 가져오기
-                    let ip = $(`#form-input-individual-credentials-ipmi-ip${i+1}`).val() || '';
-                    let user = $(`#form-input-individual-credentials-ipmi-user${i+1}`).val() || '';
-                    let password = $(`#form-input-individual-credentials-ipmi-password${i+1}`).val() || '';
-
-                    if (!ip) break; // IP가 없으면 더 이상 처리하지 않음
-                    ipmi_data.push({ ip, user, password }); // 배열에 추가
-                }
-            } else {
-                // 공통 자격 증명 처리
-                for (let i = 0; i < host_names.length; i++) {
-                    // 동적으로 각 IPMI 입력값 가져오기
-                    let ip = $(`#form-input-common-credentials-ipmi-ip${i+1}`).val() || '';
-                    if (!ip) break; // IP가 없으면 더 이상 처리하지 않음
-
-                    // 공통 사용자 정보 추가
-                    let user = $('#form-input-common-credentials-ipmi-user').val();
-                    let password = $('#form-input-common-credentials-ipmi-password').val();
-
-                    ipmi_data.push({ ip, user, password }); // 배열에 추가
-                }
-            }
-            ipmi_data.forEach((entry, index) => {
-                ipmi_config += `${index > 0 ? ";" : ""}${entry.ip},${ipmi_port},${entry.user},${entry.password}`;
-            });
-            check_ipmi_cmd = ['python3',pluginpath + '/python/gfs/gfs_manage.py' , '--check-ipmi', '--stonith', ipmi_config];
-            console.log(check_ipmi_cmd);
-            cockpit.spawn(check_ipmi_cmd)
-            .then(function(data){
-                var retVal = JSON.parse(data);
-                console.log(retVal)
-                if (retVal.code == "200"){
-                    $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-                    $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-                    $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
-                    cur_step_wizard_cloud_vm = "8";
-                }else{
-                    $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', true);
-                    cur_step_wizard_cloud_vm = "8";
-                    alert(retVal.val.message + " 이전으로 돌아가 정확한 자격증명을 입력하시길 바랍니다.");
-                }
-            })
-            .catch(function(){
-                $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', true);
-                cur_step_wizard_cloud_vm = "8";
-                alert("이전으로 돌아가 정확한 자격증명을 입력하시길 바랍니다.");
-            })
-
-        }
-        else if (cur_step_wizard_cloud_vm == "8") {
-            resetCloudVMWizard();
-
-            $('#div-modal-wizard-cloud-vm-failover-cluster').show();
-            $('#nav-button-cloud-vm-cluster').addClass('pf-m-current');
-
-            $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
-            cur_step_wizard_cloud_vm = "9";
-        }
-        else if (cur_step_wizard_cloud_vm == "9") {
-            resetCloudVMWizard();
 
             setCcvmReviewInfo();
 
@@ -681,12 +366,12 @@ $('#button-next-step-modal-wizard-cloud-vm').on('click', function(){
             $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
             $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
 
-            cur_step_wizard_cloud_vm = "10";
+            cur_step_wizard_cloud_vm = "8";
         }
-        else if (cur_step_wizard_cloud_vm == "10") {
+        else if (cur_step_wizard_cloud_vm == "8") {
             $('#div-modal-cloud-wizard-confirm').show();
         }
-        else if (cur_step_wizard_cloud_vm == "11"){
+        else if (cur_step_wizard_cloud_vm == "9"){
             $('#div-modal-wizard-cloud-vm').hide();
         }
     }else{ // OS Type이 ablestack-hci 일 경우의 다음버튼의 행동 처리
@@ -780,8 +465,8 @@ $('#button-next-step-modal-wizard-cloud-vm').on('click', function(){
 });
 
 $('#button-before-step-modal-wizard-cloud-vm').on('click', function(){
-        // OS Type이 ABLESTACK이 아닐 때의 이전버튼의 행동 처리
-    if (os_type == "powerflex"){
+
+    if (os_type == "ablestack-vm") {  // OS Type이 ablestack-vm 경우의 이전버튼의 행동 처리
         if (cur_step_wizard_cloud_vm == "1") {
             // 이벤트 처리 없음
         }
@@ -851,8 +536,8 @@ $('#button-before-step-modal-wizard-cloud-vm').on('click', function(){
         else if (cur_step_wizard_cloud_vm == "7") {
             resetCloudVMWizard();
 
-            $('#div-modal-wizard-cloud-vm-ipmi').show();
-            $('#nav-button-cloud-vm-ipmi').addClass('pf-m-current');
+            $('#div-modal-wizard-cloud-vm-ssh-key').show();
+            $('#nav-button-cloud-vm-ssh-key').addClass('pf-m-current');
 
             $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
             $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
@@ -863,18 +548,6 @@ $('#button-before-step-modal-wizard-cloud-vm').on('click', function(){
         else if (cur_step_wizard_cloud_vm == "8") {
             resetCloudVMWizard();
 
-            $('#div-modal-wizard-cloud-vm-ssh-key').show();
-            $('#nav-button-cloud-vm-ssh-key').addClass('pf-m-current');
-
-            $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
-            cur_step_wizard_cloud_vm = "7";
-        }
-        else if (cur_step_wizard_cloud_vm == "9") {
-            resetCloudVMWizard();
-
             $('#div-modal-wizard-cloud-vm-failover-cluster').show();
             $('#nav-button-cloud-vm-cluster').addClass('pf-m-current');
 
@@ -882,9 +555,9 @@ $('#button-before-step-modal-wizard-cloud-vm').on('click', function(){
             $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
             $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
 
-            cur_step_wizard_cloud_vm = "8";
+            cur_step_wizard_cloud_vm = "7";
         }
-        else if (cur_step_wizard_cloud_vm == "10") {
+        else if (cur_step_wizard_cloud_vm == "9"){
             resetCloudVMWizard();
 
             $('#div-modal-wizard-cloud-vm-review').show();
@@ -895,137 +568,7 @@ $('#button-before-step-modal-wizard-cloud-vm').on('click', function(){
             $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
             $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
 
-            cur_step_wizard_cloud_vm = "9";
-        }
-    }else if (os_type == "ablestack-vm") {  // OS Type이 ablestack-vm 경우의 이전버튼의 행동 처리
-        if (cur_step_wizard_cloud_vm == "1") {
-            // 이벤트 처리 없음
-        }
-        else if (cur_step_wizard_cloud_vm == "2") {
-            resetCloudVMWizard();
-
-            $('#div-modal-wizard-cloud-vm-overview').show();
-            $('#nav-button-cloud-vm-overview').addClass('pf-m-current');
-
-            $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', true);
-            $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
-            cur_step_wizard_cloud_vm = "1";
-        }
-        else if (cur_step_wizard_cloud_vm == "3") {
-            resetCloudVMWizard();
-
-            $('#div-modal-wizard-cloud-vm-cluster-sync-mechanism').show();
-            $('#nav-button-cloud-vm-appliance').addClass('pf-m-current');
-            $('#nav-button-cloud-vm-cluster-sync-mechanism').addClass('pf-m-current');
-
-            $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
-            cur_step_wizard_cloud_vm = "2";
-        }
-        else if (cur_step_wizard_cloud_vm == "4") {
-            resetCloudVMWizard();
-
-            $('#div-modal-wizard-cloud-vm-compute').show();
-            $('#nav-button-cloud-vm-appliance').addClass('pf-m-current');
-            $('#nav-button-cloud-vm-compute').addClass('pf-m-current');
-
-            $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
-            cur_step_wizard_cloud_vm = "3";
-        }
-        else if (cur_step_wizard_cloud_vm == "5") {
-            resetCloudVMWizard();
-
-            $('#div-modal-wizard-cloud-vm-network').show();
-            $('#nav-button-cloud-vm-appliance').addClass('pf-m-current');
-            $('#nav-button-cloud-vm-network').addClass('pf-m-current');
-
-            $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
-            cur_step_wizard_cloud_vm = "4";
-        }
-        else if (cur_step_wizard_cloud_vm == "6") {
-            resetCloudVMWizard();
-
-            $('#div-modal-wizard-cloud-vm-disk').show();
-            $('#nav-button-cloud-vm-appliance').addClass('pf-m-current');
-            $('#nav-button-cloud-vm-disk').addClass('pf-m-current');
-
-            $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
-
-            cur_step_wizard_cloud_vm = "5";
-        }
-        else if (cur_step_wizard_cloud_vm == "7") {
-            resetCloudVMWizard();
-
-            $('#div-modal-wizard-cloud-vm-additional').show();
-            $('#nav-button-cloud-vm-additional').addClass('pf-m-current');
-
-            $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
-            cur_step_wizard_cloud_vm = "6";
-        }
-        else if (cur_step_wizard_cloud_vm == "8") {
-            resetCloudVMWizard();
-
-            $('#div-modal-wizard-cloud-vm-ipmi').show();
-            $('#nav-button-cloud-vm-ipmi').addClass('pf-m-current');
-
-            $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
-            cur_step_wizard_cloud_vm = "7";
-        }
-        else if (cur_step_wizard_cloud_vm == "9") {
-            resetCloudVMWizard();
-
-            $('#div-modal-wizard-cloud-vm-ssh-key').show();
-            $('#nav-button-cloud-vm-ssh-key').addClass('pf-m-current');
-
-            $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
             cur_step_wizard_cloud_vm = "8";
-        }
-        else if (cur_step_wizard_cloud_vm == "10") {
-            resetCloudVMWizard();
-
-            $('#div-modal-wizard-cloud-vm-failover-cluster').show();
-            $('#nav-button-cloud-vm-cluster').addClass('pf-m-current');
-
-            $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
-            cur_step_wizard_cloud_vm = "9";
-        }
-        else if (cur_step_wizard_cloud_vm == "11"){
-            resetCloudVMWizard();
-
-            $('#div-modal-wizard-cloud-vm-review').show();
-            $('#nav-button-cloud-vm-review').addClass('pf-m-current');
-            $('#nav-button-cloud-vm-finish').removeClass('pf-m-disabled');
-
-            $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
-            $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-
-            cur_step_wizard_cloud_vm = "10";
         }
     }else{ // OS Type이 ABLESTACK일 경우의 이전버튼의 행동 처리
         if (cur_step_wizard_cloud_vm == "1") {
@@ -1142,23 +685,6 @@ $('#button-accordion-cloud-vm-failover-cluster').on('click', function(){
     }
 });
 
-$(document).on('click', '#button-accordion-cloud-vm-ipmi', function () {
-    const button = $(this); // 현재 클릭된 버튼
-    const content = $('#div-accordion-cloud-vm-ipmi'); // 아코디언 내용 영역
-
-    if (button.attr("aria-expanded") == "false") {
-        button.attr("aria-expanded", "true");
-        button.addClass("pf-m-expanded");
-        content.fadeIn();
-        content.addClass("pf-m-expanded");
-    } else {
-        button.attr("aria-expanded", "false");
-        button.removeClass("pf-m-expanded");
-        content.fadeOut();
-        content.removeClass("pf-m-expanded");
-    }
-});
-
 $('#button-accordion-cloud-vm-compute-network').on('click', function(){
     if ($('#button-accordion-cloud-vm-compute-network').attr("aria-expanded") == "false") {
         $('#button-accordion-cloud-vm-compute-network').attr("aria-expanded", "true");
@@ -1206,7 +732,7 @@ $('#button-accordion-cloud-vm-ssh-key').on('click', function(){
 $(document).on('click', '#button-accordion-cloud-vm-failover-cluster', function () {
     const button = $(this); // 현재 클릭된 버튼
     const content = $('#div-accordion-cloud-vm-failover-cluster'); // 아코디언 내용 영역
-
+    console.log($(`#form-input-cloud-vm-failover-cluster-host1-name`).val().trim(), $(`#form-input-cloud-vm-failover-cluster-host1-name`).length);
     if (button.attr("aria-expanded") == "false") {
         button.attr("aria-expanded", "true");
         button.addClass("pf-m-expanded");
@@ -1277,20 +803,6 @@ $('#form-radio-hosts-file-ccvm').on('click', function () {
     $('#form-input-cluster-config-host-number-minus-ccvm').attr('disabled', 'true');
     $('#form-input-cluster-config-host-number-ccvm').attr('disabled', 'true');
 });
-//IPMI 정보에서 개별 자격 즘명을 클릭할 시
-$('#form-radio-ipmi-individual-credentials').on('click', function() {
-    resetIpmiValues();
-
-    $('#div-individual-credentials').show();
-    $('#div-common-credentials').hide();
-});
-//IPMI 정보에서 공통 자격 즘명을 클릭할 시
-$('#form-radio-ipmi-common-credentials').on('click', function() {
-    resetIpmiValues();
-
-    $('#div-individual-credentials').hide();
-    $('#div-common-credentials').show();
-});
 // Host 파일 준비 중 "구성할 호스트"를 변경하는 '+', '-' 기능
 $('#form-input-cluster-config-host-number-plus-ccvm').on('click', function () {
     let num = $("#form-input-cluster-config-host-number-ccvm").val();
@@ -1332,10 +844,8 @@ $('#button-execution-modal-cloud-wizard-confirm').on('click', function () {
     $('#div-modal-cloud-wizard-confirm').hide();
     if(validateCloudCenterVm()){
         deployCloudCenterVM();
-        if(os_type == "powerflex"){
+        if(os_type == "ablestack-vm"){
             cur_step_wizard_cloud_vm = "10";
-        }else if(os_type == "ablestack-vm"){
-            cur_step_wizard_cloud_vm = "11";
         }else{
             cur_step_wizard_cloud_vm = "9";
         }
@@ -1357,10 +867,7 @@ $('#button-execution-modal-cloud-wizard-cancel').on('click', function () {
     //상태값 초기화 겸 페이지 리로드
     location.reload();
 });
-$('[name="radio-ipmi-ccvm"]').on('change', function () {
-    updateIPMIcredentials($('#form-table-tbody-cluster-config-existing-host-profile-ccvm tr').length,$('input[name="radio-ipmi-ccvm"]:checked').val())
 
-});
 /* HTML Object에서 발생하는 이벤트 처리 끝 */
 
 /* 함수 정의 시작 */
@@ -1387,12 +894,6 @@ function resetCloudVMWizard(){
     $('#div-modal-wizard-cloud-vm-deploy').hide();
     $('#div-modal-wizard-cloud-vm-finish').hide();
 
-    // 일반가상화 GFS용 일때
-    $('#div-modal-wizard-cloud-vm-disk').hide();
-    $('#div-modal-wizard-cloud-vm-ipmi').hide();
-    $('#nav-button-cloud-vm-disk').removeClass('pf-m-current');
-    $('#nav-button-cloud-vm-ipmi').removeClass('pf-m-current');
-
     // 모든 사이드버튼 '기본' 속성 삭제
     $('#nav-button-cloud-vm-overview').removeClass('pf-m-current');
     $('#nav-button-cloud-vm-cluster-sync-mechanism').removeClass('pf-m-current');
@@ -1400,7 +901,6 @@ function resetCloudVMWizard(){
     $('#nav-button-cloud-vm-appliance').removeClass('pf-m-current');
     $('#nav-button-cloud-vm-compute').removeClass('pf-m-current');
     $('#nav-button-cloud-vm-network').removeClass('pf-m-current');
-    $('#nav-button-cloud-vm-disk').removeClass('pf-m-current');
     $('#nav-button-cloud-vm-additional').removeClass('pf-m-current');
     $('#nav-button-cloud-vm-ssh-key').removeClass('pf-m-current');
     $('#nav-button-cloud-vm-review').removeClass('pf-m-current');
@@ -1437,15 +937,11 @@ function deployCloudCenterVM() {
     $('#nav-button-cloud-vm-cluster').addClass('pf-m-disabled');
     $('#nav-button-cloud-vm-appliance').addClass('pf-m-disabled');
     $('#nav-button-cloud-vm-compute').addClass('pf-m-disabled');
-    $('#nav-button-cloud-vm-ipmi').addClass('pf-m-disabled');
-    $('#nav-button-cloud-vm-disk').addClass('pf-m-disabled');
     $('#nav-button-cloud-vm-network').addClass('pf-m-disabled');
     $('#nav-button-cloud-vm-additional').addClass('pf-m-disabled');
     $('#nav-button-cloud-vm-ssh-key').addClass('pf-m-disabled');
     $('#nav-button-cloud-vm-review').addClass('pf-m-disabled');
 
-    // 서버 가상화 GFS용 일 때
-    $('#nav-button-cloud-vm-ipmi').addClass('pf-m-disabled');
 
     // ccvm 정보
     var host_name = $('#form-input-cloud-vm-hostname').val();
@@ -1621,413 +1117,13 @@ function deployCloudCenterVM() {
             createLoggerInfo("Failed to check connection status of host to configure cluster");
             alert("클러스터 구성할 host 연결 상태 확인 및 cluster.json config 실패 : "+data);
         });
-    }else if(os_type == "powerflex"){
-            // powerflex 서버 가상화 GFS용 일 때
-    var all_host_name = "";
-    var host_names = [];
-    for (let i = 1; i <= $('#form-table-tbody-cluster-config-existing-host-profile-ccvm tr').length ; i++) {
-        const hostElement = document.getElementById(`form-input-cloud-vm-failover-cluster-host${i}-name`);
-        if (hostElement) {
-            const hostName = $(`#form-input-cloud-vm-failover-cluster-host${i}-name`).val();
-            all_host_name += (all_host_name ? " " : "") + hostName;
-            if (hostName) {
-                host_names.push(hostName); // 유효한 이름만 배열에 추가
-            }
-        }
-    }
-    var ipmi_port = "623";
-    var ipmi_check_value = $('input[name="radio-ipmi-ccvm"]:checked').val();
-
-    var ipmi_config = ""; // 최종 IPMI 설정 문자열 초기화
-    var ipmi_data = [];  // IPMI 데이터를 담을 배열
-    if (ipmi_check_value === "individual") {
-        // 개별 자격 증명 처리
-        for (let i = 0; i < host_names.length; i++) {
-            // 동적으로 각 IPMI 입력값 가져오기
-            let ip = $(`#form-input-individual-credentials-ipmi-ip${i+1}`).val() || '';
-            let user = $(`#form-input-individual-credentials-ipmi-user${i+1}`).val() || '';
-            let password = $(`#form-input-individual-credentials-ipmi-password${i+1}`).val() || '';
-
-            if (!ip) break; // IP가 없으면 더 이상 처리하지 않음
-            ipmi_data.push({ ip, user, password }); // 배열에 추가
-        }
-    } else {
-        // 공통 자격 증명 처리
-        for (let i = 0; i < host_names.length; i++) {
-            // 동적으로 각 IPMI 입력값 가져오기
-            let ip = $(`#form-input-common-credentials-ipmi-ip${i+1}`).val() || '';
-            if (!ip) break; // IP가 없으면 더 이상 처리하지 않음
-
-            // 공통 사용자 정보 추가
-            let user = $('#form-input-common-credentials-ipmi-user').val();
-            let password = $('#form-input-common-credentials-ipmi-password').val();
-
-            ipmi_data.push({ ip, user, password }); // 배열에 추가
-        }
-    }
-    ipmi_data.forEach((entry, index) => {
-        ipmi_config += `${index > 0 ? ";" : ""}${entry.ip},${ipmi_port},${entry.user},${entry.password}`;
-    });
-    var journal_nums = String(host_names.length + 1);
-    var gfs_cluster_name = "cloudcenter_res";
-    var gfs_mount_point = "/mnt/glue-gfs";
-    var gfs_name = "glue-gfs";
-    var gfs_vg_name = "vg_glue";
-    var gfs_lv_name = "lv_glue";
-    //=========== 1. 클러스터 구성 host 네트워크 연결 및 초기화 작업 ===========
-    $('[name=span-ccvm-progress-step1-name]').text("클러스터 구성 Host 네트워크 연결 및 초기화 작업");
-    $('[name=span-ccvm-progress-step2-name]').text("GFS 구성 설정 및 PCS 설정");
-    setProgressStep("span-ccvm-progress-step1",1);
-    var console_log = true;
-    createLoggerInfo("deployCloudCenterVM start");
-    var host_ping_test_and_cluster_config_cmd = ['python3', pluginpath + '/python/cluster/cluster_config.py', 'insertScvmHost', '-js', ret_json_string, '-cmi', mgmt_ip, '-pcl', all_host_name];
-    if(console_log){console.log(host_ping_test_and_cluster_config_cmd);}
-    cockpit.spawn(host_ping_test_and_cluster_config_cmd)
-        .then(function(data){
-            //결과 값 json으로 return
-            var ping_test_result = JSON.parse(data);
-            if(ping_test_result.code=="200") { //정상
-                var reset_cloud_center_cmd = ['python3', pluginpath + '/python/vm/reset_cloud_center.py'];
-                if(console_log){console.log(reset_cloud_center_cmd);}
-                cockpit.spawn(reset_cloud_center_cmd)
-                    .then(function(data){
-                        //결과 값 json으로 return
-                        var reset_cloud_center_result = JSON.parse(data);
-                        if(reset_cloud_center_result.code=="200") { //정상
-                            setProgressStep("span-ccvm-progress-step1",2);
-                            setProgressStep("span-ccvm-progress-step2",1);
-                            //=========== 2. GFS 구성 설정 및 Pcs 설정 ===========
-                            // 설정 초기화 ( 필요시 python까지 종료 )
-                            var set_lvm_conf_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--modify-lvm-conf', '--list-ip', all_host_name];
-                            console.log(set_lvm_conf_cmd);
-                            cockpit.spawn(set_lvm_conf_cmd)
-                            .then(function(data){
-                                var set_lvm_conf_result = JSON.parse(data);
-                                var powerflex_disk_name = set_lvm_conf_result.val.split(',')[1];
-                                console.log(set_lvm_conf_result)
-                                if (set_lvm_conf_result.code == "200"){
-                                    var set_password_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--set-password', 'password', '--list-ip', all_host_name];
-                                    console.log(set_password_cmd);
-                                    cockpit.spawn(set_password_cmd)
-                                    .then(function(data){
-                                        var set_password_result = JSON.parse(data);
-                                        console.log(set_password_result)
-                                        if (set_password_result.code == "200"){
-                                            var auth_hosts_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--auth-hosts', 'password', '--list-ip', all_host_name];
-                                            console.log(auth_hosts_cmd);
-                                            cockpit.spawn(auth_hosts_cmd)
-                                            .then(function(data){
-                                                var auth_hosts_result = JSON.parse(data);
-                                                console.log(auth_hosts_result)
-                                                if (auth_hosts_result.code == "200"){
-                                                    var setup_cluster_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--setup-cluster', gfs_cluster_name, '--list-ip', all_host_name];
-                                                    console.log(setup_cluster_cmd);
-                                                    cockpit.spawn(setup_cluster_cmd)
-                                                    .then(function(data){
-                                                        var setup_cluster_result = JSON.parse(data);
-                                                        console.log(setup_cluster_result)
-                                                        if (setup_cluster_result.code == "200"){
-                                                            var set_configure_stonith_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--configure-stonith',
-                                                                                            ipmi_config, '--list-ip', all_host_name];
-                                                            console.log(set_configure_stonith_cmd);
-                                                            cockpit.spawn(set_configure_stonith_cmd)
-                                                            .then(function(data){
-                                                                var set_configure_stonith_result = JSON.parse(data);
-                                                                console.log(set_configure_stonith_result);
-                                                                if (set_configure_stonith_result.code == "200"){
-                                                                    var set_alert_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--set-alert', '--list-ip', all_host_name];
-                                                                    console.log(set_alert_cmd);
-                                                                    cockpit.spawn(set_alert_cmd)
-                                                                    .then(function(data){
-                                                                        var set_alert_result = JSON.parse(data);
-                                                                        console.log(set_alert_result);
-                                                                        if (set_alert_result.code == "200"){
-                                                                            setProgressStep("span-ccvm-progress-step2",4);
-                                                                            var create_gfs_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--create-gfs',
-                                                                                                    '--disks', '/dev/' + powerflex_disk_name, '--vg-name', gfs_vg_name, '--lv-name', gfs_lv_name,
-                                                                                                    '--gfs-name', gfs_name, '--mount-point', gfs_mount_point, '--cluster-name', gfs_cluster_name,
-                                                                                                    '--journal-nums', journal_nums, '--list-ip', all_host_name]
-                                                                            console.log(create_gfs_cmd);
-                                                                            cockpit.spawn(create_gfs_cmd)
-                                                                            .then(function(data){
-                                                                                var create_gfs_result = JSON.parse(data);
-                                                                                console.log(create_gfs_result);
-                                                                                if (create_gfs_result.code == "200"){
-                                                                                    //=========== 3. cloudinit iso 파일 생성 ===========
-                                                                                    // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/ccvm/cloudinit 경로에 hosts, ssh key 파일 저장
-                                                                                    setProgressStep("span-ccvm-progress-step2",2);
-                                                                                    setProgressStep("span-ccvm-progress-step3",1);
-                                                                                    var host_name = $('#form-input-cloud-vm-hostname').val();
-                                                                                    var mgmt_ip = $('#form-input-cloud-vm-mngt-nic-ip').val().split("/")[0];
-                                                                                    var mgmt_prefix = $('#form-input-cloud-vm-mngt-nic-ip').val().split("/")[1];
-                                                                                    var mngt_gw = $('#form-input-cloud-vm-mngt-gw').val();
-                                                                                    var dns = $('#form-input-cloud-vm-dns').val();
-                                                                                    create_ccvm_cloudinit_cmd = ['python3', pluginpath + '/python/vm/create_ccvm_cloudinit.py'
-                                                                                                            ,"-f1",pluginpath+"/tools/vmconfig/ccvm/hosts","-t1", $("#div-textarea-cluster-config-confirm-hosts-file-ccvm").val() // hosts 파일
-                                                                                                            ,"-f2",pluginpath+"/tools/vmconfig/ccvm/id_rsa","-t2", $("#form-textarea-cloud-vm-ssh-private-key-file").val() // ssh 개인 key 파일
-                                                                                                            ,"-f3",pluginpath+"/tools/vmconfig/ccvm/id_rsa.pub","-t3", $("#form-textarea-cloud-vm-ssh-public-key-file").val() // ssh 공개 key 파일
-                                                                                                            ,'--hostname',host_name
-                                                                                                            ,'-hns', all_host_name
-                                                                                                            ,'--mgmt-nic','enp0s20'
-                                                                                                            ,'--mgmt-ip',mgmt_ip
-                                                                                                            ,'--mgmt-prefix',mgmt_prefix
-                                                                                                        ];
-                                                                                    //GATEWAY가 공백이 아닐 시 삽입
-                                                                                    if(mngt_gw != ""){
-                                                                                        create_ccvm_cloudinit_cmd.push('--mgmt-gw',mngt_gw);
-                                                                                    }
-                                                                                    // DNS가 공백이 아닐 시 삽입
-                                                                                    if(dns != ""){
-                                                                                        create_ccvm_cloudinit_cmd.push('--dns',dns);
-                                                                                    }
-                                                                                    var svc_bool = $('input[type=checkbox][id="form-checkbox-svc-network"]').is(":checked");
-                                                                                    if(svc_bool){
-                                                                                        var sn_ip = $('#form-input-cloud-vm-svc-nic-ip').val().split("/")[0];
-                                                                                        var sn_prefix = $('#form-input-cloud-vm-svc-nic-ip').val().split("/")[1];
-                                                                                        var sn_gw = $('#form-input-cloud-vm-svc-gw').val();
-                                                                                        var sn_dns = $('#form-input-cloud-vm-svc-dns').val();
-                                                                                        create_ccvm_cloudinit_cmd.push('--sn-nic','enp0s21','--sn-ip',sn_ip,'--sn-prefix',sn_prefix,'--sn-gw',sn_gw,'--sn-dns',sn_dns);
-                                                                                    }
-                                                                                    if(console_log){console.log(create_ccvm_cloudinit_cmd);}
-                                                                                    cockpit.spawn(create_ccvm_cloudinit_cmd)
-                                                                                        .then(function(data){
-                                                                                            //결과 값 json으로 return
-                                                                                            var create_ccvm_cloudinit_result = JSON.parse(data);
-                                                                                            if(create_ccvm_cloudinit_result.code=="200"){
-                                                                                                //=========== 4. 클라우드센터 가상머신 구성 ===========
-                                                                                                setProgressStep("span-ccvm-progress-step3",2);
-                                                                                                setProgressStep("span-ccvm-progress-step4",1);
-                                                                                                xml_create_cmd.push("-hns",all_host_name, "-gmp", gfs_mount_point);
-                                                                                                if(console_log){console.log(xml_create_cmd);}
-                                                                                                cockpit.spawn(xml_create_cmd)
-                                                                                                    .then(function(data){
-                                                                                                        //결과 값 json으로 return
-                                                                                                        var create_ccvm_xml_result = JSON.parse(data);
-                                                                                                        if(create_ccvm_xml_result.code=="200"){
-                                                                                                            //=========== 5. 클러스터 구성 및 클라우드센터 가상머신 배포 ===========
-                                                                                                            //클러스터 생성
-                                                                                                            setProgressStep("span-ccvm-progress-step4",2);
-                                                                                                            setProgressStep("span-ccvm-progress-step5",1);
-                                                                                                            var pcs_config = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--create-ccvm-cluster', '--gfs-name', gfs_name, '--mount-point', gfs_mount_point, '--cluster-name', gfs_cluster_name,'--list-ip', all_host_name];
-                                                                                                            if(console_log){console.log(pcs_config);}
-                                                                                                            cockpit.spawn(pcs_config)
-                                                                                                                .then(function(data){
-                                                                                                                    //결과 값 json으로 return
-                                                                                                                    var ccvm_result = JSON.parse(data);
-                                                                                                                    if(ccvm_result.code=="200"){
-                                                                                                                        var cluster_sync_mechanism_cmd = ['python3', pluginpath + '/python/pcs/main.py', 'sync', '--time', cluster_sync_mechanism];
-                                                                                                                        if(console_log){console.log(cluster_sync_mechanism_cmd);}
-                                                                                                                        cockpit.spawn(cluster_sync_mechanism_cmd)
-                                                                                                                        .then(function(data){
-                                                                                                                            var cluster_sync_mechanism_result = JSON.parse(data);
-                                                                                                                            if (cluster_sync_mechanism_result.code == "200"){
-                                                                                                                                createLoggerInfo("deployCloudCenterVM success");
-                                                                                                                                setProgressStep("span-ccvm-progress-step5",2);
-                                                                                                                                //최종 화면 호출
-                                                                                                                                showDivisionCloudVMConfigFinish();
-                                                                                                                            }
-                                                                                                                            else{
-                                                                                                                                setProgressFail(5);
-                                                                                                                                createLoggerInfo(cluster_sync_mechanism_result.val);
-                                                                                                                                alert(cluster_sync_mechanism_result.val);
-
-                                                                                                                            }
-                                                                                                                        })
-                                                                                                                        .catch(function(data){
-                                                                                                                            setProgressFail(5);
-                                                                                                                            createLoggerInfo("Cluster configuration and cloud center virtual machine deployment failed");
-                                                                                                                            alert("클러스터 구성 및 클라우드센터 가상머신 배포 및 클러스터 민감도 설정 실패 : "+data);
-                                                                                                                        });
-                                                                                                                    } else {
-                                                                                                                        setProgressFail(5);
-                                                                                                                        createLoggerInfo(ccvm_result.val);
-                                                                                                                        alert(ccvm_result.val);
-                                                                                                                    }
-                                                                                                                })
-                                                                                                                .catch(function(data){
-                                                                                                                    setProgressFail(5);
-                                                                                                                    createLoggerInfo("Cluster configuration and cloud center virtual machine deployment failed");
-                                                                                                                    alert("클러스터 구성 및 클라우드센터 가상머신 배포 실패 : "+data);
-                                                                                                                });
-                                                                                                        } else {
-                                                                                                            setProgressFail(4);
-                                                                                                            createLoggerInfo(create_ccvm_xml_result.val);
-                                                                                                            alert(create_ccvm_xml_result.val);
-                                                                                                        }
-                                                                                                    })
-                                                                                                    .catch(function(data){
-                                                                                                        setProgressFail(4);
-                                                                                                        createLoggerInfo("Cloud Center Virtual Machine XML Creation Failed");
-                                                                                                        alert("클라우드센터 가상머신 XML 생성 실패 : "+data);
-                                                                                                    });
-                                                                                            } else {
-                                                                                                setProgressFail(3);
-                                                                                                createLoggerInfo(create_ccvm_cloudinit_result.val);
-                                                                                                alert(create_ccvm_cloudinit_result.val);
-                                                                                            }
-                                                                                        })
-                                                                                        .catch(function(data){
-                                                                                            setProgressFail(3);
-                                                                                            createLoggerInfo("Failed to create cloudinit iso file");
-                                                                                            alert("cloudinit iso 파일 생성 실패 : "+data);
-                                                                                        });
-                                                                                }else{
-                                                                                    setProgressFail(2);
-                                                                                    createLoggerInfo(create_gfs_result.val);
-                                                                                    alert(create_gfs_result.val);
-                                                                                }
-                                                                            }).catch(function(data){
-                                                                                setProgressFail(2);
-                                                                                createLoggerInfo("GFS configuration settings and Pcs task Pcs resource settings failed");
-                                                                                alert("GFS 구성 설정 및 Pcs 작업 7. Pcs 리소스 설정 실패 : "+data);
-                                                                            });
-                                                                        }else{
-                                                                            setProgressFail(2);
-                                                                            createLoggerInfo(set_alert_result.val);
-                                                                            alert(set_alert_result.val);
-                                                                        }
-                                                                    }).catch(function(data){
-                                                                        setProgressFail(2);
-                                                                        createLoggerInfo("GFS configuration setup and Pcs Alert setup failed");
-                                                                        alert("GFS 구성 설정 및 Pcs 작업 6. PCS 알림 설정 실패 : "+data);
-                                                                    });
-                                                                }else{
-                                                                    setProgressFail(2);
-                                                                    createLoggerInfo(set_configure_stonith_result.val);
-                                                                    alert(set_configure_stonith_result.val);
-                                                                }
-                                                            }).catch(function(data){
-                                                                setProgressFail(2);
-                                                                createLoggerInfo("Failed to set GFS configuration and Pcs task IPMI information");
-                                                                alert("GFS 구성 설정 및 Pcs 작업 5. IPMI 정보 설정 실패 : "+data);
-                                                            })
-                                                        }else{
-                                                            setProgressFail(2);
-                                                            createLoggerInfo(setup_cluster_result.val);
-                                                            alert(setup_cluster_result.val);
-                                                        }
-                                                    }).catch(function(data){
-                                                        setProgressFail(2);
-                                                        createLoggerInfo("GFS configuration setup and Pcs task cluster setup failed");
-                                                        alert("GFS 구성 설정 및 Pcs 작업 4. 클러스터 설정 실패 : "+data);
-                                                    });
-                                                }else{
-                                                    setProgressFail(2);
-                                                    createLoggerInfo(auth_hosts_result.val);
-                                                    alert(auth_hosts_result.val);
-                                                }
-                                            }).catch(function(data){
-                                                setProgressFail(2);
-                                                createLoggerInfo("Failed to set GFS configuration and Pcs task host authentication settings");
-                                                alert("GFS 구성 설정 및 Pcs 작업 3. 호스트 인증 설정 실패 : "+data);
-                                            });
-                                        }else{
-                                            setProgressFail(2);
-                                            createLoggerInfo(set_password_result.val);
-                                            alert(set_password_result.val);
-                                        }
-                                    }).catch(function(data){
-                                        setProgressFail(2);
-                                        createLoggerInfo("Failed to set GFS configuration and Pcs task password");
-                                        alert("GFS 구성 설정 및 Pcs 작업 2. 패스워드 설정 실패 : "+data);
-                                    });
-                                }else{
-                                    setProgressFail(2);
-                                    createLoggerInfo(set_lvm_conf_result.val);
-                                    alert(set_lvm_conf_result.val);
-                                }
-                            }).catch(function(data){
-                                setProgressFail(2);
-                                createLoggerInfo("Failed to set LVM CONF file during GFS configuration setup and Pcs operation");
-                                alert("GFS 구성 설정 및 Pcs 작업 1. LVM CONF 파일 설정 실패 : "+data);
-                            });
-                        } else {
-                            setProgressFail(1);
-                            createLoggerInfo(reset_cloud_center_result.val);
-                            alert(reset_cloud_center_result.val);
-                        }
-                    })
-                    .catch(function(data){
-                        setProgressFail(1);
-                        createLoggerInfo("Failed to initialize cluster configuration settings");
-                        alert("클러스터 구성 설정 초기화 작업 실패 : "+data);
-                    });
-
-            } else {
-                setProgressFail(1);
-                createLoggerInfo(ping_test_result.val);
-                alert(ping_test_result.val);
-            }
-        })
-        .catch(function(data){
-            setProgressFail(1);
-            createLoggerInfo("Failed to check connection status of host to configure cluster");
-            alert("클러스터 구성할 host 연결 상태 확인 및 cluster.json config 실패 : "+data);
-        });
     }else if (os_type == "ablestack-vm"){
-        var all_host_name = "";
-        var host_names = [];
-        for (let i = 1; i <= $('#form-table-tbody-cluster-config-existing-host-profile-ccvm tr').length ; i++) {
-            const hostElement = document.getElementById(`form-input-cloud-vm-failover-cluster-host${i}-name`);
-            if (hostElement) {
-                const hostName = $(`#form-input-cloud-vm-failover-cluster-host${i}-name`).val();
-                all_host_name += (all_host_name ? " " : "") + hostName;
-                if (hostName) {
-                    host_names.push(hostName); // 유효한 이름만 배열에 추가
-                }
-            }
-        }
-        var ipmi_port = "623";
-        var ipmi_check_value = $('input[name="radio-ipmi-ccvm"]:checked').val();
-
-        var ipmi_config = ""; // 최종 IPMI 설정 문자열 초기화
-        var ipmi_data = [];  // IPMI 데이터를 담을 배열
-        if (ipmi_check_value === "individual") {
-            // 개별 자격 증명 처리
-            for (let i = 0; i < host_names.length; i++) {
-                // 동적으로 각 IPMI 입력값 가져오기
-                let ip = $(`#form-input-individual-credentials-ipmi-ip${i+1}`).val() || '';
-                let user = $(`#form-input-individual-credentials-ipmi-user${i+1}`).val() || '';
-                let password = $(`#form-input-individual-credentials-ipmi-password${i+1}`).val() || '';
-
-                if (!ip) break; // IP가 없으면 더 이상 처리하지 않음
-                ipmi_data.push({ ip, user, password }); // 배열에 추가
-            }
-        } else {
-            // 공통 자격 증명 처리
-            for (let i = 0; i < host_names.length; i++) {
-                // 동적으로 각 IPMI 입력값 가져오기
-                let ip = $(`#form-input-common-credentials-ipmi-ip${i+1}`).val() || '';
-                if (!ip) break; // IP가 없으면 더 이상 처리하지 않음
-
-                // 공통 사용자 정보 추가
-                let user = $('#form-input-common-credentials-ipmi-user').val();
-                let password = $('#form-input-common-credentials-ipmi-password').val();
-
-                ipmi_data.push({ ip, user, password }); // 배열에 추가
-            }
-        }
-        ipmi_data.forEach((entry, index) => {
-            ipmi_config += `${index > 0 ? ";" : ""}${entry.ip},${ipmi_port},${entry.user},${entry.password}`;
-        });
-        var journal_nums = String(host_names.length + 1);
-        // 체크된 디스크 이름들을 동적으로 가져옴
-        var general_virtual_disk_name = $('input[type=checkbox][name="form-cloud-checkbox-disk"]:checked')
-            .map(function () {
-                return $(this).data('disk_id'); // 체크된 값 가져오기
-            })
-            .get() // jQuery 객체를 배열로 변환
-            .join(','); // 쉼표로 연결
-
         // 결과 출력 (디스크가 하나든 여러 개든 자동 처리)
         var gfs_cluster_name = "cloudcenter_res";
         var gfs_mount_point = "/mnt/glue-gfs";
         var gfs_name = "glue-gfs";
-        var gfs_vg_name = "vg_glue";
-        var gfs_lv_name = "lv_glue";
-        //=========== 1. 클러스터 구성 host 네트워크 연결 및 초기화 작업 ===========
-        $('[name=span-ccvm-progress-step1-name]').text("클러스터 구성 Host 네트워크 연결 및 초기화 작업");
-        $('[name=span-ccvm-progress-step2-name]').text("GFS 구성 설정 및 PCS 설정");
+        //=========== 1. 클러스터 구성 host 네트워크 연결 ===========
+        $('#div-ccvm-progress-step2').hide();
         setProgressStep("span-ccvm-progress-step1",1);
         var console_log = true;
         createLoggerInfo("deployCloudCenterVM start");
@@ -2038,276 +1134,128 @@ function deployCloudCenterVM() {
                 //결과 값 json으로 return
                 var ping_test_result = JSON.parse(data);
                 if(ping_test_result.code=="200") { //정상
-                    var reset_cloud_center_cmd = ['python3', pluginpath + '/python/vm/reset_cloud_center.py'];
-                    if(console_log){console.log(reset_cloud_center_cmd);}
-                    cockpit.spawn(reset_cloud_center_cmd)
+                    //=========== 2. cloudinit iso 파일 생성 ===========
+                    // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/ccvm/cloudinit 경로에 hosts, ssh key 파일 저장
+                    setProgressStep("span-ccvm-progress-step1",2);
+                    setProgressStep("span-ccvm-progress-step3",1);
+                    var host_name = $('#form-input-cloud-vm-hostname').val();
+                    var mgmt_ip = $('#form-input-cloud-vm-mngt-nic-ip').val().split("/")[0];
+                    var mgmt_prefix = $('#form-input-cloud-vm-mngt-nic-ip').val().split("/")[1];
+                    var mngt_gw = $('#form-input-cloud-vm-mngt-gw').val();
+                    var dns = $('#form-input-cloud-vm-dns').val();
+
+                    create_ccvm_cloudinit_cmd = ['python3', pluginpath + '/python/vm/create_ccvm_cloudinit.py'
+                                            ,"-f1",pluginpath+"/tools/vmconfig/ccvm/hosts","-t1", $("#div-textarea-cluster-config-confirm-hosts-file-ccvm").val() // hosts 파일
+                                            ,"-f2",pluginpath+"/tools/vmconfig/ccvm/id_rsa","-t2", $("#form-textarea-cloud-vm-ssh-private-key-file").val() // ssh 개인 key 파일
+                                            ,"-f3",pluginpath+"/tools/vmconfig/ccvm/id_rsa.pub","-t3", $("#form-textarea-cloud-vm-ssh-public-key-file").val() // ssh 공개 key 파일
+                                            ,'--hostname',host_name
+                                            ,'-hns', all_host_name
+                                            ,'--mgmt-nic','enp0s20'
+                                            ,'--mgmt-ip',mgmt_ip
+                                            ,'--mgmt-prefix',mgmt_prefix
+                                        ];
+                    //GATEWAY가 공백이 아닐 시 삽입
+                    if(mngt_gw != ""){
+                        create_ccvm_cloudinit_cmd.push('--mgmt-gw',mngt_gw);
+                    }
+                    // DNS가 공백이 아닐 시 삽입
+                    if(dns != ""){
+                        create_ccvm_cloudinit_cmd.push('--dns',dns);
+                    }
+                    var svc_bool = $('input[type=checkbox][id="form-checkbox-svc-network"]').is(":checked");
+                    if(svc_bool){
+                        var sn_ip = $('#form-input-cloud-vm-svc-nic-ip').val().split("/")[0];
+                        var sn_prefix = $('#form-input-cloud-vm-svc-nic-ip').val().split("/")[1];
+                        var sn_gw = $('#form-input-cloud-vm-svc-gw').val();
+                        var sn_dns = $('#form-input-cloud-vm-svc-dns').val();
+                        create_ccvm_cloudinit_cmd.push('--sn-nic','enp0s21','--sn-ip',sn_ip,'--sn-prefix',sn_prefix,'--sn-gw',sn_gw,'--sn-dns',sn_dns);
+                    }
+                    if(console_log){console.log(create_ccvm_cloudinit_cmd);}
+                    cockpit.spawn(create_ccvm_cloudinit_cmd)
                         .then(function(data){
                             //결과 값 json으로 return
-                            var reset_cloud_center_result = JSON.parse(data);
-                            if(reset_cloud_center_result.code=="200") { //정상
-                                setProgressStep("span-ccvm-progress-step1",2);
-                                setProgressStep("span-ccvm-progress-step2",1);
-                                //=========== 2. GFS 구성 설정 및 Pcs 설정 ===========
-                                // 설정 초기화 ( 필요시 python까지 종료 )
-                                var set_lvm_conf_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--modify-lvm-conf', '--list-ip', all_host_name];
-                                console.log(set_lvm_conf_cmd);
-                                cockpit.spawn(set_lvm_conf_cmd)
-                                .then(function(data){
-                                    var set_lvm_conf_result = JSON.parse(data);
-                                    console.log(set_lvm_conf_result);
-                                    if (set_lvm_conf_result.code == "200"){
-                                        var set_password_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--set-password', 'password', '--list-ip', all_host_name];
-                                        console.log(set_password_cmd);
-                                        cockpit.spawn(set_password_cmd)
-                                        .then(function(data){
-                                            var set_password_result = JSON.parse(data);
-                                            console.log(set_password_result)
-                                            if (set_password_result.code == "200"){
-                                                var auth_hosts_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--auth-hosts', 'password', '--list-ip', all_host_name];
-                                                console.log(auth_hosts_cmd);
-                                                cockpit.spawn(auth_hosts_cmd)
+                            var create_ccvm_cloudinit_result = JSON.parse(data);
+                            if(create_ccvm_cloudinit_result.code=="200"){
+                                // if(host_names.length == 2){
+                                //     gfs_mount_point = "/mnt"
+                                // }
+                                //=========== 3. 클라우드센터 가상머신 구성 ===========
+                                setProgressStep("span-ccvm-progress-step3",2);
+                                setProgressStep("span-ccvm-progress-step4",1);
+                                xml_create_cmd.push("-hns",all_host_name, "-gmp", gfs_mount_point);
+                                if(console_log){console.log(xml_create_cmd);}
+                                cockpit.spawn(xml_create_cmd)
+                                    .then(function(data){
+                                        //결과 값 json으로 return
+                                        var create_ccvm_xml_result = JSON.parse(data);
+                                        if(create_ccvm_xml_result.code=="200"){
+                                            //=========== 4. 클러스터 구성 및 클라우드센터 가상머신 배포 ===========
+                                            //클러스터 생성
+                                            setProgressStep("span-ccvm-progress-step4",2);
+                                            setProgressStep("span-ccvm-progress-step5",1);
+                                            var pcs_config = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--create-ccvm-cluster', '--gfs-name', gfs_name, '--mount-point', gfs_mount_point, '--cluster-name', gfs_cluster_name, '--list-ip', all_host_name];
+                                            if(console_log){console.log(pcs_config);}
+                                            cockpit.spawn(pcs_config)
                                                 .then(function(data){
-                                                    var auth_hosts_result = JSON.parse(data);
-                                                    console.log(auth_hosts_result)
-                                                    if (auth_hosts_result.code == "200"){
-                                                        var setup_cluster_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--setup-cluster', gfs_cluster_name, '--list-ip', all_host_name];
-                                                        console.log(setup_cluster_cmd);
-                                                        cockpit.spawn(setup_cluster_cmd)
+                                                    //결과 값 json으로 return
+                                                    var ccvm_result = JSON.parse(data);
+                                                    if(ccvm_result.code=="200"){
+                                                        var cluster_sync_mechanism_cmd = ['python3', pluginpath + '/python/pcs/main.py', 'sync', '--time', cluster_sync_mechanism];
+                                                        if(console_log){console.log(cluster_sync_mechanism_cmd);}
+                                                        cockpit.spawn(cluster_sync_mechanism_cmd)
                                                         .then(function(data){
-                                                            var setup_cluster_result = JSON.parse(data);
-                                                            console.log(setup_cluster_result)
-                                                            if (setup_cluster_result.code == "200"){
-                                                                var set_configure_stonith_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--configure-stonith',
-                                                                                                    ipmi_config, '--list-ip', all_host_name];
-                                                                console.log(set_configure_stonith_cmd);
-                                                                cockpit.spawn(set_configure_stonith_cmd)
-                                                                .then(function(data){
-                                                                    var set_configure_stonith_result = JSON.parse(data);
-                                                                    console.log(set_configure_stonith_result);
-                                                                    if (set_configure_stonith_result.code == "200"){
-                                                                        var set_alert_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--set-alert', '--list-ip', all_host_name];
-                                                                        console.log(set_alert_cmd);
-                                                                        cockpit.spawn(set_alert_cmd)
-                                                                        .then(function(data){
-                                                                            var set_alert_result = JSON.parse(data);
-                                                                            console.log(set_alert_result);
-                                                                            if(set_alert_result.code == "200"){
-                                                                                setProgressStep("span-ccvm-progress-step2",4);
-                                                                                var create_gfs_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--create-gfs',
-                                                                                                        '--disks', general_virtual_disk_name , '--vg-name', gfs_vg_name, '--lv-name', gfs_lv_name,
-                                                                                                        '--gfs-name', gfs_name, '--mount-point', gfs_mount_point, '--cluster-name', gfs_cluster_name,
-                                                                                                        '--journal-nums', journal_nums, '--list-ip', all_host_name]
-                                                                                console.log(create_gfs_cmd);
-                                                                                cockpit.spawn(create_gfs_cmd)
-                                                                                .then(function(data){
-                                                                                    var create_gfs_result = JSON.parse(data);
-                                                                                    console.log(create_gfs_result);
-                                                                                    if (create_gfs_result.code == "200"){
-                                                                                        //=========== 3. cloudinit iso 파일 생성 ===========
-                                                                                        // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/ccvm/cloudinit 경로에 hosts, ssh key 파일 저장
-                                                                                        setProgressStep("span-ccvm-progress-step2",2);
-                                                                                        setProgressStep("span-ccvm-progress-step3",1);
-                                                                                        var host_name = $('#form-input-cloud-vm-hostname').val();
-                                                                                        var mgmt_ip = $('#form-input-cloud-vm-mngt-nic-ip').val().split("/")[0];
-                                                                                        var mgmt_prefix = $('#form-input-cloud-vm-mngt-nic-ip').val().split("/")[1];
-                                                                                        var mngt_gw = $('#form-input-cloud-vm-mngt-gw').val();
-                                                                                        var dns = $('#form-input-cloud-vm-dns').val();
-
-                                                                                        create_ccvm_cloudinit_cmd = ['python3', pluginpath + '/python/vm/create_ccvm_cloudinit.py'
-                                                                                                                ,"-f1",pluginpath+"/tools/vmconfig/ccvm/hosts","-t1", $("#div-textarea-cluster-config-confirm-hosts-file-ccvm").val() // hosts 파일
-                                                                                                                ,"-f2",pluginpath+"/tools/vmconfig/ccvm/id_rsa","-t2", $("#form-textarea-cloud-vm-ssh-private-key-file").val() // ssh 개인 key 파일
-                                                                                                                ,"-f3",pluginpath+"/tools/vmconfig/ccvm/id_rsa.pub","-t3", $("#form-textarea-cloud-vm-ssh-public-key-file").val() // ssh 공개 key 파일
-                                                                                                                ,'--hostname',host_name
-                                                                                                                ,'-hns', all_host_name
-                                                                                                                ,'--mgmt-nic','enp0s20'
-                                                                                                                ,'--mgmt-ip',mgmt_ip
-                                                                                                                ,'--mgmt-prefix',mgmt_prefix
-                                                                                                            ];
-                                                                                        //GATEWAY가 공백이 아닐 시 삽입
-                                                                                        if(mngt_gw != ""){
-                                                                                            create_ccvm_cloudinit_cmd.push('--mgmt-gw',mngt_gw);
-                                                                                        }
-                                                                                        // DNS가 공백이 아닐 시 삽입
-                                                                                        if(dns != ""){
-                                                                                            create_ccvm_cloudinit_cmd.push('--dns',dns);
-                                                                                        }
-                                                                                        var svc_bool = $('input[type=checkbox][id="form-checkbox-svc-network"]').is(":checked");
-                                                                                        if(svc_bool){
-                                                                                            var sn_ip = $('#form-input-cloud-vm-svc-nic-ip').val().split("/")[0];
-                                                                                            var sn_prefix = $('#form-input-cloud-vm-svc-nic-ip').val().split("/")[1];
-                                                                                            var sn_gw = $('#form-input-cloud-vm-svc-gw').val();
-                                                                                            var sn_dns = $('#form-input-cloud-vm-svc-dns').val();
-                                                                                            create_ccvm_cloudinit_cmd.push('--sn-nic','enp0s21','--sn-ip',sn_ip,'--sn-prefix',sn_prefix,'--sn-gw',sn_gw,'--sn-dns',sn_dns);
-                                                                                        }
-                                                                                        if(console_log){console.log(create_ccvm_cloudinit_cmd);}
-                                                                                        cockpit.spawn(create_ccvm_cloudinit_cmd)
-                                                                                            .then(function(data){
-                                                                                                //결과 값 json으로 return
-                                                                                                var create_ccvm_cloudinit_result = JSON.parse(data);
-                                                                                                if(create_ccvm_cloudinit_result.code=="200"){
-                                                                                                    // if(host_names.length == 2){
-                                                                                                    //     gfs_mount_point = "/mnt"
-                                                                                                    // }
-                                                                                                    //=========== 4. 클라우드센터 가상머신 구성 ===========
-                                                                                                    setProgressStep("span-ccvm-progress-step3",2);
-                                                                                                    setProgressStep("span-ccvm-progress-step4",1);
-                                                                                                    xml_create_cmd.push("-hns",all_host_name, "-gmp", gfs_mount_point);
-                                                                                                    if(console_log){console.log(xml_create_cmd);}
-                                                                                                    cockpit.spawn(xml_create_cmd)
-                                                                                                        .then(function(data){
-                                                                                                            //결과 값 json으로 return
-                                                                                                            var create_ccvm_xml_result = JSON.parse(data);
-                                                                                                            if(create_ccvm_xml_result.code=="200"){
-                                                                                                                //=========== 5. 클러스터 구성 및 클라우드센터 가상머신 배포 ===========
-                                                                                                                //클러스터 생성
-                                                                                                                setProgressStep("span-ccvm-progress-step4",2);
-                                                                                                                setProgressStep("span-ccvm-progress-step5",1);
-                                                                                                                var pcs_config = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--create-ccvm-cluster', '--gfs-name', gfs_name, '--mount-point', gfs_mount_point, '--cluster-name', gfs_cluster_name, '--list-ip', all_host_name];
-                                                                                                                if(console_log){console.log(pcs_config);}
-                                                                                                                cockpit.spawn(pcs_config)
-                                                                                                                    .then(function(data){
-                                                                                                                        //결과 값 json으로 return
-                                                                                                                        var ccvm_result = JSON.parse(data);
-                                                                                                                        if(ccvm_result.code=="200"){
-                                                                                                                            var cluster_sync_mechanism_cmd = ['python3', pluginpath + '/python/pcs/main.py', 'sync', '--time', cluster_sync_mechanism];
-                                                                                                                            if(console_log){console.log(cluster_sync_mechanism_cmd);}
-                                                                                                                            cockpit.spawn(cluster_sync_mechanism_cmd)
-                                                                                                                            .then(function(data){
-                                                                                                                                var cluster_sync_mechanism_result = JSON.parse(data);
-                                                                                                                                if (cluster_sync_mechanism_result.code == "200"){
-                                                                                                                                    createLoggerInfo("deployCloudCenterVM success");
-                                                                                                                                    setProgressStep("span-ccvm-progress-step5",2);
-                                                                                                                                    //최종 화면 호출
-                                                                                                                                    showDivisionCloudVMConfigFinish();
-                                                                                                                                }
-                                                                                                                                else{
-                                                                                                                                     setProgressFail(5);
-                                                                                                                                     createLoggerInfo(cluster_sync_mechanism_result.val);
-                                                                                                                                     alert(cluster_sync_mechanism_result.val);
-
-                                                                                                                                }
-                                                                                                                            })
-                                                                                                                            .catch(function(data){
-                                                                                                                                setProgressFail(5);
-                                                                                                                                createLoggerInfo("Cluster configuration and cloud center virtual machine deployment failed");
-                                                                                                                                alert("클러스터 구성 및 클라우드센터 가상머신 배포 및 클러스터 민감도 설정 실패 : "+data);
-                                                                                                                            });
-                                                                                                                        } else {
-                                                                                                                            setProgressFail(5);
-                                                                                                                            createLoggerInfo(ccvm_result.val);
-                                                                                                                            alert(ccvm_result.val);
-                                                                                                                        }
-                                                                                                                    })
-                                                                                                                    .catch(function(data){
-                                                                                                                        setProgressFail(5);
-                                                                                                                        createLoggerInfo("Cluster configuration and cloud center virtual machine deployment failed");
-                                                                                                                        alert("클러스터 구성 및 클라우드센터 가상머신 배포 실패 : "+data);
-                                                                                                                    });
-                                                                                                            } else {
-                                                                                                                setProgressFail(4);
-                                                                                                                createLoggerInfo(create_ccvm_xml_result.val);
-                                                                                                                alert(create_ccvm_xml_result.val);
-                                                                                                            }
-                                                                                                        })
-                                                                                                        .catch(function(data){
-                                                                                                            setProgressFail(4);
-                                                                                                            createLoggerInfo("Cloud Center Virtual Machine XML Creation Failed");
-                                                                                                            alert("클라우드센터 가상머신 XML 생성 실패 : "+data);
-                                                                                                        });
-                                                                                                } else {
-                                                                                                    setProgressFail(3);
-                                                                                                    createLoggerInfo(create_ccvm_cloudinit_result.val);
-                                                                                                    alert(create_ccvm_cloudinit_result.val);
-                                                                                                }
-                                                                                            })
-                                                                                            .catch(function(data){
-                                                                                                setProgressFail(3);
-                                                                                                createLoggerInfo("Failed to create cloudinit iso file");
-                                                                                                alert("cloudinit iso 파일 생성 실패 : "+data);
-                                                                                            });
-                                                                                    }else{
-                                                                                        setProgressFail(2);
-                                                                                        createLoggerInfo(create_gfs_result.val);
-                                                                                        alert(create_gfs_result.val);
-                                                                                    }
-                                                                                }).catch(function(data){
-                                                                                    setProgressFail(2);
-                                                                                    createLoggerInfo("GFS configuration settings and Pcs task Pcs resource settings failed");
-                                                                                    alert("GFS 구성 설정 및 Pcs 작업 7. Pcs 리소스 설정 실패 : "+data);
-                                                                                });
-                                                                            }else{
-                                                                                setProgressFail(2);
-                                                                                createLoggerInfo(set_alert_result.val);
-                                                                                alert(set_alert_result.val);
-                                                                            }
-                                                                        }).catch(function(data){
-                                                                            setProgressFail(2);
-                                                                            createLoggerInfo("GFS configuration setup and Pcs Alert setup failed");
-                                                                            alert("GFS 구성 설정 및 Pcs 작업 6. PCS 알림 설정 실패 : "+data);
-                                                                        });
-
-                                                                    }else{
-                                                                        setProgressFail(2);
-                                                                        createLoggerInfo(set_configure_stonith_result.val);
-                                                                        alert(set_configure_stonith_result.val);
-                                                                    }
-                                                                }).catch(function(data){
-                                                                    setProgressFail(2);
-                                                                    createLoggerInfo("Failed to set GFS configuration and Pcs task IPMI information");
-                                                                    alert("GFS 구성 설정 및 Pcs 작업 5. IPMI 정보 설정 실패 : "+data);
-                                                                })
-                                                            }else{
-                                                                setProgressFail(2);
-                                                                createLoggerInfo(setup_cluster_result.val);
-                                                                alert(setup_cluster_result.val);
+                                                            var cluster_sync_mechanism_result = JSON.parse(data);
+                                                            if (cluster_sync_mechanism_result.code == "200"){
+                                                                createLoggerInfo("deployCloudCenterVM success");
+                                                                setProgressStep("span-ccvm-progress-step5",2);
+                                                                //최종 화면 호출
+                                                                showDivisionCloudVMConfigFinish();
                                                             }
-                                                        }).catch(function(data){
-                                                            setProgressFail(2);
-                                                            createLoggerInfo("GFS configuration setup and Pcs task cluster setup failed");
-                                                            alert("GFS 구성 설정 및 Pcs 작업 4. 클러스터 설정 실패 : "+data);
+                                                            else{
+                                                                    setProgressFail(5);
+                                                                    createLoggerInfo(cluster_sync_mechanism_result.val);
+                                                                    alert(cluster_sync_mechanism_result.val);
+
+                                                            }
+                                                        })
+                                                        .catch(function(data){
+                                                            setProgressFail(5);
+                                                            createLoggerInfo("Cluster configuration and cloud center virtual machine deployment failed");
+                                                            alert("클러스터 구성 및 클라우드센터 가상머신 배포 및 클러스터 민감도 설정 실패 : "+data);
                                                         });
-                                                    }else{
-                                                        setProgressFail(2);
-                                                        createLoggerInfo(auth_hosts_result.val);
-                                                        alert(auth_hosts_result.val);
+                                                    } else {
+                                                        setProgressFail(5);
+                                                        createLoggerInfo(ccvm_result.val);
+                                                        alert(ccvm_result.val);
                                                     }
-                                                }).catch(function(data){
-                                                    setProgressFail(2);
-                                                    createLoggerInfo("Failed to set GFS configuration and Pcs task host authentication settings");
-                                                    alert("GFS 구성 설정 및 Pcs 작업 3. 호스트 인증 설정 실패 : "+data);
+                                                })
+                                                .catch(function(data){
+                                                    setProgressFail(5);
+                                                    createLoggerInfo("Cluster configuration and cloud center virtual machine deployment failed");
+                                                    alert("클러스터 구성 및 클라우드센터 가상머신 배포 실패 : "+data);
                                                 });
-                                            }else{
-                                                setProgressFail(2);
-                                                createLoggerInfo(set_password_result.val);
-                                                alert(set_password_result.val);
-                                            }
-                                        }).catch(function(data){
-                                            setProgressFail(2);
-                                            createLoggerInfo("Failed to set GFS configuration and Pcs task password");
-                                            alert("GFS 구성 설정 및 Pcs 작업 2. 패스워드 설정 실패 : "+data);
-                                        });
-                                    }else{
-                                        setProgressFail(2);
-                                        createLoggerInfo(set_lvm_conf_result.val);
-                                        alert(set_lvm_conf_result.val);
-                                    }
-                                }).catch(function(data){
-                                    setProgressFail(2);
-                                    createLoggerInfo("Failed to set LVM CONF file during GFS configuration setup and Pcs operation");
-                                    alert("GFS 구성 설정 및 Pcs 작업 1. LVM CONF 파일 설정 실패 : "+data);
-                                });
+                                        } else {
+                                            setProgressFail(4);
+                                            createLoggerInfo(create_ccvm_xml_result.val);
+                                            alert(create_ccvm_xml_result.val);
+                                        }
+                                    })
+                                    .catch(function(data){
+                                        setProgressFail(4);
+                                        createLoggerInfo("Cloud Center Virtual Machine XML Creation Failed");
+                                        alert("클라우드센터 가상머신 XML 생성 실패 : "+data);
+                                    });
                             } else {
-                                setProgressFail(1);
-                                createLoggerInfo(reset_cloud_center_result.val);
-                                alert(reset_cloud_center_result.val);
+                                setProgressFail(3);
+                                createLoggerInfo(create_ccvm_cloudinit_result.val);
+                                alert(create_ccvm_cloudinit_result.val);
                             }
                         })
                         .catch(function(data){
-                            setProgressFail(1);
-                            createLoggerInfo("Failed to initialize cluster configuration settings");
-                            alert("클러스터 구성 설정 초기화 작업 실패 : "+data);
+                            setProgressFail(3);
+                            createLoggerInfo("Failed to create cloudinit iso file");
+                            alert("cloudinit iso 파일 생성 실패 : "+data);
                         });
-
                 } else {
                     setProgressFail(1);
                     createLoggerInfo(ping_test_result.val);
@@ -2376,9 +1324,6 @@ function showDivisionCloudVMConfigFinish() {
     $('#nav-button-cloud-vm-finish').removeClass('pf-m-disabled');
 
     $('#button-next-step-modal-wizard-cloud-vm').html('완료');
-    //$('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
-    //$('#button-before-step-modal-wizard-cloud-vm').attr('disabled', true);
-    //$('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
 
     $('#button-next-step-modal-wizard-cloud-vm').hide();
     $('#button-before-step-modal-wizard-cloud-vm').hide();
@@ -2488,7 +1433,7 @@ function setCcvmReviewInfo(){
 
     //-----장애조치 클러스터 설정-----
     //클러스터 호스트1, 호스트2, 호스트3 이름
-    createAccordion("failover",$('#form-table-tbody-cluster-config-existing-host-profile-ccvm tr').length)
+    ccvmcreateAccordion("failover",$('#form-table-tbody-cluster-config-existing-host-profile-ccvm tr').length)
 
     //-----클라우드센트 VM 설정-----
     // 클러스터 민감도
@@ -2548,21 +1493,6 @@ function setCcvmReviewInfo(){
         }
     } else {
         $('#span-cloud-vm-svc-nic-bridge').text("N/A");
-    }
-    // GFS용 디스크
-    $('#span-cloud-vm-data-disk').empty();
-    $('input[type=checkbox][name="form-cloud-checkbox-disk"]').each(function() {
-        if(this.checked){
-            var el = "";
-            el += $('label[for="'+this.id+'"]').text()+"</br>";
-
-            $('#span-cloud-vm-data-disk').append(el);
-        }
-    });
-
-    // 선택된 디스크가 없을 경우 "미입력" 표기
-    if($('#span-cloud-vm-data-disk').text() == ''){
-        $('#span-cloud-vm-data-disk').append("미입력");
     }
 
     //-----추가 네트워크 정보-----
@@ -2654,9 +1584,7 @@ function setCcvmReviewInfo(){
     } else {
         $('#span-cloud-vm-ssh-public-key-file').text(ssh_public_key_url);
     }
-    var ipmi_check_val = $('input[name="radio-ipmi-ccvm"]:checked').val();
 
-    createAccordion("ipmi",$('#form-table-tbody-cluster-config-existing-host-profile-ccvm tr').length, ipmi_check_val);
 }
 
 /**
@@ -2673,8 +1601,6 @@ function validateCloudCenterVm(){
     var validate_check = true;
     let host_file_type = $('input[name=radio-hosts-file-ccvm]:checked').val();
     var svc_bool = $('input[type=checkbox][id="form-checkbox-svc-network"]').is(":checked");
-
-    var ipmi_check_value = $('input[name="radio-ipmi-ccvm"]:checked').val();
 
     let pcs_host1 = $('#form-input-cloud-vm-failover-cluster-host1-name')
     let pcs_host2 = $('#form-input-cloud-vm-failover-cluster-host2-name')
@@ -2747,142 +1673,6 @@ function validateCloudCenterVm(){
     } else if ( $('#form-textarea-cloud-vm-ssh-public-key-file').val() == "") { //SSH 공개 Key 정보
         alert("SSH 공개 Key 파일을 입력해주세요.");
         validate_check = false;
-    } else if(os_type == "powerflex"){
-        if (pcs_host1.val() == "") {
-            alert("PCS 호스트1 PN IP를 입력해주세요.");
-            validate_check = false;
-        } else if(!checkIp(pcs_host1.val())){
-            alert("PCS 호스트1 PN IP 형식을 확인해주세요.");
-            validate_check = false;
-        } else if (pcs_host2 == ""){
-            if (pcs_host2.val() == "") {
-                alert("PCS 호스트2 PN IP를 입력해주세요.");
-                validate_check = false;
-            } else if(!checkIp(pcs_host2.val())){
-                alert("PCS 호스트2 PN IP 형식을 확인해주세요.");
-                validate_check = false;
-            } else if(pcs_host1.val() == pcs_host2.val()){
-                alert("중복된 PCS 호스트 PN IP가 존재합니다.");
-                validate_check = false;
-            }
-        } else if (pcs_host3 == "") {
-            if (pcs_host3.val() == "") {
-                alert("PCS 호스트3 PN IP를 입력해주세요.");
-                validate_check = false;
-            } else if(!checkIp(pcs_host3.val())){
-                alert("PCS 호스트3 PN IP 형식을 확인해주세요.");
-                validate_check = false;
-            } else if(pcs_host1.val() == pcs_host2.val() || pcs_host1.val() == pcs_host3.val() || pcs_host2.val() == pcs_host3.val()){
-                alert("중복된 PCS 호스트 PN IP가 존재합니다.");
-                validate_check = false;
-            }
-        } else if (pcsHostPnIpCheck(host_file_type, pcs_host1.val(), option_ccvm)) { //host1 name
-            validate_check = false;
-        } else if (pcsHostPnIpCheck(host_file_type, pcs_host2.val(), option_ccvm)) { //host2 name
-            validate_check = false;
-        } else if (pcsHostPnIpCheck(host_file_type, pcs_host3.val(), option_ccvm)) { //host3 name
-            validate_check = false;
-        } else if (ipmi_check_value == "individual"){
-            if ($('#form-input-individual-credentials-ipmi-ip1').val() == ''){
-                alert("1번 호스트 IPMI IP를 입력해주세요.");
-                validate_check = false;
-            }else if (!checkIp($('#form-input-individual-credentials-ipmi-ip1').val())){
-                alert("1번 호스트 IPMI IP 형식을 확인해주세요.");
-                validate_check = false;
-            }else if ($('#form-input-individual-credentials-ipmi-user1').val() == ''){
-                alert("1번 호스트 IPMI 아이디를 입력해주세요.");
-                validate_check = false;
-            }else if ($('#form-input-individual-credentials-ipmi-password1-check').val() == '' || $('#form-input-individual-credentials-ipmi-password1').val() == ''){
-                alert("1번 호스트 IPMI 비밀번호를 입력해주세요.");
-                validate_check = false;
-            }else if ($('#form-input-individual-credentials-ipmi-password1').val() != $('#form-input-individual-credentials-ipmi-password1-check').val()){
-                alert("1번 호스트 IPMI 비밀번호를 확인해주세요.");
-                validate_check = false;
-            }else if ($('#form-input-individual-credentials-ipmi-ip2')){
-                if ($('#form-input-individual-credentials-ipmi-ip2').val() == ''){
-                    alert("2번 호스트 IPMI IP를 입력해주세요.");
-                    validate_check = false;
-                }else if (!checkIp($('#form-input-individual-credentials-ipmi-ip2').val())){
-                    alert("2번 호스트 IPMI IP 형식을 확인해주세요.");
-                    validate_check = false;
-                }else if ($('#form-input-individual-credentials-ipmi-user2').val() == ''){
-                    alert("2번 호스트 IPMI 아이디를 입력해주세요.");
-                    validate_check = false;
-                }else if ($('#form-input-individual-credentials-ipmi-password2-check').val() == '' || $('#form-input-individual-credentials-ipmi-password2').val() == ''){
-                    alert("2번 호스트 IPMI 비밀번호를 입력해주세요.");
-                    validate_check = false;
-                }else if ($('#form-input-individual-credentials-ipmi-password2').val() != $('#form-input-individual-credentials-ipmi-password2-check').val()){
-                    alert("2번 호스트 IPMI 비밀번호를 확인해주세요.");
-                    validate_check = false;
-                }
-            }else if ($('#form-input-individual-credentials-ipmi-ip3')){
-                if ($('#form-input-individual-credentials-ipmi-ip3').val() == ''){
-                    alert("3번 호스트 IPMI IP를 입력해주세요.");
-                    validate_check = false;
-                }else if (!checkIp($('#form-input-individual-credentials-ipmi-ip3').val())){
-                    alert("3번 호스트 IPMI IP 형식을 확인해주세요.");
-                    validate_check = false;
-                }else if ($('#form-input-individual-credentials-ipmi-user3').val() == ''){
-                    alert("3번 호스트 IPMI 아이디를 입력해주세요.");
-                    validate_check = false;
-                }else if ($('#form-input-individual-credentials-ipmi-password3-check').val() == '' || $('#form-input-individual-credentials-ipmi-password3').val() == ''){
-                    alert("3번 호스트 IPMI 비밀번호를 입력해주세요.");
-                    validate_check = false;
-                }else if ($('#form-input-individual-credentials-ipmi-password3').val() != $('#form-input-individual-credentials-ipmi-password3-check').val()){
-                    alert("3번 호스트 IPMI 비밀번호를 확인해주세요.");
-                    validate_check = false;
-                }
-            }
-        } else if (ipmi_check_value == "common"){
-            if ($('#form-input-common-credentials-ipmi-ip1').val() == ''){
-                alert("1번 호스트 IPMI IP를 입력해주세요.");
-                validate_check = false;
-            } else if (!checkIp($('#form-input-common-credentials-ipmi-ip1').val())){
-                alert("1번 호스트 IPMI IP 형식을 확인해주세요.");
-                validate_check = false;
-            } else if ($('#form-input-common-credentials-ipmi-ip2')){
-                if ($('#form-input-common-credentials-ipmi-ip2').val() == ''){
-                    alert("2번 호스트 IPMI IP를 입력해주세요.");
-                    validate_check = false;
-                } else if (!checkIp($('#form-input-common-credentials-ipmi-ip2').val())){
-                    alert("2번 호스트 IPMI IP 형식을 확인해주세요.");
-                    validate_check = false;
-                }
-            } else if ($('#form-input-common-credentials-ipmi-ip3')){
-                if ($('#form-input-common-credentials-ipmi-ip3').val() == ''){
-                    alert("3번 호스트 IPMI IP를 입력해주세요.");
-                    validate_check = false;
-                } else if (!checkIp($('#form-input-common-credentials-ipmi-ip3').val())){
-                    alert("3번 호스트 IPMI IP 형식을 확인해주세요.");
-                    validate_check = false;
-                }
-            } else if ($('#form-input-common-credentials-ipmi-user').val() == ''){
-                alert("모든 호스트 IPMI 아이디를 입력해주세요.");
-                validate_check = false;
-            } else if ($('#form-input-common-credentials-ipmi-password').val() == '' || $('#form-input-common-credentials-ipmi-password-check').val() == ''){
-                alert("모든 호스트 IPMI 비밀번호를 입력해주세요.");
-                validate_check = false;
-            }else if ($('#form-input-common-credentials-ipmi-password').val() != $('#form-input-common-credentials-ipmi-password-check').val()){
-                alert("모든 호스트 IPMI 비밀번호를 확인해주세요.");
-                validate_check = false;
-            }
-        }
-    } else if (os_type == "ablestack-vm"){
-        if (ipmi_check_value === "individual") {
-            for (let i = 1; i <= host_names.length; i++) {
-                if (!validateIpmiCredentials(i, "individual")) {
-                    validate_check = false;
-                    break;
-                }
-            }
-        } else if (ipmi_check_value === "common") {
-            for (let i = 1; i <= host_names.length; i++) {
-                if (!validateIpmiCredentials(i, "common")) {
-                    validate_check = false;
-                    break;
-                }
-            }
-        }
     }
     return validate_check;
 }
@@ -2904,69 +1694,7 @@ function checkValueNull(value, errorText){
         return;
     }
 }
-/**
- * Meathod Name : validateIpmiCredentials
- * Date Created : 2024.11.26
- * Writer  : 정민철
- * Description : 입력된 값이 없는지 체크하여 값이 있을 경우 true return, 없을 경우 false 리턴
- * Parameter : int, String
- * Return  : bool
- * History  : 2024.11.26 최초 작성
- */
-function validateIpmiCredentials(index, type) {
-    let prefix = type === "individual" ? `form-input-individual-credentials-ipmi` : `form-input-common-credentials-ipmi`;
-    let ip = $(`#${prefix}-ip${index}`).val() || '';
-    let user = type === "individual" ? $(`#${prefix}-user${index}`).val() || '' : $('#form-input-common-credentials-ipmi-user').val();
-    let password = type === "individual" ? $(`#${prefix}-password${index}`).val() || '' : $('#form-input-common-credentials-ipmi-password').val();
 
-    if (!ip) {
-        alert(`${index}번 호스트 IPMI IP를 입력해주세요.`);
-        return false;
-    }
-    if (!checkIp(ip)) {
-        alert(`${index}번 호스트 IPMI IP 형식을 확인해주세요.`);
-        return false;
-    }
-    if (!user) {
-        alert(`${index}번 호스트 IPMI 아이디를 입력해주세요.`);
-        return false;
-    }
-    if (!password) {
-        alert(`${index}번 호스트 IPMI 비밀번호를 입력해주세요.`);
-        return false;
-    }
-
-    return true;
-}
-
-
-/**
- * Meathod Name : resetIpmiValues
- * Date Created : 2024.09.10
- * Writer  : 정민철
- * Description : 서버 가상화를 사용할 시 ccvm에서 바뀌는 화면 처리
- * History  : 2024.09.10 최초 작성
- */
-function resetIpmiValues() {
-    const check_value = $('input[name="radio-ipmi-ccvm"]:checked').val();
-    const maxHosts = $('#form-table-tbody-cluster-config-existing-host-profile-ccvm tr').length; // 최대 호스트 수 (필요 시 변경 가능)
-
-    if (check_value === "common") {
-        // 공통 자격 증명 처리
-        for (let i = 1; i <= maxHosts; i++) {
-            $(`#form-input-common-credentials-ipmi-ip${i}`).val("");
-        }
-        $('#form-input-common-credentials-ipmi-user').val("");
-        $('#form-input-common-credentials-ipmi-password').val("");
-    } else {
-        // 개별 자격 증명 처리
-        for (let i = 1; i <= maxHosts; i++) {
-            $(`#form-input-individual-credentials-ipmi-ip${i}`).val("");
-            $(`#form-input-individual-credentials-ipmi-user${i}`).val("");
-            $(`#form-input-individual-credentials-ipmi-password${i}`).val("");
-        }
-    }
-}
 
 /**
  * Meathod Name : setTypeByChange
@@ -2976,124 +1704,12 @@ function resetIpmiValues() {
  * History  : 2024.09.05 최초 작성
  */
 function setTypeByChange(){
-    if (os_type == "powerflex"){
-        // 루트 디스크
-        $('#form-select-cloud-vm-root-disk-size').text("500 GiB (THIN Provisioning)");
-        $('#span-cloud-vm-root-disk-size').text("500 GiB");
-        // gfs용 화면 처리
-        $('#nav-button-cloud-vm-ipmi').show();
-        $('#div-accordion-cloud-ipmi').show();
-        $('#span-ccvm-progress-step2-text').text("GFS 구성 설정 및 Pcs 설정");
-        $('#span-ccvm-progress-step1-text').text("클러스터 구성 HOST 네트워크 연결 및 초기화 작업");
-        $('#gfs-li').show();
-        $('#gfs-li').text("서버 가상화를 위한 각 호스트의 IPMI 정보");
-        // 클러스터 민감도 화면 처리
-        $('#nav-button-cloud-vm-cluster-sync-mechanism').show();
-    }else if (os_type == "ablestack-vm"){
-        // gfs용 디스크
-        $('#nav-button-cloud-vm-disk').show();
-        // 루트 디스크
-        $('#form-select-cloud-vm-root-disk-size').text("500 GiB (THIN Provisioning)");
-        $('#span-cloud-vm-root-disk-size').text("500 GiB");
-        // gfs용 화면 처리
-        $('#nav-button-cloud-vm-ipmi').show();
-        $('#div-accordion-cloud-ipmi').show();
-        $('#span-ccvm-progress-step2-text').text("GFS 구성 설정 및 Pcs 설정");
-        $('#span-ccvm-progress-step1-text').text("클러스터 구성 HOST 네트워크 연결 및 초기화 작업");
-        $('#gfs-li').show();
-        $('#gfs-li').text("서버 가상화를 위한 각 호스트의 IPMI 정보");
+    if (os_type == "ablestack-vm"){
         // 클러스터 민감도 화면 처리
         $('#nav-button-cloud-vm-cluster-sync-mechanism').show();
     }
 }
 
-function setGfsDiskInfo(){
-    var cmd = ["python3", pluginpath + "/python/disk/disk_action.py", "gfs-list"];
-
-    createLoggerInfo("setDiskInfo() start");
-
-    cockpit.spawn(cmd).then(function(data) {
-        // 초기화
-        $('#disk-cloud-vm-pci-list').empty();
-
-        var el = '';
-        var multipathElements = ''; // MultiPath 정보를 저장할 변수
-        var result = JSON.parse(data);
-        var pci_list = result.val.blockdevices;
-
-        // MultiPath 중복 제거용 세트
-        var displayedMultipaths = new Set();
-        var displayedName = new Set();
-
-        if (pci_list.length > 0) {
-            for (var i = 0; i < pci_list.length; i++) {
-                var partition_text = '';
-                var check_disable = '';
-
-                if (pci_list[i].children != undefined) {
-                    for (var j = 0; j < pci_list[i].children.length; j++) {
-                        if (!pci_list[i].wwn) {
-                            pci_list[i].wwn = ""; // 값을 공백으로 설정
-                        }
-                        var mpathName = pci_list[i].children[j].name;
-                        if (pci_list[i].children[j].name.includes('mpath')) {
-                            if (pci_list[i].children[j].children != undefined) {
-                                partition_text = '( Partition exists count : ' + pci_list[i].children[j].children.length + ' )';
-                                check_disable = 'disabled';
-                            }
-                            // MultiPath가 이미 표시된 경우 스킵
-                            if (!displayedMultipaths.has(mpathName)) {
-                                var mpathHtml = '';
-                                mpathHtml += '<div class="pf-c-check">';
-                                mpathHtml += '<input class="pf-c-check__input" type="checkbox" id="form-cloud-checkbox-disk' + i + '" name="form-cloud-checkbox-disk" value="' + pci_list[i].children[j].path + '" '+ 'data-disk_id="' + pci_list[i].children[j].id + '" ' + check_disable + ' />';
-                                // mpathHtml += '<input class="pf-c-check__input" type="checkbox" id="form-cloud-checkbox-disk' + i + '" name="form-cloud-checkbox-disk" value="' + pci_list[i].children[j].path + '" />';
-                                mpathHtml += '<label class="pf-c-check__label" style="margin-top:5px" for="form-cloud-checkbox-disk' + i + '">' + pci_list[i].children[j].path + ' ' + pci_list[i].children[j].state + ' (' + pci_list[i].children[j].type + ') ' + pci_list[i].children[j].size + ' ' + ' ' + pci_list[i].vendor + ' ' + pci_list[i].wwn  + ' ' + partition_text + '</label>';
-                                mpathHtml += '</div>';
-
-                                multipathElements += mpathHtml; // MultiPath 요소를 multipathElements에 저장
-
-                                displayedMultipaths.add(mpathName);  // MultiPath 이름을 Set에 추가
-                            }
-                        } else {
-                            partition_text = '( Partition exists count : ' + pci_list[i].children.length + ' )';
-                            check_disable = 'disabled';
-
-                            var disk_name = pci_list[i].name;
-                            if (!displayedName.has(disk_name)) {
-                                el += '<div class="pf-c-check">';
-                                el += '<input class="pf-c-check__input" type="checkbox" id="form-cloud-checkbox-disk' + i + '" name="form-cloud-checkbox-disk" value="' + pci_list[i].path + '" ' + check_disable + ' />';
-                                // el += '<input class="pf-c-check__input" type="checkbox" id="form-cloud-checkbox-disk' + i + '" name="form-cloud-checkbox-disk" value="' + pci_list[i].path + '" />';
-                                el += '<label class="pf-c-check__label" style="margin-top:5px" for="form-cloud-checkbox-disk' + i + '">' + pci_list[i].path + ' ' + pci_list[i].state + ' (' + pci_list[i].tran + ') ' + pci_list[i].size + ' ' + pci_list[i].model + ' ' + pci_list[i].wwn + partition_text + '</label>';
-                                el += '</div>';
-
-                                displayedName.add(disk_name);
-                            }
-                        }
-                    }
-                } else {
-                    if (!pci_list[i].wwn) {
-                        pci_list[i].wwn = ""; // 값을 공백으로 설정
-                    }
-                    el += '<div class="pf-c-check">';
-                    el += '<input class="pf-c-check__input" type="checkbox" id="form-cloud-checkbox-disk' + i + '" name="form-cloud-checkbox-disk" value="' + pci_list[i].path + '" ' + check_disable + ' />';
-                    // el += '<input class="pf-c-check__input" type="checkbox" id="form-cloud-checkbox-disk' + i + '" name="form-cloud-checkbox-disk" value="' + pci_list[i].path + '" />';
-                    el += '<label class="pf-c-check__label" style="margin-top:5px" for="form-cloud-checkbox-disk' + i + '">' + pci_list[i].path + ' ' + pci_list[i].state + ' (' + pci_list[i].tran + ') ' + pci_list[i].size + ' ' + pci_list[i].model + ' ' + pci_list[i].wwn + partition_text + '</label>';
-                    el += '</div>';
-                }
-            }
-        } else {
-            el += '<div class="pf-c-check">';
-            el += '<label class="pf-c-check__label" style="margin-top:5px">데이터가 존재하지 않습니다.</label>';
-            el += '</div>';
-        }
-
-        // 일반 장치 정보를 먼저 추가하고, 마지막에 MultiPath 정보를 추가
-        $('#disk-cloud-vm-pci-list').append(multipathElements + el);
-
-    }).catch(function() {
-        createLoggerInfo("setDiskInfo error");
-    });
-}
 
 /**
  * Meathod Name : updateHostFields
@@ -3167,146 +1783,7 @@ function updateHostFields(count) {
     }
 }
 /**
- * Meathod Name : updateIPMIcredentials
- * Date Created : 2024.11.14
- * Writer  : 정민철
- * Description : 호스트 수에 따른 IPMI 자격 증명 동적 화면
- * Parameter : 없음
- * Return  : 없음
- * History  : 2024.11.14 최초 작성
- */
-function updateIPMIcredentials(count,credentials_type) {
-    const hostCount = count;
-    const credentials = document.getElementById("div-ipmi-credentials");
-    credentials.innerHTML = "";
-    if (credentials_type == "individual"){
-        for (let i = 1; i <= hostCount; i++) {
-            const individual_HTML = `
-                        <div class="pf-c-form__field-group">
-                            <div class="pf-c-form__field-group-header"  style="padding-bottom:8px;">
-                                <div class="pf-c-form__field-group-header-main">
-                                    <div class="pf-c-form__field-group-header-title">
-                                        <div class="pf-c-form__field-group-header-title-text" style="padding-top: 15px;">${i}번 호스트 정보</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="pf-c-form__field-group-body" style="padding-top:0px;">
-                                <div class="pf-c-form__group" style="padding:0px;">
-                                    <div class="pf-c-form__group-label">
-                                        <label class="pf-c-form__label" for="form-input-individual-credentials-ipmi-ip${i}">
-                                            <span class="pf-c-form__label-text">IPMI IP</span>
-                                            <span class="pf-c-form__label-required" aria-hidden="true">&#42;</span>
-                                        </label>
-                                    </div>
-                                    <div class="pf-c-form__group-control">
-                                        <input class="pf-c-form-control" style="width:70%" type="text" id="form-input-individual-credentials-ipmi-ip${i}" name="form-input-individual-credentials-ipmi-ip${i}" placeholder="xxx.xxx.xxx.xxx 형식으로 입력" required/>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="pf-c-form__field-group-body" style="padding-top:0px;">
-                                <div class="pf-c-form__group" style="padding:0px;">
-                                    <div class="pf-c-form__group-label">
-                                        <label class="pf-c-form__label" for="form-input-individual-credentials-ipmi-user${i}">
-                                            <span class="pf-c-form__label-text">IPMI 아이디</span>
-                                            <span class="pf-c-form__label-required" aria-hidden="true">&#42;</span>
-                                        </label>
-                                    </div>
-                                    <div class="pf-c-form__group-control">
-                                        <input class="pf-c-form-control" style="width:70%" type="text" id="form-input-individual-credentials-ipmi-user${i}" name="form-input-individual-credentials-ipmi-user${i}" placeholder="아이디를 입력하세요." required />
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="pf-c-form__field-group-body" style="padding-top:0px;">
-                                <div class="pf-c-form__group" style="padding:0px;">
-                                    <div class="pf-c-form__group-label">
-                                        <label class="pf-c-form__label" for="form-input-individual-credentials-ipmi-password${i}">
-                                            <span class="pf-c-form__label-text">IPMI 비밀번호</span>
-                                            <span class="pf-c-form__label-required" aria-hidden="true">&#42;</span>
-                                        </label>
-                                    </div>
-                                    <div class="pf-c-form__group-control">
-                                        <input class="pf-c-form-control" style="width:70%" type="password" autocomplete="off" id="form-input-individual-credentials-ipmi-password${i}" name="form-input-individual-credentials-ipmi-password1-check${i}" placeholder="비밀번호를 입력하세요." required />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        `;
-                        credentials.insertAdjacentHTML('beforeend',individual_HTML);
-        }
-    }else{
-        for (let i = 1; i <= hostCount; i++) {
-            const common_HTML = `
-                    <div class="pf-c-form__field-group">
-                        <div class="pf-c-form__field-group-header"  style="padding-bottom:8px;">
-                            <div class="pf-c-form__field-group-header-main">
-                                <div class="pf-c-form__field-group-header-title">
-                                    <div class="pf-c-form__field-group-header-title-text" style="padding-top: 15px;">${i}번 호스트 정보</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="pf-c-form__field-group-body" style="padding-top:0px;">
-                            <div class="pf-c-form__group" style="padding:0px;">
-                                <div class="pf-c-form__group-label">
-                                    <label class="pf-c-form__label" for="form-input-common-credentials-ipmi-ip${i}">
-                                        <span class="pf-c-form__label-text">IPMI IP</span>
-                                        <span class="pf-c-form__label-required" aria-hidden="true">&#42;</span>
-                                    </label>
-                                </div>
-                                <div class="pf-c-form__group-control">
-                                    <input class="pf-c-form-control" style="width:70%" type="text" id="form-input-common-credentials-ipmi-ip${i}" name="form-input-common-credentials-ipmi-ip${i}"  placeholder="xxx.xxx.xxx.xxx 형식으로 입력" required />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-            `;
-
-            credentials.insertAdjacentHTML('beforeend',common_HTML);
-        }
-        const common_credentials_HTML= `
-            <div class="pf-c-form__field-group">
-                <div class="pf-c-form__field-group-header"  style="padding-bottom:8px;">
-                    <div class="pf-c-form__field-group-header-main">
-                        <div class="pf-c-form__field-group-header-title">
-                            <div class="pf-c-form__field-group-header-title-text" style="margin-top: 20px;">모든 호스트 자격 증명</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="pf-c-form__field-group-body" style="padding-top:0px;">
-                    <div class="pf-c-form__group" style="padding:0px;">
-                        <div class="pf-c-form__group-label">
-                            <label class="pf-c-form__label" for="form-input-common-credentials-ipmi-user">
-                                <span class="pf-c-form__label-text">IPMI 아이디</span>
-                                <span class="pf-c-form__label-required" aria-hidden="true">&#42;</span>
-                            </label>
-                        </div>
-                        <div class="pf-c-form__group-control">
-                            <input class="pf-c-form-control" style="width:70%" type="text" id="form-input-common-credentials-ipmi-user" name="form-input-common-credentials-ipmi-user" placeholder="아이디를 입력하세요." required />
-                        </div>
-                    </div>
-                </div>
-                <div class="pf-c-form__field-group-body" style="padding-top:0px;">
-                    <div class="pf-c-form__group" style="padding:0px;">
-                        <div class="pf-c-form__group-label">
-                            <label class="pf-c-form__label" for="form-input-common-credentials-ipmi-password">
-                                <span class="pf-c-form__label-text">IPMI 비밀번호</span>
-                                <span class="pf-c-form__label-required" aria-hidden="true">&#42;</span>
-                            </label>
-                        </div>
-                        <div class="pf-c-form__group-control">
-                            <input class="pf-c-form-control" style="width:70%" type="password" autocomplete="off" id="form-input-common-credentials-ipmi-password" name="form-input-common-credentials-ipmi-password-check" placeholder="비밀번호를 입력하세요." required />
-                        </div>
-                    </div>
-                </div>
-            </div>
-    `;
-
-    credentials.insertAdjacentHTML('beforeend',common_credentials_HTML);
-
-    }
-
-}
-/**
- * Meathod Name : createAccordion
+ * Meathod Name : ccvmcreateAccordion
  * Date Created : 2024.12.19
  * Writer  : 정민철
  * Description : 호스트 수에 따른 IPMI 자격 증명, 페일오버 클러스터 등 동적 화면(설정 확인)
@@ -3314,19 +1791,14 @@ function updateIPMIcredentials(count,credentials_type) {
  * Return  : 없음
  * History  : 2024.12.19 최초 작성
  */
-function createAccordion(type, hostCount, ipmiCheckVal) {
+function ccvmcreateAccordion(type, hostCount) {
     // Get the existing container by ID
     let accordionContainer;
     let expandedContentId;
     let toggleText_name;
     let toggleButton_name;
 
-    if (type == "ipmi") {
-        accordionContainer = document.getElementById("div-accordion-cloud-ipmi");
-        toggleText_name = "IPMI 정보";
-        expandedContentId = "div-accordion-cloud-vm-ipmi";
-        toggleButton_name = "button-accordion-cloud-vm-ipmi";
-    } else if (type == "failover") {
+    if (type == "failover") {
         accordionContainer = document.getElementById("div-accordion-cloud-failover-cluster");
         toggleText_name = "장애조치 클러스터 설정";
         expandedContentId = "div-accordion-cloud-vm-failover-cluster";
@@ -3372,41 +1844,14 @@ function createAccordion(type, hostCount, ipmiCheckVal) {
     descriptionList.style = "--pf-c-description-list--RowGap: 10px; margin-left: 10px;";
 
     // Add 'IPMI 구성 준비' group
-    if (type == "ipmi"){
-        descriptionList.appendChild(createDescriptionGroup("IPMI 구성 준비", ""));
+    if (type == "failover"){
+        descriptionList.appendChild(ccvmcreateDescriptionGroup("클러스터 멤버 수", hostCount));
 
         // Add host-specific IPMI groups
         for (let i = 1; i <= hostCount; i++) {
-            const hostGroup = createDescriptionGroup(
-                `${i}번 호스트`,
-                `
-                IPMI IP: <span id="span-cloud-vm-ipmi-ip${i}"></span><br/>
-                <span id="span-cloud-vm-ipmi-user${i}"></span><br/>
-                <span id="span-cloud-vm-ipmi-password${i}"></span>
-                `
-            );
-            descriptionList.appendChild(hostGroup);
-        }
-
-        // Add '모든 호스트 자격 증명' group
-        const commonGroup = createDescriptionGroup(
-            "모든 호스트 자격 증명",
-            `
-            IPMI 아이디: <span id="span-cloud-vm-ipmi-user"></span><br/>
-            IPMI 비밀번호: <span id="span-cloud-vm-ipmi-password"></span>
-            `
-        );
-        commonGroup.id = "accordion-common-ipmi";
-        commonGroup.style.display = "none";
-        descriptionList.appendChild(commonGroup);
-    } else if (type == "failover"){
-        descriptionList.appendChild(createDescriptionGroup("클러스터 멤버 수", hostCount));
-
-        // Add host-specific IPMI groups
-        for (let i = 1; i <= hostCount; i++) {
-            const hostGroup = createDescriptionGroup(
+            const hostGroup = ccvmcreateDescriptionGroup(
                 `PCS 호스트 #${i}`,
-                `PN IP : <span id="span-cloud-vm-failover-cluster-host${i}-name"></span><br/>`
+                `MGMT IP : <span id="span-cloud-vm-failover-cluster-host${i}-name"></span><br/>`
             );
             descriptionList.appendChild(hostGroup);
         }
@@ -3417,10 +1862,10 @@ function createAccordion(type, hostCount, ipmiCheckVal) {
     accordionContainer.appendChild(expandedContent);
 
     // Update spans with IPMI values
-    updateSpans(type, hostCount, ipmiCheckVal);
+    ccvmupdateSpans(type, hostCount);
 }
 
-function createDescriptionGroup(title, contentHtml) {
+function ccvmcreateDescriptionGroup(title, contentHtml) {
     const group = document.createElement("div");
     group.className = "pf-c-description-list__group";
 
@@ -3442,27 +1887,12 @@ function createDescriptionGroup(title, contentHtml) {
     return group;
 }
 
-function updateSpans(type, hostCount, ipmiCheckVal) {
-    if (type == "ipmi"){
-        if (ipmiCheckVal === "individual") {
-            $('#accordion-common-ipmi').hide();
-            for (let i = 1; i <= hostCount; i++) {
-                $(`#span-cloud-vm-ipmi-ip${i}`).text($(`#form-input-individual-credentials-ipmi-ip${i}`).val());
-                $(`#span-cloud-vm-ipmi-user${i}`).html("IPMI 아이디: " + $(`#form-input-individual-credentials-ipmi-user${i}`).val() + "<br/>");
-                $(`#span-cloud-vm-ipmi-password${i}`).text("IPMI 비밀번호: " + $(`#form-input-individual-credentials-ipmi-password${i}`).val());
-            }
-        } else {
-            $('#accordion-common-ipmi').show();
-            for (let i = 1; i <= hostCount; i++) {
-                $(`#span-cloud-vm-ipmi-ip${i}`).text($(`#form-input-common-credentials-ipmi-ip${i}`).val());
-            }
-            $('#span-cloud-vm-ipmi-user').text($('#form-input-common-credentials-ipmi-user').val());
-            $('#span-cloud-vm-ipmi-password').text($('#form-input-common-credentials-ipmi-password').val());
+function ccvmupdateSpans(type, hostCount) {
+    if (type == "failover"){
+        for (var i = 1; i <= hostCount; i++) {
+            fc_host = $(`#form-input-cloud-vm-failover-cluster-host${i}-name`).val().trim()
+            $(`#span-cloud-vm-failover-cluster-host${i}-name`).text(fc_host);
         }
-    } else if (type == "failover"){
-            for (let i = 1; i <= hostCount; i++) {
-                $(`#span-cloud-vm-failover-cluster-host${i}-name`).text($(`#form-input-cloud-vm-failover-cluster-host${i}-name`).val());
-            }
         }
 
 }

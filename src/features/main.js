@@ -64,6 +64,9 @@ $(document).ready(function(){
     $('#div-cloud-vm-snap').load("./src/features/cloud-vm-snap.html");
     $('#div-cloud-vm-snap').hide();
 
+    $('#div-modal-wizard-gfs-storage-configure').load("./src/features/gfs-storage-configure-wizard.html");
+    $('#div-modal-wizard-gfs-storage-configure').hide();
+
     // 스토리지 센터 가상머신 자원변경 페이지 로드
     $('#div-modal-storage-vm-resource-update').load("./src/features/storage-vm-resource-update.html");
     $('#div-modal-storage-vm-resource-update').hide();
@@ -296,6 +299,7 @@ $(document).ready(function(){
 // document.ready 영역 끝
 
 // 이벤트 처리 함수
+
 $('#card-action-cloud-cluster-status').on('click', function(){
     $('#dropdown-menu-cloud-cluster-status').toggle();
 });
@@ -334,6 +338,9 @@ $('#button-open-modal-wizard-storage-cluster').on('click', function(){
     $('#div-modal-wizard-cluster-config-prepare').show();
 });
 
+$('#button-link-gfs-storage-configure').on('click', function(){
+    $('#div-modal-wizard-gfs-storage-configure').show();
+});
 $('#button-open-modal-wizard-cloud-vm').on('click', function(){
     $('#div-modal-wizard-cloud-vm').show();
 });
@@ -466,12 +473,6 @@ $('#card-action-cloud-vm-db-dump').on('click', function(){
     $('#div-modal-db-backup-cloud-vm-first').show();
     $('#div-modal-wizard-cluster-config-finish-db-dump-file-download-empty-state').hide();
     $('#dbdump-prepare-status').hide();
-});
-
-//div-modal-status-alert modal 닫기
-$('#modal-status-alert-button-close1, #modal-status-alert-button-close2').on('click', function(){
-    $('#div-modal-status-alert').hide();
-    location.reload();
 });
 
 // 상태 보기 드롭다운 메뉴를 활성화한 상태에서 다른 영역을 클릭 했을 경우 메뉴 닫기 (현재 활성화된 iframe 클릭할 때 작동)
@@ -1331,6 +1332,7 @@ function checkDeployStatus(){
         $('#button-open-modal-wizard-pfmp-vm').hide();
         $('#button-open-modal-wizard-cloud-vm').hide();
         $('#button-link-storage-center-dashboard').hide();
+        $('#button-link-gfs-storage-configure').hide();
         $('#button-link-cloud-center').hide();
         $('#button-open-modal-wizard-monitoring-center').hide();
         $('#button-link-monitoring-center').hide();
@@ -1360,6 +1362,8 @@ function checkDeployStatus(){
         // powerflex용 sessionStorage
         const step9 = sessionStorage.getItem("pfmp_status");
         const step10 = sessionStorage.getItem("pfmp_bootstrap_status");
+
+        const step11 = sessionStorage.getItem("gfs_configure");
 
         // 배포 상태조회
         if (os_type == "ablestack-hci"){
@@ -1595,55 +1599,61 @@ function checkDeployStatus(){
                     }
                 }
         }else if (os_type == "ablestack-vm"){
-            console.log("step0 :: "+ step0 +", step1 :: " + step1 + ", step5 :: " + step5 + ", step6 :: " + step6 + ", step7 :: " + step7 + ", step8 :: " + step8);
+            console.log("step0 :: "+ step0 +", step1 :: " + step1 + ", step5 :: " + step5 + ", step6 :: " + step6 + ", step7 :: " + step7 + ", step8 :: " + step8 + ", step11 :: " + step11);
 
             if (step1 != "true"){
                 $('#button-open-modal-wizard-storage-cluster').show();
                 showRibbon('warning','클라우드센터 VM이 배포되지 않았습니다. 클러스터 구성준비를 진행하십시오.');
             }else{
+                // 외부 스토리지 버튼 활성화
                 $('#button-config-file-download').show();
-                if(step8!="true" && step5=="HEALTH_ERR1"||step5=="HEALTH_ERR2"||step5==null){
-                    // 외부 스토리지 버튼 활성화
-                    $('#button-gfs-multipath-sync').prop('disabled', false);
-                    $('#button-gfs-storage-rescan').prop('disabled', false);
-                    //클라우드센터 VM 배포 버튼
+                $('#button-gfs-multipath-sync').prop('disabled', false);
+                $('#button-gfs-storage-rescan').prop('disabled', false);
+                if(step11!="true"){
+                    // 클러스터 구성 준비 버튼, GFS 구성 준비 버튼
                     $('#button-open-modal-wizard-storage-cluster').show();
-                    $('#button-open-modal-wizard-cloud-vm').show();
-                    if(step8!="true" && step5=="HEALTH_ERR1"||step5==null){
-                        showRibbon('warning','클라우드센터 클러스터가 구성되지 않았습니다. 클라우드센터 클러스터 구성을 진행하십시오.');
-                    }else{
-                        showRibbon('warning','클라우드센터 클러스터는 구성되었으나 리소스 구성이 되지 않았습니다. 리소스 구성을 진행하십시오.');
-                    }
+                    $("#button-link-gfs-storage-configure").show();
+                    showRibbon('warning', 'GFS 스토리지가 구성되지 않았습니다. GFS 스토리지 구성을 진행하십시오.')
                 }else{
-                    $('#button-gfs-multipath-sync').prop('disabled', false);
-                    $('#button-gfs-storage-rescan').prop('disabled', false);
-                    if(step8!="true" && (step7!="true" && (step6=="HEALTH_ERR"||step6==null))){
+                    if(step8!="true" && step5=="HEALTH_ERR1"||step5=="HEALTH_ERR2"||step5==null){
                         //클라우드센터 VM 배포 버튼
                         $('#button-open-modal-wizard-cloud-vm').show();
-                        showRibbon('warning','클라우드센터 VM이 배포되지 않았습니다. 클라우드센터 VM 배포를 진행하십시오.');
-                    }else{
-                        if(step8!="true" && step7!="true"){
-                            showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
+                        if(step8!="true" && step5=="HEALTH_ERR1"||step5==null){
+                            showRibbon('warning','클라우드센터 클러스터가 구성되지 않았습니다. 클라우드센터 클러스터 구성을 진행하십시오.');
                         }else{
-                            // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
-                            $('#button-link-cloud-center').show();
+                            showRibbon('warning','클라우드센터 클러스터는 구성되었으나 리소스 구성이 되지 않았습니다. 리소스 구성을 진행하십시오.');
+                        }
+                    }else{
+                        $('#button-gfs-multipath-sync').prop('disabled', false);
+                        $('#button-gfs-storage-rescan').prop('disabled', false);
+                        if(step8!="true" && (step7!="true" && (step6=="HEALTH_ERR"||step6==null))){
+                            //클라우드센터 VM 배포 버튼
+                            $('#button-open-modal-wizard-cloud-vm').show();
+                            showRibbon('warning','클라우드센터 VM이 배포되지 않았습니다. 클라우드센터 VM 배포를 진행하십시오.');
+                        }else{
+                            if(step8!="true" && step7!="true"){
+                                showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
+                            }else{
+                                // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
+                                $('#button-link-cloud-center').show();
 
-                                if(step8!="true"){
-                                    $('#button-open-modal-wizard-monitoring-center').show();
-                                    showRibbon('warning','모니터링센터에 연결할 수 있도록 모니터링센터 구성 작업을 진행하십시오.');
-                                }else{
-                                    // 모니터링센터 구성 연결 버튼 show
-                                    $('#button-link-monitoring-center').show();
+                                    if(step8!="true"){
+                                        $('#button-open-modal-wizard-monitoring-center').show();
+                                        showRibbon('warning','모니터링센터에 연결할 수 있도록 모니터링센터 구성 작업을 진행하십시오.');
+                                    }else{
+                                        // 모니터링센터 구성 연결 버튼 show
+                                        $('#button-link-monitoring-center').show();
 
-                                    showRibbon('success','ABLESTACK 클라우드센터 VM 배포되었으며 모니터링센터 구성이 완료되었습니다. 가상어플라이언스 상태가 정상입니다.');
-                                    // 운영 상태조회
-                                    let msg ="";
-                                    if (step6 != null){
-                                        if(step6!="RUNNING"){
-                                            msg += '클라우드센터 가상머신이 '+step6+' 상태 입니다.\n';
-                                            msg += '클라우드센터 가상머신 Mold 서비스 , DB 상태를 확인하여 정지상태일 경우 서비스 재시작\n';
-                                            msg += '또는 클라우드센터 클러스터 상태 카드에서 가상머신 시작하여 문제를 해결할 수 있습니다.';
-                                            showRibbon('warning', msg);
+                                        showRibbon('success','ABLESTACK 클라우드센터 VM 배포되었으며 모니터링센터 구성이 완료되었습니다. 가상어플라이언스 상태가 정상입니다.');
+                                        // 운영 상태조회
+                                        let msg ="";
+                                        if (step6 != null){
+                                            if(step6!="RUNNING"){
+                                                msg += '클라우드센터 가상머신이 '+step6+' 상태 입니다.\n';
+                                                msg += '클라우드센터 가상머신 Mold 서비스 , DB 상태를 확인하여 정지상태일 경우 서비스 재시작\n';
+                                                msg += '또는 클라우드센터 클러스터 상태 카드에서 가상머신 시작하여 문제를 해결할 수 있습니다.';
+                                                showRibbon('warning', msg);
+                                            }
                                         }
                                     }
                                 }
@@ -1809,14 +1819,6 @@ function ribbonWorker() {
                 license_check();
                 // checkHostandStonithrecovery();
             });
-    }else if (os_type == "powerflex"){
-        Promise.all([pcsExeHost(), checkLicenseStatus(), checkConfigStatus(), checkStorageClusterStatus(),
-            checkStorageVmStatus(), CardCloudClusterStatus(), new CloudCenterVirtualMachine().checkCCVM()]).then(function(){
-                scanHostKey();
-                checkDeployStatus();
-                license_check();
-                // checkHostandStonithrecovery();
-        });
     }else{
         Promise.all([pcsExeHost(), checkLicenseStatus(), checkConfigStatus(), checkStorageClusterStatus(),
             checkStorageVmStatus(), CardCloudClusterStatus(), new CloudCenterVirtualMachine().checkCCVM()]).then(function(){
@@ -1933,7 +1935,6 @@ function gfs_maintenance_run(){
         $('#div-modal-gfs-maintenance-setting').show();
     }
 }
-
 function gfsDiskStatus(){
     return new Promise((resolve) => {
         $('#gfs-disk-status').html("상태 체크 중 &bull;&bull;&bull;&nbsp;&nbsp;&nbsp;<svg class='pf-c-spinner pf-m-md' role='progressbar' aria-valuetext='Loading...' viewBox='0 0 100 100' ><circle class='pf-c-spinner__path' cx='50' cy='50' r='45' fill='none'></circle></svg>");
@@ -1996,6 +1997,7 @@ function gfsDiskStatus(){
                 $('#menu-item-set-gfs-clvm-disk-add').removeClass('pf-m-disabled');
                 $('#menu-item-set-gfs-clvm-disk-delete').removeClass('pf-m-disabled');
                 $('#menu-item-set-gfs-clvm-disk-info').removeClass('pf-m-disabled');
+                $('#menu-item-set-disk-detail-info').removeClass('pf-m-disabled');
                 $('#menu-item-set-gfs-disk-add').removeClass('pf-m-disabled');
                 $('#menu-item-set-gfs-disk-delete').removeClass('pf-m-disabled');
                 $('#menu-item-set-gfs-disk-extend').removeClass('pf-m-disabled');
@@ -2007,76 +2009,26 @@ function gfsDiskStatus(){
                     var physicalVolume = $(this).data('physicalvolume');
                     var volumeGroup = $(this).data('volumegroup');
                     var diskSize = $(this).data('disksize');
-
                     // Update modal content
                     updateModalContent(mountPoint, multipaths, devices, physicalVolume, volumeGroup, diskSize);
-
                     // Show the modal
                     $('#div-modal-gfs-disk-info').show();
                 });
-
+                sessionStorage.setItem("gfs_configure", "true");
             } else {
                 $('#gfs-disk-deploy-status-check').text("GFS 디스크가 생성되지 않았습니다.");
                 $('#gfs-disk-deploy-status-check').attr("style","color: var(--pf-global--danger-color--100)");
                 $('#page-gfs-disk-mount-info').html("");
                 $('#page-gfs-disk-mount-info').text("N/A");
                 $('#page-gfs-disk-mode').text("N/A");
-            }
 
+                sessionStorage.setItem("gfs_configure", "false");
+            }
             resolve();
         });
     });
 }
 
-function updateModalContent(mountPoint, multipaths, devices, physicalVolume, volumeGroup, diskSize) {
-    // Populate the modal with relevant information
-    $('#gfs-disk-mount-info').text(mountPoint);
-    $('#gfs-disk-physical-volume').text(devices + " ( " + multipaths + " ) ");
-    $('#gfs-disk-volume-group').text(physicalVolume);
-    $('#gfs-disk-size').text(diskSize);
-    $('#gfs-disk-status').text("Health OK"); // You can customize based on the actual status
-    // You can adjust status class based on the state (e.g., if there's an error, change color)
-    $('#gfs-disk-css').removeClass('pf-m-red').addClass('pf-m-green'); // Adjust based on your logic
-    $('#gfs-disk-icon').removeClass('fa-exclamation-triangle').addClass('fa-check-circle'); // Adjust based on status\
-
-    $('#gfs-disk-text').text('N/A');
-    for (var i = 0; i < gfs_file_system_arr.length; i++){
-
-        if (gfs_file_system_arr[i][0] == mountPoint.split("/")[2]){
-
-            var offline_filteredIPs = gfs_file_system_arr
-                                .filter(item => item[2] === "offline")
-                                .map(item => item[1])
-                                .join(', ');
-            var start_filteredIPs = gfs_file_system_arr
-                                .filter(item => item[0] === mountPoint.split("/")[2] && item[2] === "start")
-                                .map(item => item[1])
-                                .join(', ');
-            var stop_filteredIPs = gfs_file_system_arr
-                                .filter(item => item[0] === mountPoint.split("/")[2] && item[2].includes("stop"))
-                                .map(item => item[1])
-                                .join(', ');
-
-            if (offline_filteredIPs) {
-                if (start_filteredIPs && !stop_filteredIPs){
-                    $('#gfs-disk-text').html('Started ( ' + start_filteredIPs + ' )</br>' + 'Offline ( ' + offline_filteredIPs + ' )');
-                }else if (!start_filteredIPs && stop_filteredIPs){
-                    $('#gfs-disk-text').html('Stopped ( ' + stop_filteredIPs + ' )</br>' + 'Offline ( ' + offline_filteredIPs + ' )');
-                }else{
-                    $('#gfs-disk-text').html('Started ( ' + start_filteredIPs + ' )</br>' + 'Offline ( ' + offline_filteredIPs + ' )');
-                }
-            }else{
-                if (start_filteredIPs && !stop_filteredIPs){
-                    $('#gfs-disk-text').text('Started ( ' + start_filteredIPs + ' )');
-                }else if (!start_filteredIPs && stop_filteredIPs){
-                    $('#gfs-disk-text').text('Stop ( ' + stop_filteredIPs + ' )');
-                }else{
-                    $('#gfs-disk-text').html('Started ( ' + start_filteredIPs + ' )</br> Stopped ( ' + stop_filteredIPs + ' )');
-                }
-            }
-        }
-    }
-}
 // Close button in the modal
 $('#button-close-modal-gfs-disk-info').on('click', function() {
     $('#div-modal-gfs-disk-info').hide();;
@@ -2558,9 +2510,106 @@ function setDiskAction(type, action, extend){
         }).catch(function() {
             createLoggerInfo("setDiskAction error");
         });
+    }else if (type == "disk" && action == "detail"){
+        var cmd = ["python3", pluginpath + "/python/disk/mpath_detail.py"];
+
+        cockpit.spawn(cmd).then(function(data) {
+            // 초기화
+            $('#disk-detail-info').empty();
+
+            // JSON 파싱
+            var result = JSON.parse(data);
+            var diskList = result.val;
+
+            // 테이블 헤더 작성
+            var output = `
+                <table border="1" style="width: 100%; border-collapse: collapse; text-align: left;">
+                    <thead>
+                        <tr>
+                            <th style="padding: 8px; background-color: #f2f2f2;">멀티패스 이름</th>
+                            <th style="padding: 8px; background-color: #f2f2f2;">멀티패스 UUID 경로</th>
+                            <th style="padding: 8px; background-color: #f2f2f2;">싱글패스 SCSI 이름</th>
+                            <th style="padding: 8px; background-color: #f2f2f2;">싱글패스 WWN 이름</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            // 결과 데이터 순회
+            Object.entries(diskList).forEach(([dm, info]) => {
+                var mpathName = info.multipath_name?.[0] || '-';
+                var mpathUUID = info.multipath_id?.[0] || '-';
+                var scsi = info.scsi?.join('<br>') || '-';
+                var wwn = info.wwn?.join('<br>') || '-';
+
+                output += `
+                    <tr>
+                        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${mpathName}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #ddd;">
+                            <a href="#" onclick="copyToClipboard('${mpathUUID}'); return false;"
+                            style="color: black; text-decoration: underline; margin-left: 10px; cursor: pointer;">
+                            ${mpathUUID}
+                            </a>
+
+                        </td>
+                        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${scsi}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #ddd;">${wwn}</td>
+                    </tr>
+                `;
+            });
+
+            output += `
+                    </tbody>
+                </table>
+            `;
+
+            $('#disk-detail-info').append(output);
+
+        }).catch(function() {
+            createLoggerInfo("setDiskAction error");
+        });
+    }
+}
+    // 복사 함수
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            showCopyNotification("클립보드에 복사되었습니다: " + text);
+        }).catch(err => {
+            showCopyNotification("복사 실패: " + err);
+        });
     }
 
-}
+    function showCopyNotification(message) {
+        const notification = document.createElement("div");
+        notification.innerText = message;
+        notification.style.position = "fixed";
+        notification.style.bottom = "30px";
+        notification.style.right = "30px";
+        notification.style.backgroundColor = "#333";
+        notification.style.color = "#fff";
+        notification.style.padding = "10px 20px";
+        notification.style.borderRadius = "8px";
+        notification.style.boxShadow = "0 4px 12px rgba(0,0,0,0.2)";
+        notification.style.zIndex = "1000";
+        notification.style.opacity = "0";
+        notification.style.transition = "opacity 0.5s";
+
+        document.body.appendChild(notification);
+
+        // fade in
+        setTimeout(() => {
+            notification.style.opacity = "1";
+        }, 10);
+
+        // fade out and remove
+        setTimeout(() => {
+            notification.style.opacity = "0";
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 500);
+        }, 2000);
+    }
+
 function applyExtendMethodStyles() {
     const checkedRadio = document.querySelector('input[name="extend-method"]:checked');
     const lunSection = document.getElementById('lun-selection-section');
@@ -2850,6 +2899,13 @@ $('#div-modal-clvm-disk-delete').on('change', 'input[type=checkbox][name="form-c
     // 체크되면 버튼 활성화, 아니면 비활성화
     $('#button-execution-modal-clvm-disk-delete').prop('disabled', !isChecked);
 });
+$('#menu-item-set-disk-detail-info').on('click', function(){
+    setDiskAction("disk", "detail");
+    $('#div-modal-disk-detail-info').show();
+});
+$('#button-execution-modal-disk-detail-info, #button-close-modal-disk-detail-info').on('click', function(){
+    $('#div-modal-disk-detail-info').hide();
+});
 $('#menu-item-set-gfs-clvm-disk-info').on('click',function(){
     setDiskAction("clvm", "list");
     $('#div-modal-clvm-disk-info').show();
@@ -2970,6 +3026,11 @@ $('#button-execution-modal-multipath-sync').on("click",function(){
         $("#modal-status-alert-title").html("외부 스토리지 동기화");
         $("#modal-status-alert-body").html("외부 스토리지 동기화가 완료되었습니다.");
         $('#div-modal-status-alert').show();
+
+        $('#button-next-step-modal-gfs-storage-wizard-config').attr('disabled', false);
+        $('#nav-button-gfs-disk-configure').removeClass('pf-m-disabled');
+        $('#nav-button-gfs-ipmi-info').removeClass('pf-m-disabled');
+        $('#nav-button-gfs-review').removeClass('pf-m-disabled');
     });
 });
 $('#button-execution-modal-storage-rescan').on("click",function(){
@@ -3276,7 +3337,6 @@ function gfsResourceStatus() {
                 var gfs_dlm_stop_arr = [];
                 var gfs_dlm_offline_arr = [];
                 var gfs_lvmlockd_offline_arr = [];
-                gfs_file_system_arr = [];
                 var num = 0;
 
                 for (var m = 0; m < retVal.val.nodes_info.length; m++){
@@ -3301,6 +3361,7 @@ function gfsResourceStatus() {
                 }
 
                 for (var j = 0; j < retVal.val.node_history.length; j++) {
+
                     var node_name = retVal.val.node_history[j].node_name;
 
                     for (var k = 0; k < retVal.val.node_history[j].resource_histories.length; k++) {
@@ -3309,55 +3370,73 @@ function gfsResourceStatus() {
                         var start_error_occurred = false; // start에서 error 발생 여부를 추적
 
                         for (var n = 0; n < retVal.val.node_history[j].resource_histories[k].operations.length; n++) {
+                            var operation_length = retVal.val.node_history[j].resource_histories[k].operations;
                             var operation = retVal.val.node_history[j].resource_histories[k].operations[n];
                             var task = operation.task;
                             var rc_text = operation.rc_text;
 
-                            if (task == "start" || task == "stop" || task == "probe") {
-                                if (resource_name === "glue-lvmlockd") {
-                                    resource_status = task;
+                            if (n == operation_length.length - 1){
+                                if (task == "start" || task == "stop" || task == "monitor") {
+                                    if (resource_name === "glue-lvmlockd") {
+                                        resource_status = task;
 
-                                    if (task == "start" && rc_text == "error") {
-                                        resource_status = task + "(" + rc_text + ")"
-                                        start_error_occurred = true; // start에서 오류 발생
+                                        if (task == "start" && rc_text == "error") {
+                                            resource_status = task + "(" + rc_text + ")"
+                                            start_error_occurred = true; // start에서 오류 발생
+                                        }
+                                        if (task == "stop" && start_error_occurred) {
+                                            // start에서 error가 발생했으므로 stop 추가하지 않음
+                                            continue;
+                                        }
+                                        if (task == "monitor" && resource_status != "stop"){
+                                            resource_status = "start";
+                                            gfs_lvmlockd_arr.push([node_name, resource_status]); //
+                                        }else{
+                                            gfs_lvmlockd_arr.push([node_name, resource_status]); //
+                                        }
+
+                                    } else if (resource_name === "glue-dlm") {
+                                        resource_status = task;
+                                        if (task == "start" && rc_text == "error") {
+                                            resource_status = task + "(" + rc_text + ")"
+                                            start_error_occurred = true; // start에서 오류 발생
+                                        }
+
+                                        if (task == "stop" && start_error_occurred) {
+                                            // start에서 error가 발생했으므로 stop 추가하지 않음
+                                            continue;
+                                        }
+                                        if (task == "monitor" && resource_status != "stop"){
+                                            resource_status = "start";
+                                            gfs_dlm_arr.push([node_name, resource_status]); // 배열 추가
+                                        }else{
+                                            gfs_dlm_arr.push([node_name, resource_status]); // 배열 추가
+                                        }
+
+                                    } else if (/^glue-gfs(-\d+)?$/.test(resource_name)) {
+
+                                        gfs_file_system_arr_list[num] = [];
+                                        resource_status = task;
+                                        if (task == "start" && rc_text == "error") {
+                                            resource_status = task + "(" + rc_text + ")"
+                                            start_error_occurred = true; // start에서 오류 발생
+                                        }
+
+                                        if (task == "stop" && start_error_occurred) {
+                                            // start에서 error가 발생했으므로 stop 추가하지 않음
+                                            continue;
+                                        }
+                                        if (task == "monitor" && resource_status != "stop"){
+                                            resource_status = "start";
+                                            gfs_file_system_arr_list[num].push([resource_name,node_name, resource_status]); // 배열 추가
+                                        }else{
+                                            gfs_file_system_arr_list[num].push([resource_name,node_name, resource_status]); // 배열 추가
+                                        }
+                                        num++;
                                     }
-
-                                    if (task == "stop" && start_error_occurred) {
-                                        // start에서 error가 발생했으므로 stop 추가하지 않음
-                                        continue;
-                                    }
-                                    gfs_lvmlockd_arr.push([node_name, resource_status]); //
-
-                                } else if (resource_name === "glue-dlm") {
-                                    resource_status = task;
-                                    if (task == "start" && rc_text == "error") {
-                                        resource_status = task + "(" + rc_text + ")"
-                                        start_error_occurred = true; // start에서 오류 발생
-                                    }
-
-                                    if (task == "stop" && start_error_occurred) {
-                                        // start에서 error가 발생했으므로 stop 추가하지 않음
-                                        continue;
-                                    }
-                                    gfs_dlm_arr.push([node_name, resource_status]); // 배열 추가
-
-                                } else if (/^glue-gfs(-\d+)?$/.test(resource_name)) {
-
-                                    gfs_file_system_arr_list[num] = [];
-                                    resource_status = task;
-                                    if (task == "start" && rc_text == "error") {
-                                        resource_status = task + "(" + rc_text + ")"
-                                        start_error_occurred = true; // start에서 오류 발생
-                                    }
-
-                                    if (task == "stop" && start_error_occurred) {
-                                        // start에서 error가 발생했으므로 stop 추가하지 않음
-                                        continue;
-                                    }
-                                    gfs_file_system_arr_list[num].push([resource_name,node_name, resource_status]); // 배열 추가
-                                    num++;
                                 }
                             }
+
                         }
                     }
                 }
@@ -3515,6 +3594,7 @@ function gfsResourceStatus() {
                 $('#gfs-fence-icon, #gfs-lock-icon').attr('class','fas fa-fw fa-exclamation-triangle');
                 $('#gfs-fence-text, #gfs-lock-text').text("N/A");
             }
+
             resolve();
         })
         cockpit.spawn(['python3', pluginpath + '/python/gfs/gfs_manage.py', '--check-stonith','--control', 'check'])
@@ -3569,7 +3649,60 @@ function updateGfsHostList(){
         }
     })
 }
+function updateModalContent(mountPoint, multipaths, devices, physicalVolume, volumeGroup, diskSize) {
+    // Populate the modal with relevant information
+    $('#gfs-disk-mount-info').text(mountPoint);
+    $('#gfs-disk-physical-volume').text(devices + " ( " + multipaths + " ) ");
+    $('#gfs-disk-volume-group').text(physicalVolume);
+    $('#gfs-disk-size').text(diskSize);
+    $('#gfs-disk-status').text("Health OK"); // You can customize based on the actual status
+    // You can adjust status class based on the state (e.g., if there's an error, change color)
+    $('#gfs-disk-css').removeClass('pf-m-red').addClass('pf-m-green'); // Adjust based on your logic
+    $('#gfs-disk-icon').removeClass('fa-exclamation-triangle').addClass('fa-check-circle'); // Adjust based on status\
 
+    $('#gfs-disk-text').text('N/A');
+    for (var i = 0; i < gfs_file_system_arr.length; i++){
+        if (gfs_file_system_arr[i][0] == mountPoint.split("/")[2]){
+
+            var offline_filteredIPs = [...new Set(
+                gfs_file_system_arr
+                    .filter(item => item[2] === "offline")
+                    .map(item => item[1])
+            )].join(', ');
+
+            var start_filteredIPs = [...new Set(
+                gfs_file_system_arr
+                    .filter(item => item[0] === mountPoint.split("/")[2] && item[2] === "start")
+                    .map(item => item[1])
+            )].join(', ');
+
+            var stop_filteredIPs = [...new Set(
+                gfs_file_system_arr
+                    .filter(item => item[0] === mountPoint.split("/")[2] && item[2].includes("stop"))
+                    .map(item => item[1])
+            )].join(', ');
+
+
+            if (offline_filteredIPs) {
+                if (start_filteredIPs && !stop_filteredIPs){
+                    $('#gfs-disk-text').html('Started ( ' + start_filteredIPs + ' )</br>' + 'Offline ( ' + offline_filteredIPs + ' )');
+                }else if (!start_filteredIPs && stop_filteredIPs){
+                    $('#gfs-disk-text').html('Stopped ( ' + stop_filteredIPs + ' )</br>' + 'Offline ( ' + offline_filteredIPs + ' )');
+                }else{
+                    $('#gfs-disk-text').html('Started ( ' + start_filteredIPs + ' )</br>' + 'Offline ( ' + offline_filteredIPs + ' )');
+                }
+            }else{
+                if (start_filteredIPs && !stop_filteredIPs){
+                    $('#gfs-disk-text').text('Started ( ' + start_filteredIPs + ' )');
+                }else if (!start_filteredIPs && stop_filteredIPs){
+                    $('#gfs-disk-text').text('Stop ( ' + stop_filteredIPs + ' )');
+                }else{
+                    $('#gfs-disk-text').html('Started ( ' + start_filteredIPs + ' )</br> Stopped ( ' + stop_filteredIPs + ' )');
+                }
+            }
+        }
+    }
+}
 // 라이센스 상태 확인 및 표시
 function updateLicenseStatus() {
     // superuser 권한으로 실행
@@ -3630,24 +3763,6 @@ function updateLicenseStatus() {
             `);
         });
 }
-// /**
-//  * Meathod Name : checkHostandStonithrecovery
-//  * Date Created : 2025.03.31
-//  * Writer  : 정민철
-//  * Description : 정전 및 전원이 나갔을 경우, PCS 및 GFS 스토리지 안정화 스크립트
-//  * Parameter : 없음
-//  * Return  : 없음
-//  * History  : 2025.02.28 최초 작성
-//  */
-// function checkHostandStonithrecovery(){
-//     var result = ['python3', pluginpath + '/python/gfs/gfs_alert_manage.py'];
-//     cockpit.spawn(result)
-//     .then(function(data){
-//         var result = JSON.parse(data);
-//         console.log(result);
-//     });
-// }
-
 // 라이센스 등록 버튼 클릭 이벤트
 $('#button-execution-modal-license-register').on('click', function(){
     // ... 기존 코드 ...
