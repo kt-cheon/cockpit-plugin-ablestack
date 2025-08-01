@@ -2,7 +2,8 @@
     "bootstrap": {
         "scvm": "false",
         "ccvm": "false",
-        "pfmp": "false"
+        "pfmp": "false",
+        "gfs_configure": "false"
     },
     "monitoring": {
         "wall": "false"

@@ -289,7 +289,7 @@ class CloudCenterVirtualMachine {
     changeOffering(cpu, memory) {
         ccvm_instance.clusterdHost.forEach(function (host){
         cockpit.spawn(['/usr/bin/ssh', '-o', 'StrictHostKeyChecking=no', host,
-            '/usr/bin/python3', pluginpath + '/python/host/virshedit.py', 'edit', '--cpu', cpu, '--memory', memory, '--xml', ccvm_instance.xml])
+            '/usr/bin/python3', pluginpath + '/python/host/virshedit.py', 'edit', '--cpu', cpu, '--memory', memory])
             .then(ccvm_instance.createAlertModal)
             .catch(ccvm_instance.createAlertModal)
         })

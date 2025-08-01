@@ -97,43 +97,6 @@ def resetCloudCenter(args):
             return createReturn(code=200, val="cloud center reset success")
         else:
             return createReturn(code=500, val="cloud center reset fail")
-
-    elif os_type == "powerflex":
-        pcs_list = []
-
-        for i in range(len(json_data["clusterConfig"]["pcsCluster"])):
-            if json_data["clusterConfig"]["pcsCluster"]["hostname"+str(i+1)]:
-                pcs_list.append(json_data["clusterConfig"]["pcsCluster"]["hostname"+str(i+1)])
-
-        pcs_list_str = " ".join(pcs_list)
-        # GFS용 초기화
-        vg_name_check = os.popen("pvs --noheadings -o vg_name | grep 'vg_glue'").read().strip().splitlines()
-        if vg_name_check:
-            disk = os.popen("pvs --noheadings -o pv_name,vg_name | grep 'vg_glue' | awk '{print $1}' | sed 's/[0-9]*$//'").read()
-            result = json.loads(python3(pluginpath + '/python/gfs/gfs_manage.py', '--init-pcs-cluster','--disks', disk ,'--vg-name', 'vg_glue', '--lv-name', 'lv_glue', '--list-ip', pcs_list_str))
-            if result['code'] not in [200,400]:
-                success_bool = False
-        else:
-            result = json.loads(python3(pluginpath + '/python/gfs/gfs_manage.py', '--init-pcs-cluster', '--list-ip', pcs_list_str))
-            if result['code'] not in [200,400]:
-                success_bool = False
-        # virsh 초기화
-        os.system("virsh destroy ccvm > /dev/null 2>&1")
-        os.system("virsh undefine ccvm --keep-nvram> /dev/null 2>&1")
-
-        # 작업폴더 생성
-        os.system("mkdir -p "+pluginpath+"/tools/vmconfig/ccvm")
-
-        # cloudinit iso 삭제
-        os.system("rm -f /var/lib/libvirt/images/ccvm-cloudinit.iso")
-
-        # 확인후 폴더 밑 내용 다 삭제해도 무관하면 아래 코드 수행
-        os.system("rm -rf "+pluginpath+"/tools/vmconfig/ccvm/*")
-        # 결과값 리턴
-        if success_bool:
-            return createReturn(code=200, val="cloud center reset success")
-        else:
-            return createReturn(code=500, val="cloud center reset fail")
     elif os_type == "ablestack-vm":
         pcs_list = []
 
@@ -164,6 +127,7 @@ def resetCloudCenter(args):
         # cloudinit iso 삭제
         os.system("rm -f /var/lib/libvirt/images/ccvm-cloudinit.iso")
 
+        #
         # 확인후 폴더 밑 내용 다 삭제해도 무관하면 아래 코드 수행
         os.system("rm -rf "+pluginpath+"/tools/vmconfig/ccvm/*")
         # 결과값 리턴
@@ -172,6 +136,7 @@ def resetCloudCenter(args):
                 ablecube = json_data["clusterConfig"]["hosts"][i]["ablecube"]
                 ssh('-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=5',ablecube,'python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update','--depth1', 'bootstrap', '--depth2', 'ccvm', '--value', 'false')
                 ssh('-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=5',ablecube,'python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update','--depth1', 'monitoring', '--depth2', 'wall', '--value', 'false')
+                ssh('-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=5',ablecube,'python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update','--depth1', 'bootstrap', '--depth2', 'gfs_configure', '--value', 'false')
             return createReturn(code=200, val="cloud center reset success")
         else:
             return createReturn(code=500, val="cloud center reset fail")

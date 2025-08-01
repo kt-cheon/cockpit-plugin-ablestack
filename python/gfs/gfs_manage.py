@@ -397,62 +397,22 @@ def create_gfs(disks, vg_name, lv_name, gfs_name, mount_point, cluster_name, num
 
 def create_ccvm_cluster(gfs_name, mount_point, cluster_name, list_ips):
     try:
-        time.sleep(80)
+        gfs_mount_check = os.system("mount | grep -w 'glue-gfs' > /dev/null 2>&1")
 
-        run_command("cp "+ pluginpath + f"/tools/vmconfig/ccvm/ccvm.xml {mount_point}/ccvm.xml")
-        run_command(f"cp /var/lib/libvirt/images/ablestack-template.qcow2 {mount_point}/ccvm.qcow2")
-        run_command(f"qemu-img resize {mount_point}/ccvm.qcow2 +350G")
+        if gfs_mount_check != 0:
+            time.sleep(30)
+            file_check = os.system("ls /mnt/glue-gfs/ccvm.qcow2 > /dev/null 2>&1")
+            run_command("cp "+ pluginpath + f"/tools/vmconfig/ccvm/ccvm.xml {mount_point}/ccvm.xml")
+            if file_check != 0:
+                run_command(f"cp /var/lib/libvirt/images/ablestack-template.qcow2 {mount_point}/ccvm.qcow2")
+                run_command(f"qemu-img resize {mount_point}/ccvm.qcow2 +350G")
+        else:
+            file_check = os.system("ls /mnt/glue-gfs/ccvm.qcow2 > /dev/null 2>&1")
+            run_command("cp "+ pluginpath + f"/tools/vmconfig/ccvm/ccvm.xml {mount_point}/ccvm.xml")
+            if file_check != 0:
+                run_command(f"cp /var/lib/libvirt/images/ablestack-template.qcow2 {mount_point}/ccvm.qcow2")
+                run_command(f"qemu-img resize {mount_point}/ccvm.qcow2 +350G")
 
-        # if len(list_ips) % 2 == 0:
-        #     run_command(f"virsh create {mount_point}/ccvm.xml")
-        #     ip = run_command("grep 'ccvm-mngt' /etc/hosts | awk '{print $1}'").strip()
-
-        #     # Setup qdevice
-        #     qdevice_command = (
-        #         "echo 'hacluster:password' | chpasswd; "
-        #         "systemctl enable --now pcsd; "
-        #         "pcs qdevice setup model net --enable --start; "
-        #         "firewall-cmd --permanent --add-service=high-availability; "
-        #         "firewall-cmd --add-service=high-availability"
-        #     )
-
-        #     retries = 5
-        #     interval = 2
-        #     for _ in range(retries):
-        #         response = subprocess.run(
-        #             ["ping", "-c", "1", "ccvm"],
-        #             stdout=subprocess.PIPE,
-        #             stderr=subprocess.PIPE,
-        #             text=True
-        #         )
-        #         if response.returncode == 0:
-        #             time.sleep(2)
-        #             ssh_client = connect_to_host(ip)
-        #             run_command(qdevice_command, ssh_client)
-        #             ssh_client.close()
-        #             break
-        #         else:
-        #             time.sleep(interval)
-
-        #     pcs_command = (
-        #         f"pcs host auth {ip} -u hacluster -p password; "
-        #         "pcs cluster stop --all; "
-        #         f"pcs quorum device add model net host={ip} algorithm=ffsplit; "
-        #         "pcs cluster start --all;"
-        #     )
-        #     run_command(pcs_command)
-
-        #     ccvm_command = (
-        #         "virsh destroy ccvm; "
-        #         "sed -i 's|/mnt/ccvm.qcow2|/mnt/glue-gfs/ccvm.qcow2|g' /mnt/ccvm.xml; "
-        #         f"cp {mount_point}/ccvm.* /mnt/glue-gfs/; "
-        #         f"rm -rf {mount_point}/ccvm.*;"
-        #     )
-        #     time.sleep(40)
-        #     run_command(ccvm_command)
-
-        #     config_path = f"{mount_point}/glue-gfs/ccvm.xml"
-        # else:
         config_path = f"{mount_point}/ccvm.xml"
 
         pcs_resource_command = (

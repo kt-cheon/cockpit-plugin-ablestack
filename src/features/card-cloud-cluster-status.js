@@ -42,6 +42,38 @@ $('#button-execution-modal-cloud-vm-start').on('click', function(){
 });
 /** cloud vm start 관련 action end */
 
+/** cloud vm delete modal 관려 action start */
+$('#button-cloud-cluster-delete').on('click', function(){
+    $('#div-modal-delete-cloud-vm').show();
+});
+$('#button-close-modal-cloud-vm-delete, #button-cancel-modal-cloud-vm-delete').on('click', function(){
+    $('#div-modal-delete-cloud-vm').hide();
+});
+$('#button-execution-modal-cloud-vm-delete').on('click', function(){
+    $('#dropdown-menu-cloud-cluster-status').toggle();
+    $('#div-modal-delete-cloud-vm').hide();
+    $('#div-modal-spinner-header-txt').text('클라우드센터VM을 파기하고 있습니다.');
+    $('#div-modal-spinner').show();
+    var purge = $('#modal-input-cloud-vm-delete').prop('checked');
+    cmd = ['/usr/bin/python3', pluginpath + '/python/cloud_cluster_status/card-cloud-cluster-status.py', 'pcsDestroy','--purge', purge];
+    console.log(cmd);
+    cockpit.spawn(cmd)
+    .then(function(data){
+        var retVal = JSON.parse(data);
+
+        if(retVal.code == 200){
+            CardCloudClusterStatus();
+            $('#card-action-cloud-vm-change').attr('disabled', false);
+            $('#button-cloud-vm-snap-rollback').attr('disabled', false);
+            createLoggerInfo("cloud vm delete success");
+        }
+        $('#div-modal-spinner').hide();
+    }).catch(function(){
+        createLoggerInfo("cloud vm delete error");
+        console.log('button-execution-modal-cloud-vm-delete spawn error');
+    });
+});
+/** cloud vm delete modal 관려 action end */
 
 /** cloud vm stop modal 관련 action start */
 $('#button-cloud-cluster-stop').on('click', function(){
@@ -733,6 +765,7 @@ function CardCloudClusterStatus(){
 
                     $("#button-cloud-cluster-start").addClass('pf-m-disabled');
                     $("#button-cloud-cluster-stop").removeClass('pf-m-disabled');
+                    $("#button-cloud-cluster-delete").addClass('pf-m-disabled');
                     $("#button-cloud-cluster-cleanup").removeClass('pf-m-disabled');
                     $("#button-cloud-cluster-migration").removeClass('pf-m-disabled');
                     $("#button-cloud-cluster-connect").removeClass('pf-m-disabled');
@@ -754,6 +787,7 @@ function CardCloudClusterStatus(){
 
                     $("#button-cloud-cluster-start").removeClass('pf-m-disabled');
                     $("#button-cloud-cluster-stop").addClass('pf-m-disabled');
+                    $("#button-cloud-cluster-delete").removeClass('pf-m-disabled');
                     $("#button-cloud-cluster-cleanup").removeClass('pf-m-disabled');
                     $("#button-cloud-cluster-migration").addClass('pf-m-disabled');
                     $("#button-cloud-cluster-connect").addClass('pf-m-disabled');
