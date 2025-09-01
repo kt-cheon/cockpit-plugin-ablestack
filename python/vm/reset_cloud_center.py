@@ -10,6 +10,7 @@ Copyright (c) 2021 ABLECLOUD Co. Ltd
 import argparse
 import logging
 import json
+import subprocess
 import sys
 import os
 
@@ -137,9 +138,46 @@ def resetCloudCenter(args):
                 ssh('-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=5',ablecube,'python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update','--depth1', 'bootstrap', '--depth2', 'ccvm', '--value', 'false')
                 ssh('-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=5',ablecube,'python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update','--depth1', 'monitoring', '--depth2', 'wall', '--value', 'false')
                 ssh('-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=5',ablecube,'python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update','--depth1', 'bootstrap', '--depth2', 'gfs_configure', '--value', 'false')
-            return createReturn(code=200, val="cloud center reset success")
+            return createReturn(code=200, val="cloud center and gfs disk reset success")
         else:
-            return createReturn(code=500, val="cloud center reset fail")
+            return createReturn(code=500, val="cloud center and gfs disk reset fail")
+    elif os_type == "ablestack-standalone":
+        # virsh 초기화
+        os.system("virsh destroy ccvm > /dev/null 2>&1")
+        os.system("virsh undefine ccvm --keep-nvram> /dev/null 2>&1")
+
+        # 작업폴더 생성
+        os.system("mkdir -p "+pluginpath+"/tools/vmconfig/ccvm")
+
+        # cloudinit iso 삭제
+        os.system("rm -f /var/lib/libvirt/images/ccvm-cloudinit.iso")
+
+        #
+        # 확인후 폴더 밑 내용 다 삭제해도 무관하면 아래 코드 수행
+        os.system("rm -rf "+pluginpath+"/tools/vmconfig/ccvm/*")
+
+        result = json.loads(python3(pluginpath + '/python/local/local_manage.py', '--reset'))
+        if result['code'] not in [200,400]:
+            success_bool = False
+
+        if success_bool:
+            subprocess.run(
+            [
+                'python3',
+                f'{pluginpath}/python/ablestack_json/ablestackJson.py',
+                'update',
+                '--depth1', 'bootstrap',
+                '--depth2', 'ccvm',
+                '--value', 'false'
+            ],
+            check=True,
+            stdout=subprocess.DEVNULL,  # 표준 출력 숨기기
+            stderr=subprocess.DEVNULL   # 표준 오류 숨기기
+            )
+
+            return createReturn(code=200, val="cloud center and local disk reset success")
+        else:
+            return createReturn(code=500, val="cloud center and local disk reset fail")
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     # parser 생성

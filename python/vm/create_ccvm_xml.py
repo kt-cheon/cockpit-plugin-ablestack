@@ -142,12 +142,21 @@ def createCcvmXml(args):
                         crd_txt += "      </auth>\n"
                         crd_txt += "      <target dev='vda' bus='virtio'/>\n"
                         crd_txt += "    </disk>"
-                    else:
+                    elif os_type == "ablestack-vm":
                         crd_txt = "     <disk type='file' device='disk'>\n"
                         crd_txt += "      <driver name='qemu' type='qcow2'/>\n"
                         crd_txt += "      <source file='"+ args.gfs_mount_point + "/ccvm.qcow2' index='1'/>\n"
                         crd_txt += "      <target dev='vda' bus='virtio'/>\n"
                         crd_txt += "      <address type='pci' domain='0x0000' bus='0x04' slot='0x00' function='0x0'/>\n"
+                        crd_txt += "    </disk>"
+                    else:
+                        crd_txt = "    <disk type='file' device='disk'>\n"
+                        crd_txt += "      <driver name='qemu' type='qcow2'/>\n"
+                        if os_type == "ablestack-standalone":
+                            crd_txt += "      <source file='/var/lib/libvirt/images/ccvm.qcow2'/>\n"
+                        else:
+                            crd_txt += "      <source file='/var/lib/libvirt/images/ablestack-template.qcow2'/>\n"
+                        crd_txt += "      <target dev='vda' bus='virtio'/>\n"
                         crd_txt += "    </disk>"
 
                     line = line.replace('<!--ccvm_disk-->',crd_txt)

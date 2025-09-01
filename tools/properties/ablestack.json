@@ -3,7 +3,8 @@
         "scvm": "false",
         "ccvm": "false",
         "pfmp": "false",
-        "gfs_configure": "false"
+        "gfs_configure": "false",
+        "local_configure": "false"
     },
     "monitoring": {
         "wall": "false"

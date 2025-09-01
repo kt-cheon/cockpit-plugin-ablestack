@@ -114,7 +114,7 @@ $('#nav-button-cluster-config-ip-info').on('click', function () {
     $('#button-next-step-modal-wizard-cluster-config-prepare').attr('disabled', false);
     $('#button-before-step-modal-wizard-cluster-config-prepare').attr('disabled', false);
 
-    screenConversion();
+    clusterconfigscreenConversion();
 
     var os_type = $('#selected-cluster-type').val();
 
@@ -139,20 +139,7 @@ $('#nav-button-cluster-config-time-server').on('click', function () {
     if($('input[name=radio-timeserver]:checked').val() == "internal") {
         inputPnIntoTimeServer(os_type);
     }
-    // 구성할 호스트 수가 3대 미만이면 로컬 시간 서버 비활성화
-    // if($('#form-input-cluster-config-host-number').val() < 3) {
-    //     $("input[name='radio-timeserver'][value='external']").prop("checked", true);
-    //     $('#form-radio-timeserver-int').attr('disabled', true);
-    //     $('#span-timeserver2-required').hide();
-    //     $('#span-timeserver3-required').hide();
-    //     $('#form-input-cluster-config-time-server-ip-2').removeAttr('required');
-    //     // 현재 host radio 버튼 숨김
-    //     $('#div-timeserver-host-num').hide();
-    //     // radio 버튼 클릭 시 ip 정보 초기화
-    //     $('input[name=form-input-cluster-config-timeserver]').val("");
-    // }else {
-    //     $('#form-radio-timeserver-int').attr('disabled', false);
-    // }
+
     cur_step_wizard_cluster_config_prepare = "5";
 });
 
@@ -184,21 +171,7 @@ $('#nav-button-cluster-config-review').on('click', function () {
 
     var os_type = $('#selected-cluster-type').val();
     putHostsValueIntoTextarea(host_file_type, option,os_type);
-    // time server 내용을 설정 확인에 반영
-    // 구성할 호스트 수가 3대 미만이면 로컬 시간 서버 비활성화
-    // if($('#form-input-cluster-config-host-number').val() < 3) {
-    //     $("input[name='radio-timeserver'][value='external']").prop("checked", true);
-    //     $('#form-radio-timeserver-int').attr('disabled', true);
-    //     $('#span-timeserver2-required').hide();
-    //     $('#span-timeserver3-required').hide();
-    //     $('#form-input-cluster-config-time-server-ip-2').removeAttr('required');
-    //     // 현재 host radio 버튼 숨김
-    //     $('#div-timeserver-host-num').hide();
-    //     // radio 버튼 클릭 시 ip 정보 초기화
-    //     $('input[name=form-input-cluster-config-timeserver]').val("");
-    // }else {
-    //     $('#form-radio-timeserver-int').attr('disabled', false);
-    // }
+
     let timeserver_type = $('input[name=radio-timeserver]:checked').val();
     putTimeServerValueIntoTextarea(timeserver_type);
 });
@@ -258,7 +231,7 @@ $('#button-next-step-modal-wizard-cluster-config-prepare').on('click', function 
 
         var os_type = $('#selected-cluster-type').val();
 
-        screenConversion();
+        clusterconfigscreenConversion();
         clusterConfigProfile(os_type,"reset");
         clusterConfigTableChange("form-input-cluster-config-host-number", "form-table-tbody-cluster-config-new-host-profile",os_type);
         $('#div-modal-wizard-cluster-config-ip-info').show();
@@ -409,7 +382,7 @@ $('#button-next-step-modal-wizard-cluster-config-prepare').on('click', function 
 
             let host_names = [];
             // pcs 클러스터 구성할 호스트 1~3번 정보
-            if (os_type == "ablestack-vm"){
+            if (os_type == "ablestack-vm" || os_type == "ablestack-standalone"){
                 saveTableData(host_file_type);
 
                 for (let i = 0; i < HostProfileData.length; i++) {
@@ -741,7 +714,7 @@ $('#form-radio-hosts-new').on('click', function () {
     $('#div-form-hosts-table').hide();
     $('#div-form-hosts-input-number').show();
     $('#div-form-hosts-input-current-number').show();
-    screenConversion();
+    clusterconfigscreenConversion();
     // "기존 파일 사용"에서 "신규 생성"을 클릭하면 초기화 된다.
     $("#form-table-tbody-cluster-config-new-host-profile").empty();
     var os_type = $('#selected-cluster-type').val();
@@ -876,17 +849,7 @@ $('#form-input-cluster-config-host-number').on('change', function () {
     }
 });
 
-// 로컬 시간서버를 외부 시간서버로 선택하면 시간서버 2, 3은 선택 입력으로 전환한다.
-// $('#form-radio-timeserver-ext').on('click', function () {
-//     $('#span-timeserver2-required').hide();
-//     $('#span-timeserver3-required').hide();
-//     $('#form-input-cluster-config-time-server-ip-2').removeAttr('required');
-//     // 현재 host radio 버튼 숨김
-//     $('#div-timeserver-host-num').hide();
-//     $('#form-input-cluster-config-int-to-ext').hide();
-//     // radio 버튼 클릭 시 ip 정보 초기화
-//     $('input[name=form-input-cluster-config-timeserver]').val("");
-// });
+
 
 // 외부 시간서버를 로컬 시간서버로 선택하면 시간서버 2, 3은 필수 입력으로 전환한다.
 $('#form-radio-timeserver-int').on('click', function () {
@@ -1195,7 +1158,7 @@ async function resetClusterConfigWizardWithData() {
     $('#form-table-tbody-cluster-config-new-host-profile tr').remove();
     $('#form-table-tbody-cluster-config-existing-host-profile tr').remove();
     var os_type = $('#selected-cluster-type').val();
-    screenConversion();
+    clusterconfigscreenConversion();
     clusterConfigTableChange("form-input-cluster-config-host-number", "form-table-tbody-cluster-config-new-host-profile",os_type);
     $('#form-input-cluster-config-host-number-plus').removeAttr('disabled');
     $('#form-input-cluster-config-host-number-minus').removeAttr('disabled');
@@ -1211,7 +1174,7 @@ async function resetClusterConfigWizardWithData() {
     clusterConfigProfile(os_type,"reset");
 
     // 시간 서버
-    // $('#form-radio-timeserver-ext').prop('checked', true);
+
     $('#form-radio-timeserver-int').prop('checked', true);
     $('input[name=form-input-cluster-config-timeserver]').val("");
     // $('#div-timeserver-host-num').hide();
@@ -1525,7 +1488,7 @@ function inputPnIntoTimeServer(os_type) {
     }else if ($('#'+tbody_tr).length == 2){
         $('#form-radio-timeserver-host-num-3').prop('disabled', true);
     }
-    if (os_type == "ablestack-vm"){
+    if (os_type == "ablestack-vm" || os_type == "ablestack-standalone"){
         $('#'+ tbody_tr).each(function(index){
             idx_num = $(this).find('td').eq(0).text();
             hostName = $(this).find('td').eq(1).text();
@@ -1744,7 +1707,7 @@ function validateClusterConfigPrepare(timeserver_type, os_type) {
     } else if(mngt_nic_dns != "" && !checkIp(mngt_nic_dns)){
         alert("관리 NIC DNS 형식을 확인해주세요.");
         validate_check = false;
-    } else if(os_type != "ablestack-vm"){
+    } else if(os_type != "ablestack-vm" && os_type != "ablestack-standalone"){
         if (pcs_host1 == "") {
             alert("PCS 호스트1 PN IP를 입력해주세요.");
             validate_check = false;
@@ -1791,20 +1754,12 @@ function validateClusterConfigPrepare(timeserver_type, os_type) {
         }
     }else if (checkDuplicateCcvmIp(ccvm_mngt_ip, host_file_type, option, os_type)) { // config 유효성 검사
         validate_check = false;
-    } else if (timeserver_type == "external") {
-        if (timeserver_ip_check_external_1 == false) {
-            alert("시간 서버 1번 IP정보를 확인해 주세요.");
-            validate_check = false;
-        } else if (timeserver_ip_check_external_2 == false && $('#div-cluster-config-confirm-time-server-2').text() != "") {
-            alert("시간 서버 2번 IP정보를 확인해 주세요.");
-            validate_check = false;
-        }
     } else if (timeserver_type == "internal") {
         if (timeserver_ip_check_internal_1 == false) {
-            alert("시간 서버 1번 정보를 확인해 주세요.");
+            alert("시간 서버 1번 IP 정보를 확인해 주세요.");
             validate_check = false;
-        } else if (timeserver_ip_check_internal_2 == false) {
-            alert("시간 서버 2번 정보를 확인해 주세요.");
+        } else if (timeserver_ip_check_internal_2 == false && $('#form-input-cluster-config-time-server-ip-2').val() != "") {
+            alert("시간 서버 2번 IP 정보를 확인해 주세요.");
             validate_check = false;
         }
     }
@@ -1852,7 +1807,7 @@ function validateClusterConfigPrepare(timeserver_type, os_type) {
 }
 
 /**
- * Meathod Name : screenConversion
+ * Meathod Name : clusterconfigscreenConversion
  * Date Created : 2024.11.11
  * Writer  : 정민철
  * Description : 클러스터 종류별 스크린 변화
@@ -1860,13 +1815,15 @@ function validateClusterConfigPrepare(timeserver_type, os_type) {
  * Return  : 없음
  * History  : 2024.11.11 최초 작성
  */
-function screenConversion(){
+function clusterconfigscreenConversion(){
     if ($('#selected-cluster-type').val() == "ablestack-vm"){
         $('#form-input-cluster-config-host-number').val(1);
-        $('#div-form-hosts-ablestack-vm').show();
         $('#div-form-hosts').hide();
         $('[name="pcs-cluster"]').hide();
         $('[name="pcs-host-pn-ip-all"]').hide();
+        $('#form-radio-cluster-host-add').prop('disabled', false).closest('.pf-c-radio').removeClass('pf-m-disabled');
+        $('#form-input-cluster-config-host-number-plus').removeClass('pf-m-disabled');
+        $('#form-input-cluster-config-host-number-minus').removeClass('pf-m-disabled');
         if($('[name="radio-cluster-host"').val() == "add"){
             $('[name="cluster-config-ccvm-info"]').hide();
             $('[name="cluster-config-ipmi-info"]').show();
@@ -1876,12 +1833,22 @@ function screenConversion(){
             $('[name="cluster-config-ccvm-info"]').show();
             $('[name="cluster-config-ipmi-info"]').hide();
         }
+    }else if($('#selected-cluster-type').val() == "ablestack-standalone"){
+        $('#form-input-cluster-config-host-number').val(1);
+        $('#div-form-hosts').hide();
+        $('[name="pcs-cluster"]').hide();
+        $('[name="pcs-host-pn-ip-all"]').hide();
+        $('#form-radio-cluster-host-add').prop('disabled', true).closest('.pf-c-radio').addClass('pf-m-disabled');
+        $('#form-input-cluster-config-host-number-plus').addClass('pf-m-disabled');
+        $('#form-input-cluster-config-host-number-minus').addClass('pf-m-disabled');
     }else{
         $('[name="cluster-config-ipmi-info"]').hide();
         $('#form-input-cluster-config-host-number').val(3);
-        $('#div-form-hosts-ablestack-vm').hide();
         $('#div-form-hosts').show();
         $('[name="pcs-cluster"]').show();
+        $('#form-radio-cluster-host-add').prop('disabled', false).closest('.pf-c-radio').removeClass('pf-m-disabled');
+        $('#form-input-cluster-config-host-number-plus').removeClass('pf-m-disabled');
+        $('#form-input-cluster-config-host-number-minus').removeClass('pf-m-disabled');
     }
 }
 

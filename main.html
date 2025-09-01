@@ -27,6 +27,8 @@
                     <button style="display:none" class="pf-c-button pf-m-link pf-m-inline" type="button"
                         id="button-link-gfs-storage-configure">GFS 스토리지 구성</button>
                     <button style="display:none" class="pf-c-button pf-m-link pf-m-inline" type="button"
+                        id="button-link-local-storage-configure">로컬 스토리지 구성</button>
+                    <button style="display:none" class="pf-c-button pf-m-link pf-m-inline" type="button"
                         id="button-open-modal-wizard-pfmp-vm">파워플렉스 관리 플랫폼 VM 배포</button>
                     <button style="display:none" class="pf-c-button pf-m-link pf-m-inline" type="button"
                         id="button-link-cloud-center">클라우드센터 연결</button>
@@ -45,7 +47,7 @@
         <!-- 상태를 보여주기 위한 레이아웃 시작 -->
         <section class="pf-c-page__main-section">
             <div class="pf-l-grid pf-m-gutter">
-                <div class="pf-l-grid__item pf-m-12-col">
+                <div class="pf-l-grid__item pf-m-12-col" id="div-grid-main">
                     <div class="pf-l-grid pf-m-gutter">
                         <div class="pf-l-grid__item pf-m-6-col" id="div-card-gfs-cluster-status" style="display: none;">
                             <!-- GFS 리소스 상태 카드 영역 시작-->
@@ -342,8 +344,7 @@
                             </div>
                             <!-- 스토리지 클러스터 상태 카드 영역 끝 -->
                         </div>
-
-                        <div class="pf-l-grid__item pf-m-6-col">
+                        <div class="pf-l-grid__item pf-m-6-col" id="div-card-cloud-cluster-status">
                             <!-- 클라우드센터 클러스터 상태 카드 영역 시작-->
                             <div class="pf-c-card pf-m-hoverable pf-m-compact" id="card-cloud-cluster-status">
                                 <div class="pf-c-card__header">
@@ -761,54 +762,31 @@
                             </div>
                             <!-- GFS 디스크 상태 카드 영역 끝 -->
                         </div>
-                        <div class="pf-l-grid__item pf-m-6-col">
-                            <!-- 클라우드센터VM 상태 카드 영역 시작-->
-                            <div class="pf-c-card pf-m-hoverable pf-m-compact" id="card-cloud-vm-status">
+                        <!-- 로컬 디스크 상태 카드 영역 시작-->
+                        <div class="pf-l-grid__item pf-m-12-col" id="div-card-local-disk-status" style="display:none">
+                            <div class="pf-c-card pf-m-hoverable pf-m-compact" id="card-local-disk-status">
                                 <div class="pf-c-card__header">
                                     <div class="pf-c-card__header-main">
                                         <i class="pf-icon pf-icon-virtual-machine"
                                             style="font-size: var(--pf-global--icon--FontSize--lg);padding-right: 15px"
                                             aria-hidden="true"></i>
                                     </div>
-                                    <div class="pf-c-card__title" id="card-cloud-vm-title">클라우드센터 가상머신 상태</div>
+                                    <div class="pf-c-card__title" id="card-local-disk-status-title">로컬 디스크 상태
+                                    </div>
                                     <div class="pf-c-card__actions">
                                         <div class="pf-c-dropdown">
                                             <button class="pf-c-dropdown__toggle pf-m-plain"
-                                                id="card-action-cloud-vm-status" aria-expanded="false" type="button"
+                                                id="card-action-local-disk-status" aria-expanded="false" type="button"
                                                 aria-label="Actions">
                                                 <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
                                             </button>
                                             <ul class="pf-c-dropdown__menu pf-m-align-right"
-                                                aria-labelledby="card-action-cloud-vm-status"
-                                                id="dropdown-menu-cloud-vm-status">
-                                                <li>
-                                                    <button class="pf-c-dropdown__menu-item pf-m-disabled"
-                                                        id="card-action-cloud-vm-change" type="button">클라우드센터VM 자원변경</button>
-                                                </li>
-                                                <li>
-                                                    <button class="pf-c-dropdown__menu-item pf-m-disabled"
-                                                        id="button-mold-service-control" type="button">Mold 서비스 제어</button>
-                                                </li>
-                                                <li>
-                                                    <button class="pf-c-dropdown__menu-item pf-m-disabled"
-                                                        id="button-mold-db-control" type="button">Mold DB 제어</button>
-                                                </li>
-                                                <li>
-                                                    <button class="pf-c-dropdown__menu-item pf-m-disabled"
-                                                        id="button-mold-secondary-size-expansion" type="button">Mold 세컨더리 용량 추가</button>
-                                                </li>
-                                                <li>
-                                                    <button class="pf-c-dropdown__menu-item pf-m-disabled"
-                                                        id="button-cloud-vm-snap-backup" type="button">클라우드센터VM 스냅샷 백업</button>
-                                                </li>
-                                                <li>
-                                                    <button class="pf-c-dropdown__menu-item pf-m-disabled"
-                                                        id="button-cloud-vm-snap-rollback" type="button">클라우드센터VM 스냅샷 복구</button>
-                                                </li>
-                                                <li>
-                                                    <button class="pf-c-dropdown__menu-item"
-                                                        id="card-action-cloud-vm-db-dump" type="button">클라우드센터VM DB 백업</button>
-                                                </li>
+                                                aria-labelledby="card-action-local-disk-status"
+                                                id="dropdown-menu-local-disk-status">
+                                                <!-- <li>
+                                                    <button class="pf-c-dropdown__menu-item pf-m-disabled" type="button"
+                                                        id="menu-item-set-local-disk-add">로컬 디스크 추가</button>
+                                                </li> -->
                                             </ul>
                                         </div>
                                     </div>
@@ -820,19 +798,17 @@
                                             style="--pf-c-description-list--RowGap: 10px;">
                                             <div class="pf-c-description-list__group">
                                                 <dt class="pf-c-description-list__term">
-                                                    <span class="pf-c-description-list__text">가상머신 상태</span>
+                                                    <span class="pf-c-description-list__text">디스크 마운트 상태</span>
                                                 </dt>
-                                                <dd class="pf-c-description-list__description"
-                                                    id="description-cloud-vm-status" style="overflow: auto;">
-                                                    <div class="pf-c-description-list__text">
-                                                        <span class="pf-c-label pf-m-red" id="span-cloud-vm-status">
-                                                            <span class="pf-c-label__content"
-                                                                id="span-cloud-vm-status-content">
+                                                <dd class="pf-c-description-list__description">
+                                                    <div class="pf-c-description-list__text" style="overflow: auto;display:flex; align-items:center;">
+                                                        <span class="pf-c-label pf-m-red" id="local-disk-css" style="margin-right: 10px">
+                                                            <span class="pf-c-label__content">
                                                                 <span class="pf-c-label__icon">
-                                                                    <i id="ccvm_status_icon"
-                                                                        class="fas fa-fw fa-exclamation-triangle"
-                                                                        aria-hidden="true"></i>
-                                                                </span>Health Err
+                                                                    <i class="fas fa-fw fa-exclamation-triangle"
+                                                                        aria-hidden="true" id="local-disk-icon"></i>
+                                                                </span>
+                                                                <div id="local-disk-status">Health Err</div>
                                                             </span>
                                                         </span>
                                                     </div>
@@ -840,110 +816,34 @@
                                             </div>
                                             <div class="pf-c-description-list__group">
                                                 <dt class="pf-c-description-list__term">
-                                                    <span class="pf-c-description-list__text">Mold 서비스 상태</span>
+                                                    <span class="pf-c-description-list__text">마운트 경로</span>
                                                 </dt>
                                                 <dd class="pf-c-description-list__description">
-                                                    <div id="div-mold-service-status"
-                                                        class="pf-c-description-list__text">N/A</div>
+                                                    <div class="pf-c-description-list__text" id="page-local-disk-mount-info">N/A</div>
                                                 </dd>
                                             </div>
                                             <div class="pf-c-description-list__group">
                                                 <dt class="pf-c-description-list__term">
-                                                    <span class="pf-c-description-list__text">Mold DB 상태</span>
+                                                    <span class="pf-c-description-list__text">물리 볼륨</span>
                                                 </dt>
                                                 <dd class="pf-c-description-list__description">
-                                                    <div id="div-mold-db-status" class="pf-c-description-list__text">N/A
-                                                    </div>
+                                                    <div class="pf-c-description-list__text" id="page-local-disk-physical-volume">N/A</div>
                                                 </dd>
                                             </div>
                                             <div class="pf-c-description-list__group">
                                                 <dt class="pf-c-description-list__term">
-                                                    <span class="pf-c-description-list__text">CPU</span>
+                                                    <span class="pf-c-description-list__text">볼륨 그룹</span>
                                                 </dt>
                                                 <dd class="pf-c-description-list__description">
-                                                    <div class="pf-c-description-list__text" id="div-cloud-vm-cpu-text">
-                                                        N/A vCore</div>
+                                                    <div class="pf-c-description-list__text" id="page-local-disk-volume-group">N/A</div>
                                                 </dd>
                                             </div>
                                             <div class="pf-c-description-list__group">
                                                 <dt class="pf-c-description-list__term">
-                                                    <span class="pf-c-description-list__text">Memory</span>
+                                                    <span class="pf-c-description-list__text">디스크 크기</span>
                                                 </dt>
                                                 <dd class="pf-c-description-list__description">
-                                                    <div class="pf-c-description-list__text"
-                                                        id="div-cloud-vm-memory-text">N/A GiB</div>
-                                                </dd>
-                                            </div>
-                                            <div class="pf-c-description-list__group">
-                                                <dt class="pf-c-description-list__term">
-                                                    <span class="pf-c-description-list__text">ROOT Disk 크기</span>
-                                                </dt>
-                                                <dd class="pf-c-description-list__description">
-                                                    <div class="pf-c-description-list__text"
-                                                        id="div-cloud-vm-disk-text">N/A GiB</div>
-                                                </dd>
-                                            </div>
-                                            <div class="pf-c-description-list__group">
-                                                <dt class="pf-c-description-list__term">
-                                                    <span class="pf-c-description-list__text">세컨더리 Disk 크기</span>
-                                                </dt>
-                                                <dd class="pf-c-description-list__description">
-                                                    <div class="pf-c-description-list__text"
-                                                        id="div-cloud-vm-secondary-disk-text">N/A GiB</div>
-                                                </dd>
-                                            </div>
-                                            <div class="pf-c-description-list__group">
-                                                <dt class="pf-c-description-list__term">
-                                                    <span class="pf-c-description-list__text">관리 NIC</span>
-                                                </dt>
-                                                <dd class="pf-c-description-list__description">
-                                                    <div class="pf-c-description-list__text"
-                                                        id="div-cloud-vm-nic-type-text">NIC Type : N/A (Parent : N/A)
-                                                    </div>
-                                                </dd>
-                                            </div>
-                                            <div class="pf-c-description-list__group">
-                                                <dt class="pf-c-description-list__term">
-                                                    <span class="pf-c-description-list__text">&nbsp;</span>
-                                                </dt>
-                                                <dd class="pf-c-description-list__description">
-                                                    <div class="pf-c-description-list__text"
-                                                        id="div-cloud-vm-nic-ip-text">IP : N/A</div>
-                                                </dd>
-                                            </div>
-                                            <div class="pf-c-description-list__group">
-                                                <dt class="pf-c-description-list__term">
-                                                    <span class="pf-c-description-list__text">&nbsp;</span>
-                                                </dt>
-                                                <dd class="pf-c-description-list__description">
-                                                    <div class="pf-c-description-list__text"
-                                                        id="div-cloud-vm-nic-prefix-text">PREFIX : N/A</div>
-                                                </dd>
-                                            </div>
-                                            <div class="pf-c-description-list__group">
-                                                <dt class="pf-c-description-list__term">
-                                                    <span class="pf-c-description-list__text">&nbsp;</span>
-                                                </dt>
-                                                <dd class="pf-c-description-list__description">
-                                                    <div class="pf-c-description-list__text"
-                                                        id="div-cloud-vm-nic-gw-text">GW : N/A</div>
-                                                </dd>
-                                            </div>
-                                            <div class="pf-c-description-list__group">
-                                                <dt class="pf-c-description-list__term">
-                                                    <span class="pf-c-description-list__text">&nbsp;</span>
-                                                </dt>
-                                                <dd class="pf-c-description-list__description">
-                                                    <div class="pf-c-description-list__text"
-                                                        id="div-cloud-vm-nic-dns-text">DNS : N/A</div>
-                                                </dd>
-                                            </div>
-                                            <div class="pf-c-description-list__group">
-                                                <dt class="pf-c-description-list__term">
-                                                    <span class="pf-c-description-list__text">&nbsp;</span>
-                                                </dt>
-                                                <dd class="pf-c-description-list__description">
-                                                    <div class="pf-c-description-list__text">&nbsp;</div>
+                                                    <div class="pf-c-description-list__text" id="page-local-disk-size">N/A</div>
                                                 </dd>
                                             </div>
                                             <div class="pf-c-description-list__group">
@@ -958,13 +858,14 @@
                                     </section>
                                 </div>
                                 <div class="pf-c-divider" role="separator"></div>
-                                <div id="ccvm-low-info" class="pf-c-card__footer"
-                                    style="color: var(--pf-global--danger-color--100);">클라우드센터 가상머신이 배포되지 않았습니다.</div>
+                                <div class="pf-c-card__footer" style="color: var(--pf-global--danger-color--100);"
+                                    id="local-disk-low-info">로컬 디스크가 생성되지 않았습니다.</div>
                             </div>
-                            <!-- 클라우드센터VM 상태 카드 영역 끝 -->
                         </div>
+                        <div class="pf-l-grid__item pf-m-6-col" id="div-card-cloud-vm-status-1" style="display: none;"></div>
                     </div>
                 </div>
+                <div class="pf-l-grid__item pf-m-6-col" id="div-card-cloud-vm-status-2" style="display: none;"></div>
             </div>
         </section>
     </main>
@@ -981,6 +882,9 @@
 
 <!-- GFS 스토리지 구성 마법사 : ./src/features/gfs-storage-configure-wizard.html을 내용으로 load -->
 <div class="pf-c-backdrop" id="div-modal-wizard-gfs-storage-configure"></div>
+
+<!-- 로컬 스토리지 구성 마법사 : ./src/features/gfs-storage-configure-wizard.html을 내용으로 load -->
+<div class="pf-c-backdrop" id="div-modal-wizard-local-storage-configure"></div>
 
 <!-- 클라우드센터VM 배포 마법사 : ./src/features/cloud-vm-wizard.html을 내용으로 load -->
 <div class="pf-c-backdrop" id="div-modal-wizard-cloud-vm"></div>
@@ -1029,6 +933,15 @@
             </header>
             <div class="pf-c-modal-box__body">
                 <div>클라우드센터VM을 정지하시겠습니까?</div>
+            </div>
+            <div id="modal-div-force-quit" class="pf-c-modal-box__body pf-l-flex pf-m-align-items-center" style="display: none;">
+                <p>강제 종료</p>
+                <label class="pf-c-switch">
+                    <input id="modal-input-force-quit" class="pf-c-switch__input" type="checkbox" aria-label="강제 종료 체크">
+                    <span class="pf-c-switch__toggle">
+                        <div id="modal-switch-force-quit" class="pf-c-switch__toggle-icon" aria-hidden="true"></div>
+                    </span>
+                </label>
             </div>
             <footer class="pf-c-modal-box__footer">
                 <button id="button-execution-modal-cloud-vm-stop" aria-disabled="false" class="pf-c-button pf-m-primary"
@@ -1420,7 +1333,7 @@
                         </div>
                     </section>
                 </form>
-                <label class="pf-c-check pf-c-select__menu-item" style="margin-top: 10px;">
+                <label class="pf-c-check pf-c-select__menu-item" style="margin-top: 10px;" id="label-checkbox-mold-secondary-size-expansion">
                     <input class="pf-c-check__input" type="checkbox" id="input-checkbox-mold-secondary-size-expansion" value="resize"/>
                     <span class="pf-c-check__label" style="color: #c9190b;"><i class="fas fa-fw fa-exclamation-circle" aria-hidden="true"></i>용량 추가 작업시 클라우드센터 가상머신 스냅샷이 모두 삭제되고,<br/>&nbsp;&emsp;클라우드센터 가상머신을 재시작합니다. 그래도 진행하시겠습니까?</span>
                 </label>
@@ -2210,6 +2123,7 @@
 <!-- 클라우드센터VM 용량 변경에 관한 modal : ./src/features/cloud-vm-change-alert.html을 내용으로 load -->
 <div class="pf-c-backdrop" id="div-change-alert-cloud-vm"></div>
 <!-- 해당 페이지에 필요한 javascript 파일 추가 영역 시작 -->
+<!-- <script src="./src/features/card-cloud-center-status.js"></script> -->
 <script src="./src/features/cloud-center-virtual-machine.js"></script>
 <script src="./src/features/main.js"></script>
 <script src="./src/features/card-cloud-cluster-status.js"></script>

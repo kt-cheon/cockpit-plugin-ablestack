@@ -970,9 +970,11 @@ function deployCloudCenterVM() {
 
     let ret_json_string = tableToClusterConfigJsonString(host_file_type, option_ccvm, os_type);
 
+    var local_host = "127.0.0.1       localhost localhost.localdomain localhost4 localhost4.localdomain4\n::1     localhost localhost.localdomain localhost6 localhost6.localdomain6\n"
+
     if (os_type == "ablestack-hci"){
     //=========== 1. 클러스터 구성 host 네트워크 연결 테스트 ===========
-    setProgressStep("span-ccvm-progress-step1",1);
+    setProgressStep("span-ccvm-progress-step1",1,os_type);
     var console_log = true;
     createLoggerInfo("deployCloudCenterVM start");
     var host_ping_test_and_cluster_config_cmd = ['python3', pluginpath + '/python/cluster/cluster_config.py', 'insertScvmHost', '-t', os_type, '-js', ret_json_string, '-cmi', mgmt_ip, '-pcl', all_host_name];
@@ -984,8 +986,8 @@ function deployCloudCenterVM() {
             if(ping_test_result.code=="200") { //정상
                 //=========== 2. 클러스터 초기화 작업 ===========
                 // 설정 초기화 ( 필요시 python까지 종료 )
-                setProgressStep("span-ccvm-progress-step1",2);
-                setProgressStep("span-ccvm-progress-step2",1);
+                setProgressStep("span-ccvm-progress-step1",2,os_type);
+                setProgressStep("span-ccvm-progress-step2",1,os_type);
                 var reset_cloud_center_cmd = ['python3', pluginpath + '/python/vm/reset_cloud_center.py'];
                 if(console_log){console.log(reset_cloud_center_cmd);}
                 cockpit.spawn(reset_cloud_center_cmd)
@@ -995,8 +997,8 @@ function deployCloudCenterVM() {
                         if(reset_cloud_center_result.code=="200") { //정상
                             //=========== 3. cloudinit iso 파일 생성 ===========
                             // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/ccvm/cloudinit 경로에 hosts, ssh key 파일 저장
-                            setProgressStep("span-ccvm-progress-step2",2);
-                            setProgressStep("span-ccvm-progress-step3",1);
+                            setProgressStep("span-ccvm-progress-step2",2,os_type);
+                            setProgressStep("span-ccvm-progress-step3",1,os_type);
                             var host_name = $('#form-input-cloud-vm-hostname').val();
                             var mgmt_ip = $('#form-input-cloud-vm-mngt-nic-ip').val().split("/")[0];
                             var mgmt_prefix = $('#form-input-cloud-vm-mngt-nic-ip').val().split("/")[1];
@@ -1004,7 +1006,7 @@ function deployCloudCenterVM() {
                             var dns = $('#form-input-cloud-vm-dns').val();
 
                             create_ccvm_cloudinit_cmd = ['python3', pluginpath + '/python/vm/create_ccvm_cloudinit.py'
-                                                    ,"-f1",pluginpath+"/tools/vmconfig/ccvm/hosts","-t1", $("#div-textarea-cluster-config-confirm-hosts-file-ccvm").val() // hosts 파일
+                                                    ,"-f1",pluginpath+"/tools/vmconfig/ccvm/hosts","-t1", local_host+$("#div-textarea-cluster-config-confirm-hosts-file-ccvm").val() // hosts 파일
                                                     ,"-f2",pluginpath+"/tools/vmconfig/ccvm/id_rsa","-t2", $("#form-textarea-cloud-vm-ssh-private-key-file").val() // ssh 개인 key 파일
                                                     ,"-f3",pluginpath+"/tools/vmconfig/ccvm/id_rsa.pub","-t3", $("#form-textarea-cloud-vm-ssh-public-key-file").val() // ssh 공개 key 파일
                                                     ,'--hostname',host_name
@@ -1036,8 +1038,8 @@ function deployCloudCenterVM() {
                                     var create_ccvm_cloudinit_result = JSON.parse(data);
                                     if(create_ccvm_cloudinit_result.code=="200"){
                                         //=========== 4. 클라우드센터 가상머신 구성 ===========
-                                        setProgressStep("span-ccvm-progress-step3",2);
-                                        setProgressStep("span-ccvm-progress-step4",1);
+                                        setProgressStep("span-ccvm-progress-step3",2,os_type);
+                                        setProgressStep("span-ccvm-progress-step4",1,os_type);
                                         xml_create_cmd.push("-hns",all_host_name);
                                         if(console_log){console.log(xml_create_cmd);}
                                         cockpit.spawn(xml_create_cmd)
@@ -1047,8 +1049,8 @@ function deployCloudCenterVM() {
                                                 if(create_ccvm_xml_result.code=="200"){
                                                     //=========== 5. 클러스터 구성 및 클라우드센터 가상머신 배포 ===========
                                                     //클러스터 생성
-                                                    setProgressStep("span-ccvm-progress-step4",2);
-                                                    setProgressStep("span-ccvm-progress-step5",1);
+                                                    setProgressStep("span-ccvm-progress-step4",2,os_type);
+                                                    setProgressStep("span-ccvm-progress-step5",1,os_type);
                                                     var pcs_config = ['python3', pluginpath + '/python/vm/setup_pcs_cluster.py', '-hns', all_host_name];
                                                     if(console_log){console.log(pcs_config);}
                                                     cockpit.spawn(pcs_config)
@@ -1057,7 +1059,7 @@ function deployCloudCenterVM() {
                                                             var ccvm_result = JSON.parse(data);
                                                             if(ccvm_result.code=="200"){
                                                                 createLoggerInfo("deployCloudCenterVM success");
-                                                                setProgressStep("span-ccvm-progress-step5",2);
+                                                                setProgressStep("span-ccvm-progress-step5",2,os_type);
                                                                 //최종 화면 호출
                                                                 showDivisionCloudVMConfigFinish();
                                                             } else {
@@ -1124,7 +1126,7 @@ function deployCloudCenterVM() {
         var gfs_name = "glue-gfs";
         //=========== 1. 클러스터 구성 host 네트워크 연결 ===========
         $('#div-ccvm-progress-step2').hide();
-        setProgressStep("span-ccvm-progress-step1",1);
+        setProgressStep("span-ccvm-progress-step1",1,os_type);
         var console_log = true;
         createLoggerInfo("deployCloudCenterVM start");
         var host_ping_test_and_cluster_config_cmd = ['python3', pluginpath + '/python/cluster/cluster_config.py', 'check', '-js', ret_json_string, '-cmi', mgmt_ip, '-pcl', all_host_name];
@@ -1136,8 +1138,8 @@ function deployCloudCenterVM() {
                 if(ping_test_result.code=="200") { //정상
                     //=========== 2. cloudinit iso 파일 생성 ===========
                     // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/ccvm/cloudinit 경로에 hosts, ssh key 파일 저장
-                    setProgressStep("span-ccvm-progress-step1",2);
-                    setProgressStep("span-ccvm-progress-step3",1);
+                    setProgressStep("span-ccvm-progress-step1",2,os_type);
+                    setProgressStep("span-ccvm-progress-step3",1,os_type);
                     var host_name = $('#form-input-cloud-vm-hostname').val();
                     var mgmt_ip = $('#form-input-cloud-vm-mngt-nic-ip').val().split("/")[0];
                     var mgmt_prefix = $('#form-input-cloud-vm-mngt-nic-ip').val().split("/")[1];
@@ -1145,7 +1147,7 @@ function deployCloudCenterVM() {
                     var dns = $('#form-input-cloud-vm-dns').val();
 
                     create_ccvm_cloudinit_cmd = ['python3', pluginpath + '/python/vm/create_ccvm_cloudinit.py'
-                                            ,"-f1",pluginpath+"/tools/vmconfig/ccvm/hosts","-t1", $("#div-textarea-cluster-config-confirm-hosts-file-ccvm").val() // hosts 파일
+                                            ,"-f1",pluginpath+"/tools/vmconfig/ccvm/hosts","-t1", local_host+$("#div-textarea-cluster-config-confirm-hosts-file-ccvm").val() // hosts 파일
                                             ,"-f2",pluginpath+"/tools/vmconfig/ccvm/id_rsa","-t2", $("#form-textarea-cloud-vm-ssh-private-key-file").val() // ssh 개인 key 파일
                                             ,"-f3",pluginpath+"/tools/vmconfig/ccvm/id_rsa.pub","-t3", $("#form-textarea-cloud-vm-ssh-public-key-file").val() // ssh 공개 key 파일
                                             ,'--hostname',host_name
@@ -1180,8 +1182,8 @@ function deployCloudCenterVM() {
                                 //     gfs_mount_point = "/mnt"
                                 // }
                                 //=========== 3. 클라우드센터 가상머신 구성 ===========
-                                setProgressStep("span-ccvm-progress-step3",2);
-                                setProgressStep("span-ccvm-progress-step4",1);
+                                setProgressStep("span-ccvm-progress-step3",2,os_type);
+                                setProgressStep("span-ccvm-progress-step4",1,os_type);
                                 xml_create_cmd.push("-hns",all_host_name, "-gmp", gfs_mount_point);
                                 if(console_log){console.log(xml_create_cmd);}
                                 cockpit.spawn(xml_create_cmd)
@@ -1191,8 +1193,8 @@ function deployCloudCenterVM() {
                                         if(create_ccvm_xml_result.code=="200"){
                                             //=========== 4. 클러스터 구성 및 클라우드센터 가상머신 배포 ===========
                                             //클러스터 생성
-                                            setProgressStep("span-ccvm-progress-step4",2);
-                                            setProgressStep("span-ccvm-progress-step5",1);
+                                            setProgressStep("span-ccvm-progress-step4",2,os_type);
+                                            setProgressStep("span-ccvm-progress-step5",1,os_type);
                                             var pcs_config = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--create-ccvm-cluster', '--gfs-name', gfs_name, '--mount-point', gfs_mount_point, '--cluster-name', gfs_cluster_name, '--list-ip', all_host_name];
                                             if(console_log){console.log(pcs_config);}
                                             cockpit.spawn(pcs_config)
@@ -1207,7 +1209,7 @@ function deployCloudCenterVM() {
                                                             var cluster_sync_mechanism_result = JSON.parse(data);
                                                             if (cluster_sync_mechanism_result.code == "200"){
                                                                 createLoggerInfo("deployCloudCenterVM success");
-                                                                setProgressStep("span-ccvm-progress-step5",2);
+                                                                setProgressStep("span-ccvm-progress-step5",2,os_type);
                                                                 //최종 화면 호출
                                                                 showDivisionCloudVMConfigFinish();
                                                             }
@@ -1268,10 +1270,136 @@ function deployCloudCenterVM() {
                 alert("클러스터 구성할 host 연결 상태 확인 및 cluster.json config 실패 : "+data);
             });
 
+    }else if(os_type == "ablestack-standalone"){
+                // 결과 출력 (디스크가 하나든 여러 개든 자동 처리)
+                $('#div-ccvm-progress-step1').hide();
+                $('#span-ccvm-progress-step2-text').text("HOSTS 파일 및 SSH 키 파일 복사");
+                setProgressStep("span-ccvm-progress-step2",1,os_type);
+                var ccvm_copy_file_cmd = ['python3', pluginpath + '/python/vm/local_ccvm_manage.py', 'copy']
+                console.log(ccvm_copy_file_cmd);
+                cockpit.spawn(ccvm_copy_file_cmd)
+                .then(function(data){
+                    var retVal = JSON.parse(data);
+                    if (retVal.code == 200){
+                        setProgressStep("span-ccvm-progress-step2",2,os_type);
+                        setProgressStep("span-ccvm-progress-step3",1,os_type);
+                        var console_log = true;
+                        createLoggerInfo("deployCloudCenterVM start");
+                        //=========== 1. cloudinit iso 파일 생성 ===========
+                        // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/ccvm/cloudinit 경로에 hosts, ssh key 파일 저장
+                        setProgressStep("span-ccvm-progress-step3",2,os_type);
+                        setProgressStep("span-ccvm-progress-step4",1,os_type);
+                        var host_name = $('#form-input-cloud-vm-hostname').val();
+                        var mgmt_ip = $('#form-input-cloud-vm-mngt-nic-ip').val().split("/")[0];
+                        var mgmt_prefix = $('#form-input-cloud-vm-mngt-nic-ip').val().split("/")[1];
+                        var mngt_gw = $('#form-input-cloud-vm-mngt-gw').val();
+                        var dns = $('#form-input-cloud-vm-dns').val();
+
+                        create_ccvm_cloudinit_cmd = ['python3', pluginpath + '/python/vm/create_ccvm_cloudinit.py'
+                                                ,"-f1",pluginpath+"/tools/vmconfig/ccvm/hosts","-t1", local_host+$("#div-textarea-cluster-config-confirm-hosts-file-ccvm").val() // hosts 파일
+                                                ,"-f2",pluginpath+"/tools/vmconfig/ccvm/id_rsa","-t2", $("#form-textarea-cloud-vm-ssh-private-key-file").val() // ssh 개인 key 파일
+                                                ,"-f3",pluginpath+"/tools/vmconfig/ccvm/id_rsa.pub","-t3", $("#form-textarea-cloud-vm-ssh-public-key-file").val() // ssh 공개 key 파일
+                                                ,'--hostname',host_name
+                                                ,'-hns', all_host_name
+                                                ,'--mgmt-nic','enp0s20'
+                                                ,'--mgmt-ip',mgmt_ip
+                                                ,'--mgmt-prefix',mgmt_prefix
+                                            ];
+                        //GATEWAY가 공백이 아닐 시 삽입
+                        if(mngt_gw != ""){
+                            create_ccvm_cloudinit_cmd.push('--mgmt-gw',mngt_gw);
+                        }
+                        // DNS가 공백이 아닐 시 삽입
+                        if(dns != ""){
+                            create_ccvm_cloudinit_cmd.push('--dns',dns);
+                        }
+                        var svc_bool = $('input[type=checkbox][id="form-checkbox-svc-network"]').is(":checked");
+                        if(svc_bool){
+                            var sn_ip = $('#form-input-cloud-vm-svc-nic-ip').val().split("/")[0];
+                            var sn_prefix = $('#form-input-cloud-vm-svc-nic-ip').val().split("/")[1];
+                            var sn_gw = $('#form-input-cloud-vm-svc-gw').val();
+                            var sn_dns = $('#form-input-cloud-vm-svc-dns').val();
+                            create_ccvm_cloudinit_cmd.push('--sn-nic','enp0s21','--sn-ip',sn_ip,'--sn-prefix',sn_prefix,'--sn-gw',sn_gw,'--sn-dns',sn_dns);
+                        }
+                        if(console_log){console.log(create_ccvm_cloudinit_cmd);}
+                        cockpit.spawn(create_ccvm_cloudinit_cmd)
+                            .then(function(data){
+                                //결과 값 json으로 return
+                                var create_ccvm_cloudinit_result = JSON.parse(data);
+                                if(create_ccvm_cloudinit_result.code=="200"){
+                                    //=========== 2. 클라우드센터 가상머신 구성 ===========
+                                    setProgressStep("span-ccvm-progress-step3",2,os_type);
+                                    setProgressStep("span-ccvm-progress-step4",1,os_type);
+                                    xml_create_cmd.push("-hns",all_host_name);
+                                    if(console_log){console.log(xml_create_cmd);}
+                                    cockpit.spawn(xml_create_cmd)
+                                        .then(function(data){
+                                            //결과 값 json으로 return
+                                            var create_ccvm_xml_result = JSON.parse(data);
+                                            if(create_ccvm_xml_result.code=="200"){
+                                                //=========== 4. 클러스터 구성 및 클라우드센터 가상머신 배포 ===========
+                                                //클러스터 생성
+                                                setProgressStep("span-ccvm-progress-step4",2,os_type);
+                                                setProgressStep("span-ccvm-progress-step5",1,os_type);
+                                                var ccvm_config = ['python3', pluginpath + '/python/vm/local_ccvm_manage.py', 'create'];
+                                                if(console_log){console.log(ccvm_config);}
+                                                cockpit.spawn(ccvm_config)
+                                                    .then(function(data){
+                                                        //결과 값 json으로 return
+                                                        var ccvm_result = JSON.parse(data);
+                                                        if(ccvm_result.code=="200"){
+                                                            createLoggerInfo("deployCloudCenterVM success");
+                                                            setProgressStep("span-ccvm-progress-step5",2,os_type);
+                                                            //최종 화면 호출
+                                                            showDivisionCloudVMConfigFinish();
+
+
+                                                        } else {
+                                                            setProgressFail(5);
+                                                            createLoggerInfo(ccvm_result.val);
+                                                            alert(ccvm_result.val);
+                                                        }
+                                                    })
+                                                    .catch(function(data){
+                                                        setProgressFail(5);
+                                                        createLoggerInfo("Cluster configuration and cloud center virtual machine deployment failed");
+                                                        alert("클러스터 구성 및 클라우드센터 가상머신 배포 실패 : "+data);
+                                                    });
+                                            } else {
+                                                setProgressFail(4);
+                                                createLoggerInfo(create_ccvm_xml_result.val);
+                                                alert(create_ccvm_xml_result.val);
+                                            }
+                                        })
+                                        .catch(function(data){
+                                            setProgressFail(4);
+                                            createLoggerInfo("Cloud Center Virtual Machine XML Creation Failed");
+                                            alert("클라우드센터 가상머신 XML 생성 실패 : "+data);
+                                        });
+                                } else {
+                                    setProgressFail(3);
+                                    createLoggerInfo(create_ccvm_cloudinit_result.val);
+                                    alert(create_ccvm_cloudinit_result.val);
+                                }
+                            })
+                            .catch(function(data){
+                                setProgressFail(3);
+                                createLoggerInfo("Failed to create cloudinit iso file");
+                                alert("cloudinit iso 파일 생성 실패 : "+data);
+                            });
+                    }else{
+                        setProgressFail(2);
+                        createLoggerInfo(retVal.val);
+                        alert(retVal.val);
+                    }
+                }).catch(function(data){
+                    setProgressFail(2);
+                    createLoggerInfo("Cloud Center Virtual Machine Directory Copy Failed");
+                    alert("ccvm 폴더에 복사 실패 : "+data);
+                });
+
     }
-
 }
-
 /**
  * Meathod Name : setProgressFail
  * Date Created : 2021.03.24

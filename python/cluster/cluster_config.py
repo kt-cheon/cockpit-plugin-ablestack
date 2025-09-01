@@ -120,7 +120,7 @@ def insert(args):
         if args.extenal_timeserver is not None:
             json_data["clusterConfig"]["extenal_timeserver"] = args.extenal_timeserver
 
-        if args.type == "ablestack-vm":
+        if args.type == "ablestack-vm" or args.type == "ablestack-standalone":
             if args.pcs_cluster_list is not None:
                     for i in range(len(args.pcs_cluster_list)):
                         if args.pcs_cluster_list[i] is not None:
@@ -297,7 +297,7 @@ def insertAllHost(args):
             ping_check_list = []
             for p_val1 in param_json:
                 ping_check_list.append(p_val1["ablecube"])
-                if args.type != "ablestack-vm":
+                if args.type == "ablestack-hci":
                     if args.exclude_hostname != p_val1["hostname"]:
                         ping_check_list.append(p_val1["scvmMngt"])
 
@@ -343,7 +343,7 @@ def insertAllHost(args):
                     if args.extenal_timeserver is not None:
                         cmd_str += " -ets "+args.extenal_timeserver
 
-                    if args.type != "ablestack-vm":
+                    if args.type == "ablestack-hci":
                         if args.exclude_hostname != p_val3["hostname"]:
                             cmd_str += " -co withScvm"
                         else:
@@ -527,7 +527,7 @@ if __name__ == '__main__':
 
     # 실제 로직 부분 호출 및 결과 출력
     if args.action == 'insert':
-        if os_type == "ablestack-vm":
+        if os_type == "ablestack-vm" or os_type == "ablestack-standalone":
             reset_cluster_config()
         ret = insert(args)
         print(ret)
