@@ -241,10 +241,10 @@
                                                     <input class="pf-c-check__input" type="checkbox" id="form-checkbox-mngt-network" name="form-checkbox-mngt-network" checked disabled/>
                                                     <label class="pf-c-check__label" style="margin-top:5px" for="form-checkbox-mngt-network">관리네트워크</label>
                                                 </div>
-                                                <div class="pf-c-check">
+                                                <!-- <div class="pf-c-check">
                                                     <input class="pf-c-check__input" type="checkbox" id="form-checkbox-svc-network" name="form-checkbox-svc-network" />
                                                     <label class="pf-c-check__label" style="margin-top:5px" for="form-checkbox-svc-network">서비스네트워크</label>
-                                                </div>
+                                                </div> -->
                                             </div>
                                         </div>
                                         <div class="pf-c-form__field-group">
@@ -268,7 +268,7 @@
                                                         </select>
                                                     </div>
                                                 </div>
-                                                <div class="pf-c-form__group" style="padding:0px;">
+                                                <!-- <div class="pf-c-form__group" style="padding:0px;">
                                                     <div class="pf-c-form__group-label">
                                                         <label class="pf-c-form__label" for="form-select-cloud-vm-svc-parent">
                                                             <span class="pf-c-form__label-text">서비스네트워크</span>
@@ -279,7 +279,7 @@
                                                         <select class="pf-c-form-control" id="form-select-cloud-vm-svc-parent" name="form-select-cloud-vm-svc-parent" style="width:40%;" disabled>
                                                         </select>
                                                     </div>
-                                                </div>
+                                                </div> -->
                                             </div>
                                         </div>
                                     </section>
@@ -437,7 +437,7 @@
                                                 <input class="pf-c-form-control" style="width:50%" type="text" id="form-input-cloud-vm-dns" name="form-input-cloud-vm-dns" placeholder="xxx.xxx.xxx.xxx 형식으로 입력" />
                                             </div>
                                         </div>
-                                        <div class="pf-c-form__group">
+                                        <!-- <div class="pf-c-form__group">
                                             <div class="pf-c-form__group-label">
                                                 <label class="pf-c-form__label" for="form-input-cloud-vm-svc-nic-ip">
                                                     <span class="pf-c-form__label-text">서비스 NIC IP</span>
@@ -466,7 +466,7 @@
                                             <div class="pf-c-form__group-control pf-m-inline">
                                                 <input class="pf-c-form-control" style="width:50%" type="text" id="form-input-cloud-vm-svc-dns" name="form-input-cloud-vm-svc-dns" placeholder="xxx.xxx.xxx.xxx 형식으로 입력" disabled/>
                                             </div>
-                                        </div>
+                                        </div> -->
                                     </section>
                                 </form>
                             </div>
@@ -727,7 +727,7 @@
                                 클라우드센터 가상머신을 배포 중입니다. 전체 5단계 중 1단계 진행 중입니다.
                             </p>
 
-                            <div class="pf-c-content" style="margin-top:30px;margin-left:15px">
+                            <div class="pf-c-content" style="margin-top:30px;margin-left:15px" id="div-ccvm-progress-step1">
                                 <span class="pf-c-label pf-m-blue" id="span-ccvm-progress-step1">
                                     <span class="pf-c-label__content">
                                         <span class="pf-c-label__icon">
@@ -735,7 +735,7 @@
                                         </span><p>준비중</p>
                                     </span>
                                 </span>
-                                <span class="pf-c-label__content" style="margin-left:4px" id="span-ccvm-progress-step1" name="span-ccvm-progress-step1-name">클러스터 구성 HOST 네트워크 연결 테스트</span>
+                                <span class="pf-c-label__content" style="margin-left:4px" id="span-ccvm-progress-step1-text" name="span-ccvm-progress-step1-name">클러스터 구성 HOST 네트워크 연결 테스트</span>
                             </div>
                             <div class="pf-c-content" style="margin-top:30px;margin-left:15px" id="div-ccvm-progress-step2">
                                 <span class="pf-c-label pf-m-blue" id="span-ccvm-progress-step2">
@@ -745,7 +745,7 @@
                                         </span><p>준비중</p>
                                     </span>
                                 </span>
-                                <span class="pf-c-label__content" style="margin-left:4px" id="span-ccvm-progress-step2" name="span-ccvm-progress-step2-name">클러스터 구성 설정 초기화 작업</span>
+                                <span class="pf-c-label__content" style="margin-left:4px" id="span-ccvm-progress-step2-text" name="span-ccvm-progress-step2-name">클러스터 구성 설정 초기화 작업</span>
                             </div>
                             <div class="pf-c-content" style="margin-top:30px;margin-left:15px">
                                 <span class="pf-c-label pf-m-blue" id="span-ccvm-progress-step3">

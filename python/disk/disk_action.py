@@ -142,7 +142,7 @@ def listDiskInterface(H=False, classify=None, action=None):
                             dev["children"][0]["children"][0]["id"] = dp[1]
             newbd.append(dev)
         else:
-            if 'loop' not in dev['type']:
+            if 'loop' not in dev['type'] and  (dev['tran'] is None or 'usb' not in dev['tran']) and 'cdrom' not in dev['group']:
                 for dp in disk_path:
                     if dev["name"] == dp[0]:
                         dev["path"] = dp[1]

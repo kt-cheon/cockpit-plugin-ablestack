@@ -43,7 +43,7 @@
                         <div class="pf-c-wizard__main-body" id="div-modal-wizard-gfs-overview">
                             <div class="pf-c-content">
                                 <p>
-                                    GFS 스토리지 배포 마법사는 클러스터 환경에서 GFS 스토리지를 모든 호스트에 일관되게 구성하고, 운영에 필요한 설정을 자동으로 적용하는 도구입니다. GFS 스토리지를 배포하기 위해서는 다음의 정보가 필요합니다.
+                                    GFS 스토리지 구성 마법사는 클러스터 환경에서 GFS 스토리지를 모든 호스트에 일관되게 구성하고, 운영에 필요한 설정을 자동으로 적용하는 도구입니다. GFS 스토리지를 배포하기 위해서는 다음의 정보가 필요합니다.
                                 </p>
                                 <ul>
                                     <li>SAN 스토리지에서 클러스터 환경의 디스크 할당 및 WWN 정보</li>
@@ -51,7 +51,7 @@
                                     <li>호스트별 원격 관리(IPMI) 정보</li>
                                 </ul>
                                 <p>
-                                    필요한 정보를 먼저 준비하십시오. 정보가 준비되었다면 "다음" 버튼을 눌러 가상머신 배포를 시작합니다.
+                                    필요한 정보를 먼저 준비하십시오. 정보가 준비되었다면 "다음" 버튼을 눌러 GFS 스토리지 구성을 시작합니다.
                                 </p>
                             </div>
                         </div>
@@ -239,7 +239,7 @@
                             <div class="pf-c-accordion" style="margin-top:32px;margin-left:10px;" id="div-accordion-gfs-ipmi"></div>
                         </div>
                         <div class="pf-c-wizard__main-body" id="div-modal-wizard-gfs-deploy">
-                            <p id='progress-step-text'>
+                            <p id='gfs-progress-step-text'>
                                 GFS 스토리지를 구성 중입니다. 전체 3단계 중 1단계 진행 중입니다.
                             </p>
 
@@ -251,7 +251,7 @@
                                         </span><p>준비중</p>
                                     </span>
                                 </span>
-                                <span class="pf-c-label__content" style="margin-left:4px">클러스터 구성 HOST 외부 스토리지 동기화</span>
+                                <span class="pf-c-label__content" style="margin-left:4px">클러스터 구성 HOST 간 연결 상태 확인</span>
                             </div>
                             <div class="pf-c-content" style="margin-top:30px;margin-left:15px">
                                 <span class="pf-c-label pf-m-blue" id="span-gfs-progress-step2">
@@ -319,9 +319,9 @@
                     </div>
                 </div>
             </div>
-            <!-- 스토리지센터 가상머신 배포 마법사 진행: Modal 영역 끝 -->
+            <!-- GFS 스토리지 구성 마법사 진행: Modal 영역 끝 -->
 
-            <!-- 스토리지센터 가상머신 배포 마법사 취소: Modal 영역 시작 -->
+            <!-- GFS 스토리지 구성 마법사 취소: Modal 영역 시작 -->
             <div id="div-modal-cancel-gfs-storage-wizard-cancel" class="pf-c-backdrop" style="display:none" >
                 <div class="pf-l-bullseye">
                     <div class="pf-c-modal-box pf-m-sm" role="dialog" aria-modal="true" aria-label="gfs storage wizard cancel">
@@ -339,7 +339,7 @@
                     </div>
                 </div>
             </div>
-            <!-- 스토리지센터 가상머신 배포 마법사 취소: Modal 영역 끝 -->
+            <!-- GFS 스토리지 구성 마법사 취소: Modal 영역 끝 -->
 <!-- 해당 페이지에 필요한 javascript 파일 추가 영역 시작 -->
 <script src="./src/common/wizard-common.js"></script>
 <script src="./src/common/validation.js"></script>

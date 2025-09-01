@@ -61,7 +61,7 @@ os_type = json_data["clusterConfig"]["type"]
 def changeHosts(args):
     try:
         # 호스트 파일 초기화
-        if args.type == "ablestack-vm":
+        if args.type == "ablestack-vm" or args.type == "ablestack-standalone":
 
             with open(hosts_file_path, "r") as file:
                 lines = file.readlines()
@@ -98,7 +98,7 @@ def changeHosts(args):
                 my_hosts.remove_all_matching(name="pn-"+"scvm"+f_val["index"])
                 my_hosts.remove_all_matching(name="cn-"+"scvm"+f_val["index"])
 
-            elif args.type == "ablestack-vm":
+            elif args.type == "ablestack-vm" or args.type == "ablestack-standalone":
                 my_hosts.remove_all_matching(name=f_val["hostname"])
                 my_hosts.remove_all_matching(name=f_val["ablecube"])
 
@@ -130,7 +130,7 @@ def changeHosts(args):
                     my_hosts.add([entry])
                     entry = HostsEntry(entry_type='ipv4', address=f_val["scvmCn"], names=["cn-"+"scvm"+f_val["index"], 'cn-scvm'])
                     my_hosts.add([entry])
-                elif args.type == "ablestack-vm":
+                elif args.type == "ablestack-vm" or args.type == "ablestack-standalone":
                     entry = HostsEntry(entry_type='ipv4', address=f_val["ablecube"], names=[f_val["hostname"], 'ablecube'])
                     my_hosts.add([entry])
                 else:
@@ -158,7 +158,7 @@ def changeHosts(args):
                     my_hosts.add([entry])
                     entry = HostsEntry(entry_type='ipv4', address=f_val["scvmCn"], names=["cn-"+"scvm"+f_val["index"]])
                     my_hosts.add([entry])
-                elif args.type == "ablestack-vm":
+                elif args.type == "ablestack-vm" or args.type == "ablestack-standalone":
                     entry = HostsEntry(entry_type='ipv4', address=f_val["ablecube"], names=[f_val["hostname"]])
                     my_hosts.add([entry])
                 else:

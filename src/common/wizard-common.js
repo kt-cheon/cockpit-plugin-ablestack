@@ -219,7 +219,7 @@ function setSshKeyFileReader(input, file_name, callBackFunction) {
  * Return  : 없음
  * History  : 2021.03.22 최초 작성
  */
- function setProgressStep(span_id, status){
+ function setProgressStep(span_id, status, os_type){
     //proceeding or 1: 진행중, completed or 2: 완료됨, aborted or 3: 중단됨 or 4: formatting, 포맷중
     if(status=="proceeding" || status=="completed" || status=="aborted" || status=="formatting"|| status==1 || status==2 || status==3 || status==4){
         var span = $('#'+span_id);
@@ -229,36 +229,92 @@ function setSshKeyFileReader(input, file_name, callBackFunction) {
         // 초기화
         span.removeClass('pf-m-blue pf-m-green pf-m-orange pf-m-red pf-m-purple');
         icon.removeClass('fa-info-circle fa-check-circle fa-play fa-exclamation-circle fa-hourglass-half');
+        if(os_type == "ablestack-vm"){
+            if(status == "proceeding" || status==1){
+                if(span.attr('id') == "span-ccvm-progress-step1"){
+                    $('#ccvm-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 4단계 중 1단계 진행 중입니다.');
+                } else if(span.attr('id') == "span-ccvm-progress-step3"){
+                    $('#ccvm-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 4단계 중 2단계 진행 중입니다.');
+                } else if(span.attr('id') == "span-ccvm-progress-step4"){
+                    $('#ccvm-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 4단계 중 3단계 진행 중입니다.');
+                } else if(span.attr('id') == "span-ccvm-progress-step5"){
+                    $('#ccvm-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 4단계 중 4단계 진행 중입니다.');
 
-        if(status == "proceeding" || status==1){
-            if(span.attr('id') == "span-ccvm-progress-step1"){
-                $('#ccvm-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 5단계 중 1단계 진행 중입니다.');
-            } else if(span.attr('id') == "span-ccvm-progress-step2"){
-                $('#ccvm-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 5단계 중 2단계 진행 중입니다.');
-            } else if(span.attr('id') == "span-ccvm-progress-step3"){
-                $('#ccvm-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 5단계 중 3단계 진행 중입니다.');
-            } else if(span.attr('id') == "span-ccvm-progress-step4"){
-                $('#ccvm-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 5단계 중 4단계 진행 중입니다.');
-            } else if(span.attr('id') == "span-ccvm-progress-step5"){
-                $('#ccvm-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 5단계 중 5단계 진행 중입니다.');
-
+                }
+                span.addClass('pf-m-orange');
+                icon.addClass('fa-play');
+                progress_text.text('진행중');
+            } else if(status=="completed" || status==2){
+                span.addClass('pf-m-green');
+                icon.addClass('fa-check-circle');
+                progress_text.text('완료됨');
+            } else if(status=="aborted" || status==3){
+                span.addClass('pf-m-red');
+                icon.addClass('fa-exclamation-circle');
+                progress_text.text('중단됨');
+            } else if(status=="formatting" || status==4){
+                span.addClass('pf-m-purple');
+                icon.addClass('fa-hourglass-half');
+                progress_text.text('포맷중');
             }
+        }else if (os_type == "ablestack-standalone"){
+            if(status == "proceeding" || status==1){
+                if(span.attr('id') == "span-ccvm-progress-step2"){
+                    $('#ccvm-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 4단계 중 1단계 진행 중입니다.');
+                } else if(span.attr('id') == "span-ccvm-progress-step3"){
+                    $('#ccvm-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 4단계 중 2단계 진행 중입니다.');
+                } else if(span.attr('id') == "span-ccvm-progress-step4"){
+                    $('#ccvm-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 4단계 중 3단계 진행 중입니다.');
+                } else if(span.attr('id') == "span-ccvm-progress-step5"){
+                    $('#ccvm-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 4단계 중 4단계 진행 중입니다.');
 
-            span.addClass('pf-m-orange');
-            icon.addClass('fa-play');
-            progress_text.text('진행중');
-        } else if(status=="completed" || status==2){
-            span.addClass('pf-m-green');
-            icon.addClass('fa-check-circle');
-            progress_text.text('완료됨');
-        } else if(status=="aborted" || status==3){
-            span.addClass('pf-m-red');
-            icon.addClass('fa-exclamation-circle');
-            progress_text.text('중단됨');
-        } else if(status=="formatting" || status==4){
-            span.addClass('pf-m-purple');
-            icon.addClass('fa-hourglass-half');
-            progress_text.text('포맷중');
+                }
+                span.addClass('pf-m-orange');
+                icon.addClass('fa-play');
+                progress_text.text('진행중');
+            } else if(status=="completed" || status==2){
+                span.addClass('pf-m-green');
+                icon.addClass('fa-check-circle');
+                progress_text.text('완료됨');
+            } else if(status=="aborted" || status==3){
+                span.addClass('pf-m-red');
+                icon.addClass('fa-exclamation-circle');
+                progress_text.text('중단됨');
+            } else if(status=="formatting" || status==4){
+                span.addClass('pf-m-purple');
+                icon.addClass('fa-hourglass-half');
+                progress_text.text('포맷중');
+            }
+        }else{
+            if(status == "proceeding" || status==1){
+                if(span.attr('id') == "span-ccvm-progress-step1"){
+                    $('#ccvm-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 5단계 중 1단계 진행 중입니다.');
+                } else if(span.attr('id') == "span-ccvm-progress-step2"){
+                    $('#ccvm-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 5단계 중 2단계 진행 중입니다.');
+                } else if(span.attr('id') == "span-ccvm-progress-step3"){
+                    $('#ccvm-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 5단계 중 3단계 진행 중입니다.');
+                } else if(span.attr('id') == "span-ccvm-progress-step4"){
+                    $('#ccvm-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 5단계 중 4단계 진행 중입니다.');
+                } else if(span.attr('id') == "span-ccvm-progress-step5"){
+                    $('#ccvm-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 5단계 중 5단계 진행 중입니다.');
+
+                }
+                span.addClass('pf-m-orange');
+                icon.addClass('fa-play');
+                progress_text.text('진행중');
+            } else if(status=="completed" || status==2){
+                span.addClass('pf-m-green');
+                icon.addClass('fa-check-circle');
+                progress_text.text('완료됨');
+            } else if(status=="aborted" || status==3){
+                span.addClass('pf-m-red');
+                icon.addClass('fa-exclamation-circle');
+                progress_text.text('중단됨');
+            } else if(status=="formatting" || status==4){
+                span.addClass('pf-m-purple');
+                icon.addClass('fa-hourglass-half');
+                progress_text.text('포맷중');
+            }
         }
     }else{
         alert("진행 상태를 잘못 입력했습니다.");
@@ -334,13 +390,58 @@ function setGfsProgressStep(span_id, status){
 
         if(status == "proceeding" || status==1){
             if(span.attr('id') == "span-gfs-progress-step1"){
-                $('#gfs-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 5단계 중 1단계 진행 중입니다.');
+                $('#gfs-progress-step-text').text('GFS 스토리지를 구성 중입니다. 전체 3단계 중 1단계 진행 중입니다.');
             } else if(span.attr('id') == "span-gfs-progress-step2"){
-                $('#gfs-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 5단계 중 2단계 진행 중입니다.');
+                $('#gfs-progress-step-text').text('GFS 스토리지를 구성 중입니다. 전체 3단계 중 2단계 진행 중입니다.');
             } else if(span.attr('id') == "span-gfs-progress-step3"){
-                $('#gfs-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 5단계 중 3단계 진행 중입니다.');
-            } else if(span.attr('id') == "span-gfs-progress-step4"){
-                $('#gfs-progress-step-text').text('클라우드센터 가상머신을 배포 중입니다. 전체 5단계 중 4단계 진행 중입니다.');
+                $('#gfs-progress-step-text').text('GFS 스토리지를 구성 중입니다. 전체 3단계 중 3단계 진행 중입니다.');
+            }
+
+            span.addClass('pf-m-orange');
+            icon.addClass('fa-play');
+            progress_text.text('진행중');
+        } else if(status=="completed" || status==2){
+            span.addClass('pf-m-green');
+            icon.addClass('fa-check-circle');
+            progress_text.text('완료됨');
+        } else if(status=="aborted" || status==3){
+            span.addClass('pf-m-red');
+            icon.addClass('fa-exclamation-circle');
+            progress_text.text('중단됨');
+        } else if(status=="formatting" || status==4){
+            span.addClass('pf-m-purple');
+            icon.addClass('fa-hourglass-half');
+            progress_text.text('포맷중');
+        }
+    }else{
+        alert("진행 상태를 잘못 입력했습니다.");
+    }
+}
+/**
+ * Meathod Name : setLocalProgressStep
+ * Date Created : 2025.08.07
+ * Writer  : 정민철
+ * Description : span id와 status 입력받아 해당하는 span의 진행상태를 입력받은 status 변경
+ * Parameter : String, String
+ * Return  : 없음
+ * History  : 2025.08.07 최초 작성
+ */
+function setLocalProgressStep(span_id, status){
+    //proceeding or 1: 진행중, completed or 2: 완료됨, aborted or 3: 중단됨 or 4: formatting, 포맷중
+    if(status=="proceeding" || status=="completed" || status=="aborted" || status=="formatting"|| status==1 || status==2 || status==3 || status==4){
+        var span = $('#'+span_id);
+        var icon = $('#'+span_id).children('span').children('span').children("i");
+        var progress_text = $('#'+span_id).children('span').children('p');
+
+        // 초기화
+        span.removeClass('pf-m-blue pf-m-green pf-m-orange pf-m-red pf-m-purple');
+        icon.removeClass('fa-info-circle fa-check-circle fa-play fa-exclamation-circle fa-hourglass-half');
+
+        if(status == "proceeding" || status==1){
+            if(span.attr('id') == "span-local-progress-step1"){
+                $('#local-progress-step-text').text('로컬 스토리지를 구성 중입니다. 전체 2단계 중 1단계 진행 중입니다.');
+            } else if(span.attr('id') == "span-local-progress-step2"){
+                $('#local-progress-step-text').text('로컬 스토리지를 구성 중입니다. 전체 2단계 중 2단계 진행 중입니다.');
             }
 
             span.addClass('pf-m-orange');
@@ -637,7 +738,7 @@ function settingProfile(clusterJsonConf, option, os_type){
     let max_index = 0;
     let current_host_name = $("#form-input-current-host-name").val();
     let add_tr_yn = true;
-    if(os_type == "ablestack-vm"){
+    if(os_type == "ablestack-vm" || os_type == "ablestack-standalone"){
         for (let i = 0 ; i < hostCnt ; i++){
             insert_tr += "<tr style='border-bottom: solid 1px #dcdcdc'>";
             insert_tr += "  <td contenteditable='false'>"+hostsJson[i].index+"</td>";
@@ -984,7 +1085,7 @@ function tableToHostsText(table_tr_obj, option, os_type){
                 temp_text += scvm_pn_ip + "\t"  + "pn-"+"scvm"+idx + "\n";
                 temp_text += scvm_cn_ip + "\t"  + "cn-"+"scvm"+idx + "\n";
             }
-        }else if(os_type == "ablestack-vm"){
+        }else if(os_type == "ablestack-vm" || os_type == "ablestack-standalone"){
             let host_name = $(this).find('td').eq(1).text().trim();
             let host_ip = $(this).find('td').eq(2).text().trim();
 
@@ -1107,7 +1208,7 @@ function tableToClusterConfigJsonString(radio_value, option, os_type){
         // 객체 생성
 		var data = new Object() ;
 
-        if (os_type == "ablestack-vm"){
+        if (os_type == "ablestack-vm" || os_type == "ablestack-standalone"){
             let idx = $(this).find('td').eq(0).text().trim();
             let host_name = $(this).find('td').eq(1).text().trim();
             let host_ip = $(this).find('td').eq(2).text().trim();
@@ -1200,7 +1301,7 @@ function ClusterConfigJsonStringGFS(clusterConfig) {
         // eq(5) : SCVM PN IP
         // eq(6) : SCVM CN IP
 
-        if (os_type == "ablestack-vm"){
+        if (os_type == "ablestack-vm" || os_type == "ablestack-standalone"){
             let idx = $(this).find('td').eq(0).text().trim();
             let host_name = $(this).find('td').eq(1).text().trim();
             let host_ip = $(this).find('td').eq(2).text().trim();
@@ -1469,7 +1570,7 @@ function ClusterConfigJsonStringGFS(clusterConfig) {
         // eq(6) : SCVM CN IP
 
 
-        if (os_type == "ablestack-vm"){
+        if (os_type == "ablestack-vm" || os_type == "ablestack-standalone"){
             let host_ip = $(this).find('td').eq(2).text().trim();
             // let host_pn_ip = $(this).find('td').eq(3).text().trim();
 
@@ -1595,35 +1696,57 @@ function pcsHostPnIpCheck(host_file_type, pcs_host_pn_ip, option){
  * Description : 클러스터 구성 파일 유동 변화
  * History  : 2024.11.11 최초 작성
  **/
-function clusterConfigProfile(operating_system,setting) {
+function clusterConfigProfile(operating_system, setting) {
     // 열 정보 설정
     let columns = [];
-    if (operating_system == "ablestack-vm") {
-        columns = [
-            { name: "idx", width: "5%" },
-            { name: "호스트 명", width: "15%" },
-            { name: "호스트 IP", width: "16%" }
-        ];
-    } else {
-        columns = [
-            { name: "idx", width: "5%" },
-            { name: "호스트 명", width: "15%" },
-            { name: "호스트 IP", width: "16%" },
-            { name: "SCVM<br/>MNGT IP", width: "16%" },
-            { name: "호스트 PN IP", width: "16%" },
-            { name: "SCVM PN IP", width: "16%" },
-            { name: "SCVM CN IP", width: "16%" }
-        ];
+
+    function createTableHeaderAndBody() {
+        createTableHeader();
+        const rows = (operating_system === "ablestack-vm" || operating_system === "ablestack-standalone") ? 1 : 3;
+        createTableBody(rows);
     }
-    // 테이블 헤더 생성 함수
+
+    if (operating_system === "ablestack-standalone") {
+        cockpit.spawn(["hostname"]).then(function(data) {
+            const hostname = data.trim();
+            cockpit.spawn(["ip","route","get","1"]).then(function(ipData) {
+                const host_ip = ipData.trim().split(/\s+/)[6];
+                columns = [
+                    { name: "idx", width: "5%" },
+                    { name: "호스트 명", width: "15%", value: hostname },
+                    { name: "호스트 IP", width: "16%", value: host_ip }
+                ];
+                createTableHeaderAndBody(); // 비동기 작업 후 테이블 생성
+            });
+        });
+    } else {
+        // 다른 운영체제 경우 동기 처리
+        if (operating_system === "ablestack-vm") {
+            columns = [
+                { name: "idx", width: "5%" },
+                { name: "호스트 명", width: "15%" },
+                { name: "호스트 IP", width: "16%" }
+            ];
+        } else {
+            columns = [
+                { name: "idx", width: "5%" },
+                { name: "호스트 명", width: "15%" },
+                { name: "호스트 IP", width: "16%" },
+                { name: "SCVM<br/>MNGT IP", width: "16%" },
+                { name: "호스트 PN IP", width: "16%" },
+                { name: "SCVM PN IP", width: "16%" },
+                { name: "SCVM CN IP", width: "16%" }
+            ];
+        }
+        createTableHeaderAndBody(); // 동기일 경우 즉시 호출
+    }
+
+    // 나머지 함수들은 그대로 유지
     function createTableHeader() {
         const theads = document.querySelectorAll("#cluster-prepare-table-head tr, #cluster-prepare-table-head-existing tr, #cloud-vm-wizard-table-head tr, #cloud-vm-wizard-table-head-existing tr");
-
-        if(setting != "reset"){
-            if (theads.length > 0 && theads[0].children.length > 0) return;
-        }
+        if (setting !== "reset" && theads.length > 0 && theads[0].children.length > 0) return;
         theads.forEach(thead => {
-            thead.innerHTML = ""; // 기존 내용 초기화
+            thead.innerHTML = "";
             columns.forEach(col => {
                 const th = document.createElement("th");
                 th.style.width = col.width;
@@ -1633,31 +1756,23 @@ function clusterConfigProfile(operating_system,setting) {
         });
     }
 
-    // 테이블 본문 생성 함수
     function createTableBody(rows) {
         const tbodies = document.querySelectorAll("#form-table-tbody-cluster-config-new-host-profile, #form-table-tbody-cluster-config-existing-host-profile, #form-table-tbody-cluster-config-new-host-profile-ccvm, #form-table-tbody-cluster-config-existing-host-profile-ccvm");
-
-        if(setting != "reset"){
-            if (tbodies.length > 0 && tbodies[0].children.length > 0) return;
-        }
+        if (setting !== "reset" && tbodies.length > 0 && tbodies[0].children.length > 0) return;
 
         tbodies.forEach(tbody => {
-            tbody.innerHTML = ""; // 기존 내용 초기화
+            tbody.innerHTML = "";
             for (let i = 0; i < rows; i++) {
                 const tr = document.createElement("tr");
                 tr.style.borderBottom = "solid 1px #dcdcdc";
                 columns.forEach((col, index) => {
                     const td = document.createElement("td");
-                    td.contentEditable = index === 0 ? "false" : "true"; // 첫 번째 열은 읽기 전용
-                    td.textContent = index === 0 ? i + 1 : ""; // 첫 번째 열에 인덱스 표시
+                    td.contentEditable = index === 0 ? "false" : "true";
+                    td.textContent = index === 0 ? i + 1 : (col.value || "");
                     tr.appendChild(td);
                 });
                 tbody.appendChild(tr);
             }
         });
     }
-    // 테이블 생성 호출
-    createTableHeader();
-    const rows = operating_system === "ablestack-vm" ? 1 : 3;
-    createTableBody(rows);
 }

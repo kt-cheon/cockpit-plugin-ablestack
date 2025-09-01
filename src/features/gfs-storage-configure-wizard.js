@@ -7,14 +7,12 @@
 
 // 변수 선언
 var cur_step_wizard_gfs_config = "1";
-var xml_create_cmd;
 var completed = false;
-var option_scvm = "-scvm";
 var os_type = sessionStorage.getItem("os_type");
 
 // Document.ready 시작
 $(document).ready(function(){
-    // 스토리지센터 가상머신 배포 마법사 페이지 준비
+    // GFS 스토리지 구성 마법사 페이지 준비
     $('#div-modal-wizard-gfs-external-storage-sync').hide();
     $('#div-modal-wizard-gfs-disk-configure').hide();
     $('#div-modal-wizard-gfs-ipmi').hide();
@@ -380,7 +378,7 @@ $('#button-close-modal-wizard-gfs, #button-cancel-config-modal-wizard-gfs-config
 $('#button-gfs-external-storage-sync').on('click', function(){
     $('#div-modal-multipath-sync').show();
 });
-// 마법사 "배포 버튼 모달창" 실행 버튼을 눌러 가상머신 배포
+// 마법사 "배포 버튼 모달창" 실행 버튼을 눌러 GFS 스토리지 구성
 $('#button-execution-modal-gfs-storage-wizard-confirm').on('click', function () {
     $('#div-modal-gfs-storage-wizard-confirm').hide();
     validateGfsStorage().then(function(valid){
@@ -569,10 +567,6 @@ function deployGfsStorage() {
                 var ping_test_result = JSON.parse(data);
                 if(ping_test_result.code=="200") { //정상
                     if(externel_storage_sync == "duplication"){
-                        var multipath_sync = ['sh', pluginpath + '/shell/host/multipath_sync.sh', 'sync'];
-                        console.log(multipath_sync);
-                        cockpit.spawn(multipath_sync)
-                        .then(function(){
                             setGfsProgressStep("span-gfs-progress-step1",2);
                             setGfsProgressStep("span-gfs-progress-step2",1);
                             var reset_cloud_center_cmd = ['python3', pluginpath + '/python/vm/reset_cloud_center.py'];
@@ -645,7 +639,7 @@ function deployGfsStorage() {
                                                                                                 cockpit.spawn(gfs_boostrap_cmd)
                                                                                                 .then(function(){
                                                                                                     createLoggerInfo("deployGfsStorage success");
-                                                                                                    setProgressStep("span-gfs-progress-step3",2);
+                                                                                                    setGfsProgressStep("span-gfs-progress-step3",2);
                                                                                                     //최종 화면 호출
                                                                                                     showDivisionGFSConfigFinish();
                                                                                                 })
@@ -731,12 +725,6 @@ function deployGfsStorage() {
                                     createLoggerInfo("Failed to initialize cluster configuration settings");
                                     alert("클러스터 구성 설정 초기화 작업 실패 : "+data);
                                 });
-                        })
-                        .catch(function(){
-                            setGfsProgressFail(2);
-                            createLoggerInfo("Failed to initialize cluster Multipath Settings");
-                            alert("멀티패스 동기화 실패 : 클러스터의 Hosts파일과 SSH Key를 확인해 주시길 바랍니다.");
-                        })
                     }else{
                         setGfsProgressStep("span-gfs-progress-step1",2);
                         setGfsProgressStep("span-gfs-progress-step2",1);
@@ -810,7 +798,7 @@ function deployGfsStorage() {
                                                                                             cockpit.spawn(gfs_boostrap_cmd)
                                                                                             .then(function(){
                                                                                                 createLoggerInfo("deployGfsStorage success");
-                                                                                                setProgressStep("span-gfs-progress-step3",2);
+                                                                                                setGfsProgressStep("span-gfs-progress-step3",2);
                                                                                                 //최종 화면 호출
                                                                                                 showDivisionGFSConfigFinish();
                                                                                             })
@@ -920,7 +908,7 @@ $('[name="radio-gfs-ipmi"]').on('change', function () {
     })
 });
 /**
- * Meathod Name : showDivisionVMConfigFinish
+ * Meathod Name : showDivisionGFSConfigFinish
  * Date Created : 2025.07.23
  * Writer  : 정민철
  * Description : 가상머신을 배포한 후 마지막 페이지를 보여주는 함수
@@ -1056,7 +1044,7 @@ function validateGfsStorage() {
  * Meathod Name : setGfsProgressFail
  * Date Created : 2025.07.23
  * Writer  : 정민철
- * Description : 스토리지센터 가상머신 배포 진행중 실패 단계에 따른 중단됨 UI 처리
+ * Description : GFS 스토리지 구성 진행중 실패 단계에 따른 중단됨 UI 처리
  * Parameter : setp_num
  * Return  : 없음
  * History  : 2025.07.23 최초 작성
