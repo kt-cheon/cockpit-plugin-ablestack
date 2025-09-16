@@ -57,7 +57,7 @@ def copy_file():
 def define_and_start_ccvm():
     xml_path = f"{pluginpath}/tools/vmconfig/ccvm/ccvm.xml"
     qcow_file = "/var/lib/libvirt/images/ablestack-template-back.qcow2"
-    ccvm_file = "/var/lib/libvirt/images/ccvm.qcow2"
+    ccvm_file = "/mnt/glue/ccvm.qcow2"
     cmds = [
         f"cp {qcow_file} {ccvm_file}",
         f"qemu-img resize {ccvm_file} +350G",
