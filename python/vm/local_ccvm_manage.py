@@ -55,13 +55,15 @@ def copy_file():
         return createReturn(code=500, val=f"Unexpected error: {e}")
 
 def define_and_start_ccvm():
-    xml_path = f"{pluginpath}/tools/vmconfig/ccvm/ccvm.xml"
+    old_xml_path = f"{pluginpath}/tools/vmconfig/ccvm/ccvm.xml"
+    new_xml_path = "/mnt/glue/ccvm.xml"
     qcow_file = "/var/lib/libvirt/images/ablestack-template-back.qcow2"
-    ccvm_file = "/var/lib/libvirt/images/ccvm.qcow2"
+    ccvm_file = "/mnt/glue/ccvm.qcow2"
     cmds = [
         f"cp {qcow_file} {ccvm_file}",
+        f"cp {old_xml_path} {new_xml_path}",
         f"qemu-img resize {ccvm_file} +350G",
-        f"virsh define --file {xml_path}",
+        f"virsh define --file {new_xml_path}",
         "virsh autostart ccvm",
         "virsh start ccvm",
         "virsh dominfo ccvm"

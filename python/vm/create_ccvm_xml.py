@@ -153,7 +153,7 @@ def createCcvmXml(args):
                         crd_txt = "    <disk type='file' device='disk'>\n"
                         crd_txt += "      <driver name='qemu' type='qcow2'/>\n"
                         if os_type == "ablestack-standalone":
-                            crd_txt += "      <source file='/var/lib/libvirt/images/ccvm.qcow2'/>\n"
+                            crd_txt += "      <source file='/mnt/glue/ccvm.qcow2'/>\n"
                         else:
                             crd_txt += "      <source file='/var/lib/libvirt/images/ablestack-template.qcow2'/>\n"
                         crd_txt += "      <target dev='vda' bus='virtio'/>\n"
