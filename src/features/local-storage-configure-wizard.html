@@ -73,13 +73,15 @@
                                     <i class="fas fa-fw fa-info-circle" aria-hidden="true"></i>
                                 </div>
                                 <p class="pf-c-alert__title pf-m-truncate">
-                                    <strong><span class="pf-screen-reader">Info alert:</span>로컬용 디스크 자원 구성 시 참고사항</strong>
+                                    <strong><span class="pf-screen-reader">Info alert:</span>로컬용 디스크 자원 구성 필수 준수사항</strong>
                                 </p>
                                 <div class="pf-c-alert__description">
                                     <p>
                                        로컬 스토리지는 서버 내부의 직접 연결 디스크를 기반으로 동작하며, 운영 환경에 따라 안정성과 성능에 큰 영향을 미칩니다.
 
-                                       구성 시에는 디스크의 종류, 용량, 연결 경로를 반드시 확인하시기 바랍니다.
+                                       구성 화면에 여러 물리 디스크가 보일 경우 개별 디스크를 직접 선택해 구성하지 말고, 먼저 BIOS/RAID 컨트롤러에서 필요한 수준의 RAID를 **사전에 구성하여 하나의 논리 디스크(가상 드라이브)**로 만든 뒤 그 논리 디스크만 선택해 설치를 진행해야 합니다.
+
+                                       또한 구성 시에는 디스크의 종류(SSD/HDD), 총 용량, 인터페이스와 경로를 반드시 확인하여 오선택을 방지하시기 바랍니다.
                                     </p>
                                 </div>
                             </div>
