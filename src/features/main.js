@@ -1382,15 +1382,15 @@ function checkDeployStatus(){
                 $('#button-config-file-download').show();
                 if(step2=="HEALTH_ERR"||step2==null){
                     // 외부 스토리지 버튼 활성화
-                    $('#button-gfs-multipath-sync').prop('disabled', false);
-                    $('#button-gfs-storage-rescan').prop('disabled', false);
+                    $('#button-hci-multipath-sync').prop('disabled', false);
+                    $('#button-hci-storage-rescan').prop('disabled', false);
                     // 클러스터 구성준비 버튼, 스토리지센터 VM 배포 버튼 show
                     $('#button-open-modal-wizard-storage-cluster').show();
                     $('#button-open-modal-wizard-storage-vm').show();
                     showRibbon('warning','스토리지센터 및 클라우드센터 VM이 배포되지 않았습니다. 스토리지센터 VM 배포를 진행하십시오.');
                 }else{
-                    $('#button-gfs-multipath-sync').prop('disabled', false);
-                    $('#button-gfs-storage-rescan').prop('disabled', false);
+                    $('#button-hci-multipath-sync').prop('disabled', false);
+                    $('#button-hci-storage-rescan').prop('disabled', false);
                     if(step3!="true"){
                         showRibbon('warning','스토리지센터 대시보드에 연결할 수 있도록 스토리지센터 구성하기 작업을 진행하십시오.');
                     }else{
