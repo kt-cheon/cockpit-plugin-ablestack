@@ -74,18 +74,18 @@ cloudstack-setup-management  2>&1 | tee -a $LOGFILE
 systemctl enable --now mold.service
 
 #UEFI 설정 파일 생성
-echo -e "guest.nvram.template.secure=/usr/share/edk2/ovmf/OVMF_VARS.secboot.fd
-guest.nvram.template.legacy=/usr/share/edk2/ovmf/OVMF_VARS.fd
-guest.loader.secure=/usr/share/edk2/ovmf/OVMF_CODE.secboot.fd
-guest.loader.legacy=/usr/share/edk2/ovmf/OVMF_CODE.secboot.fd
-guest.nvram.path=/var/lib/libvirt/qemu/nvram/" > /root/uefi.properties
+#echo -e "guest.nvram.template.secure=/usr/share/edk2/ovmf/OVMF_VARS.secboot.fd
+#guest.nvram.template.legacy=/usr/share/edk2/ovmf/OVMF_VARS.fd
+#guest.loader.secure=/usr/share/edk2/ovmf/OVMF_CODE.secboot.fd
+#guest.loader.legacy=/usr/share/edk2/ovmf/OVMF_CODE.secboot.fd
+#guest.nvram.path=/var/lib/libvirt/qemu/nvram/" > /root/uefi.properties
 
-for host in $hosts
-do
-  scp -o StrictHostKeyChecking=no /root/uefi.properties $host:/etc/cloudstack/agent/
-done
+#for host in $hosts
+#do
+#  scp -o StrictHostKeyChecking=no /root/uefi.properties $host:/etc/cloudstack/agent/
+#done
 
-rm -rf /root/uefi.properties
+#rm -rf /root/uefi.properties
 
 
 #tpm 설정 파일 생성
