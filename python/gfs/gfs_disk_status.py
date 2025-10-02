@@ -150,28 +150,51 @@ def group_by_mountpoint(devices):
     """
     mountpoint 기준으로 그룹화하고, multipath와 device를 배열로 묶음
     """
-    grouped = defaultdict(lambda: {"lvm": "", "multipaths": [], "devices": [], "size": "", "disk_id": []})
+    multipath_check = os.popen("multipath -l -v 1").read().strip()
+    if multipath_check != "":
+        grouped = defaultdict(lambda: {"lvm": "", "multipaths": [], "devices": [], "size": "", "disk_id": []})
 
-    for dev in devices:
+        for dev in devices:
 
-        mountpoint = dev["mountpoint"]
-        grouped[mountpoint]["lvm"] = dev["lvm"]
-        grouped[mountpoint]["size"] = dev["size"]
-        grouped[mountpoint]["multipaths"].append(dev["multipath"])
-        grouped[mountpoint]["devices"].append(dev["device"])
-        grouped[mountpoint]["disk_id"].append(dev["disk_id"])
-    # 결과를 리스트 형태로 변환
-    return [
-        {
-            "lvm": value["lvm"],
-            "mountpoint": key,
-            "size": value["size"],
-            "multipaths": list(set(value["multipaths"])),
-            "devices": list(set(value["devices"])),
-            "disk_id": list(set(value["disk_id"]))
-        }
-        for key, value in grouped.items()
-    ]
+            mountpoint = dev["mountpoint"]
+            grouped[mountpoint]["lvm"] = dev["lvm"]
+            grouped[mountpoint]["size"] = dev["size"]
+            grouped[mountpoint]["multipaths"].append(dev["multipath"])
+            grouped[mountpoint]["devices"].append(dev["device"])
+            grouped[mountpoint]["disk_id"].append(dev["disk_id"])
+        # 결과를 리스트 형태로 변환
+        return [
+            {
+                "lvm": value["lvm"],
+                "mountpoint": key,
+                "size": value["size"],
+                "multipaths": list(set(value["multipaths"])),
+                "devices": list(set(value["devices"])),
+                "disk_id": list(set(value["disk_id"]))
+            }
+            for key, value in grouped.items()
+        ]
+    else:
+        grouped = defaultdict(lambda: {"lvm": "", "multipaths": [], "devices": [], "size": ""})
+
+        for dev in devices:
+
+            mountpoint = dev["mountpoint"]
+            grouped[mountpoint]["lvm"] = dev["lvm"]
+            grouped[mountpoint]["size"] = dev["size"]
+            grouped[mountpoint]["multipaths"].append(dev["multipath"])
+            grouped[mountpoint]["devices"].append(dev["device"])
+        # 결과를 리스트 형태로 변환
+        return [
+            {
+                "lvm": value["lvm"],
+                "mountpoint": key,
+                "size": value["size"],
+                "multipaths": list(set(value["multipaths"])),
+                "devices": list(set(value["devices"]))
+            }
+            for key, value in grouped.items()
+        ]
 
 
 def listDiskInterface(H=False, classify=None):

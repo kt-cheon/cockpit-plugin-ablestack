@@ -318,7 +318,10 @@ def create_gfs(disks, vg_name, lv_name, gfs_name, mount_point, cluster_name, num
                     ssh_client = connect_to_host(ip)
                     run_command(f"partprobe {disk}", ssh_client, ignore_errors=True)
             # 파티션 이름 확인
-            partition = disk.replace("dm-uuid-mpath-","dm-uuid-part1-mpath-")
+            if "mpath" not in disk:
+                partition = f"{disk}1"
+            else:
+                partition = disk.replace("dm-uuid-mpath-","dm-uuid-part1-mpath-")
             # 물리 볼륨 생성
             run_command(f"pvcreate -ff --yes {partition}")
             # PV 디스크 목록에 추가

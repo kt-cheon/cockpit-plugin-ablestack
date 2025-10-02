@@ -484,6 +484,7 @@ function deployGfsStorage() {
 
     createLoggerInfo("deployGfsStorage start");
 
+    // var iscsi_check = sessionStorage.getItem("iscsi_check");
     //=========== 1. 스토리지센터 가상머신 초기화 작업 ===========
     // 설정 초기화 ( 필요시 python까지 종료 )
 
@@ -539,13 +540,6 @@ function deployGfsStorage() {
             ipmi_config += `${index > 0 ? ";" : ""}${entry.ip},${ipmi_port},${entry.user},${entry.password}`;
         });
         var journal_nums = String(hosts.length + 1);
-        // 체크된 디스크 이름들을 동적으로 가져옴
-        var general_virtual_disk_name = $('input[type=checkbox][name="form-gfs-storage-checkbox-disk"]:checked')
-            .map(function () {
-                return $(this).data('disk_id'); // 체크된 값 가져오기
-            })
-            .get() // jQuery 객체를 배열로 변환
-            .join(','); // 쉼표로 연결
 
         // 결과 출력 (디스크가 하나든 여러 개든 자동 처리)
         var gfs_cluster_name = "cloudcenter_res";
@@ -567,6 +561,13 @@ function deployGfsStorage() {
                 var ping_test_result = JSON.parse(data);
                 if(ping_test_result.code=="200") { //정상
                     if(externel_storage_sync == "duplication"){
+                            // 체크된 디스크 이름들을 동적으로 가져옴
+                            var general_virtual_disk_name = $('input[type=checkbox][name="form-gfs-storage-checkbox-disk"]:checked')
+                            .map(function () {
+                                return $(this).data('disk_id'); // 체크된 값 가져오기
+                            })
+                            .get() // jQuery 객체를 배열로 변환
+                            .join(','); // 쉼표로 연결
                             setGfsProgressStep("span-gfs-progress-step1",2);
                             setGfsProgressStep("span-gfs-progress-step2",1);
                             var reset_cloud_center_cmd = ['python3', pluginpath + '/python/vm/reset_cloud_center.py'];
@@ -726,6 +727,14 @@ function deployGfsStorage() {
                                     alert("클러스터 구성 설정 초기화 작업 실패 : "+data);
                                 });
                     }else{
+                        // 체크된 디스크 이름들을 동적으로 가져옴
+                        var general_virtual_disk_name = $('input[type=checkbox][name="form-gfs-storage-checkbox-disk"]:checked')
+                        .map(function () {
+                            return $(this).val(); // 체크된 값 가져오기
+                        })
+                        .get() // jQuery 객체를 배열로 변환
+                        .join(','); // 쉼표로 연결
+
                         setGfsProgressStep("span-gfs-progress-step1",2);
                         setGfsProgressStep("span-gfs-progress-step2",1);
                         var reset_cloud_center_cmd = ['python3', pluginpath + '/python/vm/reset_cloud_center.py'];

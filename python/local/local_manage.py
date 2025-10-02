@@ -98,7 +98,7 @@ def create_local_disk(disks):
             run_command(f"vgcreate {vg} {partition}")
             run_command(f"lvcreate -n {lv_glue} {vg} -l +100%FREE -y")
             run_command("mkdir -p /mnt/glue")
-            run_command(f"mkfs.xfs /dev/{vg}/{lv_glue}")
+            run_command(f"mkfs.xfs -K /dev/{vg}/{lv_glue}")
             run_command(f"printf '\\n{fstab_line}\\n' >> /etc/fstab")
             run_command("systemctl daemon-reload")
             run_command("mount -a")
