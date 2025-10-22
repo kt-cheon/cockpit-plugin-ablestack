@@ -781,6 +781,7 @@ function CardCloudClusterStatus(){
                 $('#cccs-status').text('Health Err');
                 $('#cccs-back-color').attr('class','pf-c-label pf-m-red');
                 $('#cccs-cluster-icon').attr('class','fas fa-fw fa-exclamation-triangle');
+                $('#cccs-low-info').attr('style','color: var(--pf-global--danger-color--100)')
                 $('#cccs-low-info').text('클라우드센터 클러스터가 구성되지 않았습니다.');
                 sessionStorage.setItem("cc_status", "HEALTH_ERR1");
             }else if(retVal.code == '400' && retVal.val == 'resource not found.'){

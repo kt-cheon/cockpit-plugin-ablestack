@@ -218,6 +218,21 @@
                                             <input class="pf-c-form-control" style="width:50%" type="text" id="form-input-current-host-name" name="form-input-current-host-name" required="required" disabled/>
                                         </div>
                                     </div>
+                                    <div class="pf-c-form__group" id="iscsi-storage-exclusive" style="display: none;">
+                                        <div class="pf-c-form__group-label">
+                                          <label class="pf-c-form__label" for="iscsi-net-switch">
+                                            <span class="pf-c-form__label-text">iSCSI 스토리지 전용</span>
+                                          </label>
+                                        </div>
+                                        <div class="pf-c-form__group-control pf-l-flex pf-m-align-items-center">
+                                          <label class="pf-c-switch">
+                                            <input id="iscsi-net-switch" class="pf-c-switch__input" type="checkbox" aria-label="iSCSI 전용 네트워크 토글" />
+                                            <span class="pf-c-switch__toggle">
+                                              <span class="pf-c-switch__toggle-icon" aria-hidden="true"></span>
+                                            </span>
+                                          </label>
+                                        </div>
+                                    </div>
                                     <div class="pf-c-form__group" id="div-form-hosts-input-number">
                                         <div class="pf-c-form__group-label">
                                             <label class="pf-c-form__label" for="form-input-cluster-config-host-number">

@@ -11,6 +11,7 @@ var xml_create_cmd;
 var completed = false;
 var option_ccvm = "-ccvm";
 var os_type = sessionStorage.getItem("os_type");
+var iscsi_check = sessionStorage.getItem("iscsi_check");
 /* Document Ready 이벤트 처리 시작 */
 
 $(document).ready(function(){
@@ -49,25 +50,6 @@ $(document).ready(function(){
     //서비스네트워크 리스트 초기 세팅
     setNicBridge('form-select-cloud-vm-svc-parent');
 
-    //호스트 파일 셋팅
-    clusterConfigProfile(os_type);
-
-    cockpit.spawn(["cat", pluginpath + "/tools/properties/cluster.json"])
-    .then(function(data){
-        var clusterJsonConf = JSON.parse(data);
-
-        var count = clusterJsonConf.clusterConfig.hosts.length;
-
-        //장애조치 클러스터 동적 셋팅
-        updateHostFields(count);
-
-        settingProfile(clusterJsonConf, option_ccvm, os_type);
-    })
-    .catch(function(data){
-        createLoggerInfo("cluster.json 파일 읽기 실패");
-        console.log("cluster.json 파일 읽기 실패" + data);
-    });
-
     //ssh 개인 key 파일 선택 이벤트 세팅
     setSshKeyFileReader($('#form-input-cloud-vm-ssh-private-key-file'), 'id_rsa', setCcvmSshPrivateKeyInfo);
 
@@ -76,6 +58,9 @@ $(document).ready(function(){
 
     //os type 별로 화면 처리
     setTypeByChange();
+
+    // 호스트 필드 자동 설정
+    ccvmsethostfiled();
 
     //SSH Key 정보 자동 세팅
     settingSshKey(option_ccvm);
@@ -312,6 +297,7 @@ $('#button-next-step-modal-wizard-cloud-vm').on('click', function(){
         }
         else if (cur_step_wizard_cloud_vm == "3") {
             resetCloudVMWizard();
+
 
             $('#div-modal-wizard-cloud-vm-network').show();
             $('#nav-button-cloud-vm-appliance').addClass('pf-m-current');
@@ -1129,7 +1115,7 @@ function deployCloudCenterVM() {
     // hosts 파일 > config 파일 쓰는 부분
     let host_file_type = $('input[name=radio-hosts-file-ccvm]:checked').val();
 
-    let ret_json_string = tableToClusterConfigJsonString(host_file_type, option_ccvm, os_type);
+    let ret_json_string = tableToClusterConfigJsonString(host_file_type, option_ccvm, os_type, iscsi_check);
 
     var local_host = "127.0.0.1       localhost localhost.localdomain localhost4 localhost4.localdomain4\n::1     localhost localhost.localdomain localhost6 localhost6.localdomain6\n"
 
@@ -1799,7 +1785,7 @@ function setCcvmReviewInfo(){
     // 변경된 hosts file 내용을 설정 확인에 반영
     let host_file_type = $('input[name=radio-hosts-file-ccvm]:checked').val();
 
-    putHostsValueIntoTextarea(host_file_type, option_ccvm,os_type);
+    putHostsValueIntoTextarea(host_file_type, option_ccvm,os_type,iscsi_check);
 
     //호스트명
     var ccvm_name = $('#form-input-cloud-vm-hostname').val();
@@ -1923,7 +1909,7 @@ function validateCloudCenterVm(){
     } else if($('#div-textarea-cluster-config-confirm-hosts-file-ccvm').val().trim() == "") {
         alert("클러스터 구성 프로파일 정보를 확인해 주세요.");
         validate_check = false;
-    } else if(validateClusterConfigProfile(host_file_type, option_ccvm, os_type)) { // config 유효성 검사
+    } else if(validateClusterConfigProfile(host_file_type, option_ccvm, os_type, iscsi_check)) { // config 유효성 검사
         validate_check = false;
     } else if ($('#form-input-cloud-vm-hostname').val() == "") { //클라우드센터 가상머신 호스트명
         alert("클라우드센터 가상머신의 호스트명 입력해주세요.");
@@ -1998,8 +1984,13 @@ function setTypeByChange(){
     if (os_type == "ablestack-vm"){
         // 클러스터 민감도 화면 처리
         $('#nav-button-cloud-vm-cluster-sync-mechanism').show();
+        $('#cloud-iscsi-storage-exclusive').show();
     }else if(os_type == "ablestack-standalone"){
         $('#nav-button-cloud-vm-cluster').hide();
+        $('#cloud-iscsi-storage-exclusive').hide();
+    }else{
+        $('#nav-button-cloud-vm-cluster-sync-mechanism').show();
+        $('#cloud-iscsi-storage-exclusive').hide();
     }
 }
 
@@ -2084,93 +2075,107 @@ function updateHostFields(count) {
  * Return  : 없음
  * History  : 2024.12.19 최초 작성
  */
-function ccvmcreateAccordion(type, hostCount) {
-    // Get the existing container by ID
+function ccvmcreateAccordion(type, hostCount, opts = {}) {
+    const { lock = true, resetLock = false } = opts;
+
+    // 대상 컨테이너/아이디 설정
     let accordionContainer;
     let expandedContentId;
     let toggleText_name;
     let toggleButton_name;
 
-    if (type == "failover") {
-        accordionContainer = document.getElementById("div-accordion-cloud-failover-cluster");
-        toggleText_name = "장애조치 클러스터 설정";
-        expandedContentId = "div-accordion-cloud-vm-failover-cluster";
-        toggleButton_name = "button-accordion-cloud-vm-failover-cluster";
+    if (type === 'failover') {
+      accordionContainer = document.getElementById('div-accordion-cloud-failover-cluster');
+      toggleText_name = '장애조치 클러스터 설정';
+      expandedContentId = 'div-accordion-cloud-vm-failover-cluster';
+      toggleButton_name = 'button-accordion-cloud-vm-failover-cluster';
+    }
+    if (!accordionContainer) return;
+
+    // ✅ 증가 방지: 최초 렌더 수를 잠그고 그 이상으로는 커지지 않게 함
+    const prevLocked = Number(accordionContainer.dataset.lockedCount || 0);
+    let effectiveCount = Number(hostCount);
+
+    if (lock) {
+      if (resetLock || prevLocked === 0) {
+        // 최초 또는 리셋 시점: 현재 hostCount로 잠금 갱신
+        accordionContainer.dataset.lockedCount = String(effectiveCount);
+      } else {
+        // 잠금 유지: 이전 값보다 커지면 이전 값으로 클램프
+        effectiveCount = Math.min(effectiveCount, prevLocked);
+      }
     }
 
-    // Clear existing content to avoid duplication
-    accordionContainer.innerHTML = "";
+    // 중복 생성 방지: 기존 내용을 지우고 다시 그림
+    accordionContainer.innerHTML = '';
 
-    // Create toggle button
-    const toggleButton = document.createElement("button");
-    toggleButton.className = "pf-c-accordion__toggle";
-    toggleButton.setAttribute("aria-expanded", "false");
+    // 토글 버튼
+    const toggleButton = document.createElement('button');
+    toggleButton.className = 'pf-c-accordion__toggle';
+    toggleButton.setAttribute('aria-expanded', 'false');
     toggleButton.id = toggleButton_name;
 
-    const toggleText = document.createElement("span");
-    toggleText.className = "pf-c-accordion__toggle-text";
+    const toggleText = document.createElement('span');
+    toggleText.className = 'pf-c-accordion__toggle-text';
     toggleText.innerText = toggleText_name;
 
-    const toggleIcon = document.createElement("span");
-    toggleIcon.className = "pf-c-accordion__toggle-icon";
+    const toggleIcon = document.createElement('span');
+    toggleIcon.className = 'pf-c-accordion__toggle-icon';
     toggleIcon.innerHTML = '<i class="fas fa-angle-right" aria-hidden="true"></i>';
 
     toggleButton.appendChild(toggleText);
     toggleButton.appendChild(toggleIcon);
 
-    // Append toggle button
-    const heading = document.createElement("h3");
+    const heading = document.createElement('h3');
     heading.appendChild(toggleButton);
     accordionContainer.appendChild(heading);
 
-    // Create expanded content
-    const expandedContent = document.createElement("div");
-    expandedContent.className = "pf-c-accordion__expanded-content";
+    // 펼침 영역
+    const expandedContent = document.createElement('div');
+    expandedContent.className = 'pf-c-accordion__expanded-content';
     expandedContent.id = expandedContentId;
-    expandedContent.style.display = "none"; // 기본적으로 닫힌 상태
+    expandedContent.style.display = 'none';
 
-    const expandedBody = document.createElement("div");
-    expandedBody.className = "pf-c-accordion__expanded-content-body";
+    const expandedBody = document.createElement('div');
+    expandedBody.className = 'pf-c-accordion__expanded-content-body';
 
-    const descriptionList = document.createElement("dl");
-    descriptionList.className = "pf-c-description-list pf-m-horizontal";
-    descriptionList.style = "--pf-c-description-list--RowGap: 10px; margin-left: 10px;";
+    const descriptionList = document.createElement('dl');
+    descriptionList.className = 'pf-c-description-list pf-m-horizontal';
+    descriptionList.style = '--pf-c-description-list--RowGap: 10px; margin-left: 10px;';
 
-    // Add 'IPMI 구성 준비' group
-    if (type == "failover"){
-        descriptionList.appendChild(ccvmcreateDescriptionGroup("클러스터 멤버 수", hostCount));
+    if (type === 'failover') {
+      descriptionList.appendChild(ccvmcreateDescriptionGroup('클러스터 멤버 수', effectiveCount));
 
-        // Add host-specific IPMI groups
-        for (let i = 1; i <= hostCount; i++) {
-            const hostGroup = ccvmcreateDescriptionGroup(
-                `PCS 호스트 #${i}`,
-                `MGMT IP : <span id="span-cloud-vm-failover-cluster-host${i}-name"></span><br/>`
-            );
-            descriptionList.appendChild(hostGroup);
-        }
+      for (let i = 1; i <= effectiveCount; i += 1) {
+        const hostGroup = ccvmcreateDescriptionGroup(
+          `PCS 호스트 #${i}`,
+          `MGMT IP : <span id="span-cloud-vm-failover-cluster-host${i}-name"></span><br/>`
+        );
+        descriptionList.appendChild(hostGroup);
+      }
     }
 
     expandedBody.appendChild(descriptionList);
     expandedContent.appendChild(expandedBody);
     accordionContainer.appendChild(expandedContent);
 
-    // Update spans with IPMI values
-    ccvmupdateSpans(type, hostCount);
-}
+    // 값 채우기
+    ccvmupdateSpans(type, effectiveCount);
+  }
 
-function ccvmcreateDescriptionGroup(title, contentHtml) {
-    const group = document.createElement("div");
-    group.className = "pf-c-description-list__group";
+  function ccvmcreateDescriptionGroup(title, contentHtml) {
+    const group = document.createElement('div');
+    group.className = 'pf-c-description-list__group';
 
-    const term = document.createElement("dt");
-    term.className = "pf-c-description-list__term";
+    const term = document.createElement('dt');
+    term.className = 'pf-c-description-list__term';
     term.innerHTML = `<span class="pf-c-description-list__text">${title}</span>`;
 
-    const description = document.createElement("dd");
-    description.className = "pf-c-description-list__description";
+    const description = document.createElement('dd');
+    description.className = 'pf-c-description-list__description';
 
-    const textContainer = document.createElement("div");
-    textContainer.className = "pf-c-description-list__text";
+    const textContainer = document.createElement('div');
+    textContainer.className = 'pf-c-description-list__text';
     textContainer.innerHTML = contentHtml;
 
     description.appendChild(textContainer);
@@ -2178,14 +2183,43 @@ function ccvmcreateDescriptionGroup(title, contentHtml) {
     group.appendChild(description);
 
     return group;
-}
+  }
 
-function ccvmupdateSpans(type, hostCount) {
-    if (type == "failover"){
-        for (var i = 1; i <= hostCount; i++) {
-            fc_host = $(`#form-input-cloud-vm-failover-cluster-host${i}-name`).val().trim()
-            $(`#span-cloud-vm-failover-cluster-host${i}-name`).text(fc_host);
-        }
-        }
+  function ccvmupdateSpans(type, hostCount) {
+    if (type === 'failover') {
+      for (let i = 1; i <= hostCount; i += 1) {
+        const fc_host = $(`#form-input-cloud-vm-failover-cluster-host${i}-name`).val()?.trim() || '';
+        $(`#span-cloud-vm-failover-cluster-host${i}-name`).text(fc_host);
+      }
+    }
+  }
+
+  /* 선택: 잠금 리셋이 필요할 때 호출 */
+  function ccvmResetAccordionLock(type) {
+    if (type === 'failover') {
+      const el = document.getElementById('div-accordion-cloud-failover-cluster');
+      if (el) delete el.dataset.lockedCount;
+    }
+  }
+
+
+function ccvmsethostfiled(){
+    cockpit.spawn(["cat", pluginpath + "/tools/properties/cluster.json"])
+    .then(function(data){
+        var clusterJsonConf = JSON.parse(data);
+
+        var count = clusterJsonConf.clusterConfig.hosts.length;
+        var iscsi_check = clusterJsonConf.clusterConfig.iscsi_storage;
+        //장애조치 클러스터 동적 셋팅
+        updateHostFields(count);
+
+        clusterConfigProfile(os_type, "", iscsi_check);
+
+        settingProfile(clusterJsonConf, option_ccvm, os_type, iscsi_check);
+    })
+    .catch(function(data){
+        createLoggerInfo("cluster.json 파일 읽기 실패");
+        console.log("cluster.json 파일 읽기 실패" + data);
+    });
 
 }

@@ -626,6 +626,15 @@ function checkConfigStatus(){
                             resetBootstrap();
                             resolve();
                         })
+                        cockpit.spawn(["cat", pluginpath + "/tools/properties/cluster.json"])
+                        .then(function(data){
+                            var clusterJsonConf = JSON.parse(data);
+                            sessionStorage.setItem("iscsi_check", clusterJsonConf.clusterConfig.iscsi_storage);
+                        })
+                        .catch(function(data){
+                            createLoggerInfo("cluster.json 파일 읽기 실패");
+                            console.log("cluster.json 파일 읽기 실패" + data);
+                        });
                 }
             })
             .catch(err=>{
@@ -2722,7 +2731,6 @@ function applyExtendMethodStyles() {
       checkedRadio.style.backgroundColor = '#007BBA';
       checkedRadio.style.boxShadow = 'inset 0 0 0 3px white';
     }
-    console.log($('input[name="extend-method"]:checked').val())
   }
 
   // 초기 상태에도 적용
@@ -2788,8 +2796,6 @@ $('#button-execution-modal-gfs-disk-extend').on('click',function(){
          return name.split("/").pop();
     })
     .get().join(',');
-
-    console.log(vg_name, lv_name, mount_point, disks, gfs_name,non_stop_check);
 
     if (extend_method == "resize"){
         cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--rescan', '--vg-names', vg_name, '--lv-names', lv_name, '--mount-point', mount_point];
@@ -3685,6 +3691,8 @@ function gfsResourceStatus() {
                 $('#gfs-fence-back-color, #gfs-lock-back-color').attr('class','pf-c-label pf-m-red');
                 $('#gfs-fence-icon, #gfs-lock-icon').attr('class','fas fa-fw fa-exclamation-triangle');
                 $('#gfs-fence-text, #gfs-lock-text').text("N/A");
+                $('#gfs-low-info').attr("style","color: var(--pf-global--danger-color--100)");
+                $('#gfs-low-info').text("GFS 리소스가 구성되지 않았습니다.");
             }
 
             resolve();

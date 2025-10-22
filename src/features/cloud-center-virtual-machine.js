@@ -182,6 +182,8 @@ class CloudCenterVirtualMachine {
                     $('#card-action-cloud-vm-connect').removeClass('pf-m-disabled');
                     resolve();
                 }else{
+                    $('#ccvm-low-info').text('클라우드센터 가상머신이 배포되지 않았습니다.');
+                    $('#ccvm-low-info').attr('style','color: var(--pf-global--danger-color--100)');
                     sessionStorage.setItem("ccvm_status", "HEALTH_ERR");
                     resolve();
                 }

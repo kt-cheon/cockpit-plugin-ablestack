@@ -484,26 +484,27 @@ function deployGfsStorage() {
 
     createLoggerInfo("deployGfsStorage start");
 
-    // var iscsi_check = sessionStorage.getItem("iscsi_check");
+    var iscsi_check = sessionStorage.getItem("iscsi_check");
     //=========== 1. 스토리지센터 가상머신 초기화 작업 ===========
     // 설정 초기화 ( 필요시 python까지 종료 )
 
     cockpit.spawn(['cat', pluginpath + '/tools/properties/cluster.json']).then(function(data){
         var retVal = JSON.parse(data);
         var hosts = retVal.clusterConfig.hosts;
-
         var all_host_name = "";
         var host_names = [];
         for (let i = 0; i < hosts.length ; i++) {
-
-            var hostName = hosts[i].ablecube;
+            if (iscsi_check == "true"){
+                var hostName = hosts[i].ablecubePn;
+            }else{
+                var hostName = hosts[i].ablecube;
+            }
             all_host_name += (all_host_name ? " " : "") + hostName;
             if (hostName) {
                 host_names.push(hostName); // 유효한 이름만 배열에 추가
             }
 
         }
-
         var ipmi_port = "623";
         var ipmi_check_value = $('input[name="radio-gfs-ipmi"]:checked').val();
 
@@ -547,7 +548,7 @@ function deployGfsStorage() {
         var gfs_name = "glue-gfs";
         var gfs_vg_name = "vg_glue";
         var gfs_lv_name = "lv_glue";
-        var ret_json_string = ClusterConfigJsonStringGFS(retVal);
+        var ret_json_string = ClusterConfigJsonStringGFS(retVal, iscsi_check);
         var mgmt_ip = retVal.clusterConfig.ccvm.ip;
         //=========== 1. 클러스터 구성 host 네트워크 연결 및 초기화 작업 ===========
         setGfsProgressStep("span-gfs-progress-step1",1);
@@ -560,7 +561,7 @@ function deployGfsStorage() {
                 //결과 값 json으로 return
                 var ping_test_result = JSON.parse(data);
                 if(ping_test_result.code=="200") { //정상
-                    if(externel_storage_sync == "duplication"){
+                    if(externel_storage_sync == "duplication" || externel_storage_sync == "skip"){
                             // 체크된 디스크 이름들을 동적으로 가져옴
                             var general_virtual_disk_name = $('input[type=checkbox][name="form-gfs-storage-checkbox-disk"]:checked')
                             .map(function () {
