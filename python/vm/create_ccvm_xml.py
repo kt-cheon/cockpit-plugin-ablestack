@@ -239,8 +239,19 @@ def createCcvmXml(args):
                 if ret_num == 0:
                     break
 
-            if ret_num != 0:
-                return createReturn(code=500, val="pcs 클러스터 할 호스트 설정 복제 실패")
+            # # ablestack-template_VARS.fd 파일 CCVM용으로 복사
+            # for i in [1,2,3]:
+            #     # 대상 파일이 없을 때만 복사합니다(있으면 아무 것도 하지 않음)입니다.
+            #     ret_num = os.system(
+            #         "ssh root@" + host_name +
+            #         " 'test -e /var/lib/libvirt/qemu/nvram/ablestack-template-ccvm_VARS.fd"
+            #         " || cp -f /var/lib/libvirt/qemu/nvram/ablestack-template_VARS.fd"
+            #         " /var/lib/libvirt/qemu/nvram/ablestack-template-ccvm_VARS.fd'"
+            #     )
+            #     if ret_num == 0:
+            #         break
+            # if ret_num != 0:
+            #     return createReturn(code=500, val="ablestack-template-ccvm_VARS.fd 파일 복사 실패")
 
         #작업파일 지우기
         os.system("rm -f "+pluginpath+"/tools/vmconfig/ccvm/ccvm-temp.xml "+pluginpath+"/tools/vmconfig/ccvm/ccvm.xml.bak "+pluginpath+"/tools/vmconfig/ccvm/ccvm-temp.xml.bak")

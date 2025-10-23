@@ -241,10 +241,10 @@
                                                     <input class="pf-c-check__input" type="checkbox" id="form-checkbox-mngt-network" name="form-checkbox-mngt-network" checked disabled/>
                                                     <label class="pf-c-check__label" style="margin-top:5px" for="form-checkbox-mngt-network">관리네트워크</label>
                                                 </div>
-                                                <!-- <div class="pf-c-check">
+                                                <div class="pf-c-check">
                                                     <input class="pf-c-check__input" type="checkbox" id="form-checkbox-svc-network" name="form-checkbox-svc-network" />
                                                     <label class="pf-c-check__label" style="margin-top:5px" for="form-checkbox-svc-network">서비스네트워크</label>
-                                                </div> -->
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="pf-c-form__field-group">
@@ -268,7 +268,7 @@
                                                         </select>
                                                     </div>
                                                 </div>
-                                                <!-- <div class="pf-c-form__group" style="padding:0px;">
+                                                <div class="pf-c-form__group" style="padding:0px;">
                                                     <div class="pf-c-form__group-label">
                                                         <label class="pf-c-form__label" for="form-select-cloud-vm-svc-parent">
                                                             <span class="pf-c-form__label-text">서비스네트워크</span>
@@ -279,7 +279,7 @@
                                                         <select class="pf-c-form-control" id="form-select-cloud-vm-svc-parent" name="form-select-cloud-vm-svc-parent" style="width:40%;" disabled>
                                                         </select>
                                                     </div>
-                                                </div> -->
+                                                </div>
                                             </div>
                                         </div>
                                     </section>
@@ -335,6 +335,21 @@
                                             </div>
                                             <div class="pf-c-form__group-control">
                                                 <input class="pf-c-form-control" style="width:50%" type="text" id="form-input-current-host-name-ccvm" name="form-input-current-host-name-ccvm" required="required" disabled/>
+                                            </div>
+                                        </div>
+                                        <div class="pf-c-form__group" id="cloud-iscsi-storage-exclusive" style="display: none;">
+                                            <div class="pf-c-form__group-label">
+                                              <label class="pf-c-form__label" for="cloud-iscsi-net-switch">
+                                                <span class="pf-c-form__label-text">iSCSI 스토리지 전용</span>
+                                              </label>
+                                            </div>
+                                            <div class="pf-c-form__group-control pf-l-flex pf-m-align-items-center">
+                                              <label class="pf-c-switch">
+                                                <input id="cloud-iscsi-net-switch" class="pf-c-switch__input" type="checkbox" aria-label="iSCSI 전용 네트워크 토글" disabled/>
+                                                <span class="pf-c-switch__toggle">
+                                                  <span class="pf-c-switch__toggle-icon" aria-hidden="true"></span>
+                                                </span>
+                                              </label>
                                             </div>
                                         </div>
                                         <div class="pf-c-form__group" id="div-form-hosts-input-number-ccvm">
@@ -437,7 +452,7 @@
                                                 <input class="pf-c-form-control" style="width:50%" type="text" id="form-input-cloud-vm-dns" name="form-input-cloud-vm-dns" placeholder="xxx.xxx.xxx.xxx 형식으로 입력" />
                                             </div>
                                         </div>
-                                        <!-- <div class="pf-c-form__group">
+                                        <div class="pf-c-form__group">
                                             <div class="pf-c-form__group-label">
                                                 <label class="pf-c-form__label" for="form-input-cloud-vm-svc-nic-ip">
                                                     <span class="pf-c-form__label-text">서비스 NIC IP</span>
@@ -466,7 +481,7 @@
                                             <div class="pf-c-form__group-control pf-m-inline">
                                                 <input class="pf-c-form-control" style="width:50%" type="text" id="form-input-cloud-vm-svc-dns" name="form-input-cloud-vm-svc-dns" placeholder="xxx.xxx.xxx.xxx 형식으로 입력" disabled/>
                                             </div>
-                                        </div> -->
+                                        </div>
                                     </section>
                                 </form>
                             </div>
@@ -605,7 +620,7 @@
                                                     </div>
                                                 </dd>
                                             </div>
-                                            <!-- <div class="pf-c-description-list__group">
+                                            <div class="pf-c-description-list__group">
                                                 <dt class="pf-c-description-list__term">
                                                     <span class="pf-c-description-list__text">서비스용 Bridge</span>
                                                 </dt>
@@ -614,7 +629,7 @@
                                                         <span id="span-cloud-vm-svc-nic-bridge"></span>
                                                     </div>
                                                 </dd>
-                                            </div> -->
+                                            </div>
                                         </dl>
                                     </div>
                                 </div>
@@ -668,7 +683,7 @@
                                                     </div>
                                                 </dd>
                                             </div>
-                                            <!-- <div class="pf-c-description-list__group">
+                                            <div class="pf-c-description-list__group">
                                                 <dt class="pf-c-description-list__term">
                                                     <span class="pf-c-description-list__text">서비스 NIC 정보</span>
                                                 </dt>
@@ -679,7 +694,7 @@
                                                         DNS : <span id="span-cloud-vm-additional-svc-dns"></span>
                                                     </div>
                                                 </dd>
-                                            </div> -->
+                                            </div>
                                         </dl>
                                     </div>
                                 </div>

@@ -107,10 +107,12 @@ def resetCloudCenter(args):
         # GFS용 초기화
         pcs_list_str = " ".join(pcs_list)
         vg_name_check = os.popen("pvs --noheadings -o vg_name 2>/dev/null | grep 'vg_glue' | uniq").read().strip().splitlines()
+
         if vg_name_check:
+            lv_names = [s.replace('vg', 'lv', 1) if s.startswith('vg') else s for s in vg_name_check]
             disk_list = os.popen("pvs --noheadings -o pv_name,vg_name 2>/dev/null | grep 'vg_glue' | awk '{print $1}' | sed 's/[0-9]*$//'").read().strip().split("\n")
             disk = ",".join(disk_list)
-            result = json.loads(python3(pluginpath + '/python/gfs/gfs_manage.py', '--init-pcs-cluster','--disks', disk ,'--vg-name', 'vg_glue', '--lv-name', 'lv_glue', '--list-ip', pcs_list_str))
+            result = json.loads(python3(pluginpath + '/python/gfs/gfs_manage.py', '--init-pcs-cluster','--disks', disk ,'--vg-name', vg_name_check, '--lv-name', lv_names, '--list-ip', pcs_list_str))
             if result['code'] not in [200,400]:
                 success_bool = False
         else:
