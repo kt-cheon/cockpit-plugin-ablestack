@@ -205,6 +205,43 @@ curl -s -X PUT "${KC_URL}/admin/realms/${REALM_NAME}" \
 echo "✅ Realm '${REALM_NAME}' 타임아웃 설정 완료 (1시간)"
 
 # ---------------------------------------------
+# Realm 다국어적용(Internationalization)
+# ---------------------------------------------
+# master Realm
+curl -s -X PUT "${KC_URL}/admin/realms/master" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "internationalizationEnabled": true,
+        "supportedLocales": ["en", "ko"],
+        "defaultLocale": "ko"
+      }' >/dev/null
+
+if [ $? -eq 0 ]; then
+  echo "[OK] Realm master 다국어 활성화 완료"
+else
+  echo "[ERROR] Realm master 다국어 활성화 실패"
+  exit 1
+fi
+
+# 생성한 Realm
+curl -s -X PUT "${KC_URL}/admin/realms/${REALM_NAME}" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "internationalizationEnabled": true,
+        "supportedLocales": ["en", "ko"],
+        "defaultLocale": "ko"
+      }' >/dev/null
+
+if [ $? -eq 0 ]; then
+  echo "[OK] Realm ${REALM_NAME} 다국어 활성화 완료"
+else
+  echo "[ERROR] Realm ${REALM_NAME} 다국어 활성화 실패"
+  exit 1
+fi
+
+# ---------------------------------------------
 # Realm 테마적용
 # ---------------------------------------------
 echo "[INFO] Realm 테마 적용 중..."
