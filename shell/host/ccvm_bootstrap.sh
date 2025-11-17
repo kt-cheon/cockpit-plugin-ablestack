@@ -13,6 +13,7 @@ LOGFILE="/var/log/cloud_install.log"
 
 os_type=$(cat /etc/cluster.json | grep '"type"' | awk -F'"' '{print $4}')
 hosts=$(grep -v mngt /etc/hosts | grep -v scvm | grep -v pn | grep -v localhost | awk {'print $1'})
+ccvm=$(grep ccvm /etc/hosts | awk {'print $1'})
 
 systemctl enable --now mysqld
 DATABASE_PASSWD="Ablecloud1!"
@@ -51,9 +52,18 @@ mysqladmin -uroot password $DATABASE_PASSWD
 systemctl enable --now mold-usage.service
 cloudstack-setup-databases cloud:$DATABASE_PASSWD --deploy-as=root:$DATABASE_PASSWD  2>&1 | tee -a $LOGFILE
 
-# 글로벌설정 DB 업데이트
+# 글로벌설정 DB 업데이트(네트워크필터, saml)
 global_settings=(
   "enable.vm.network.filter.allow.all.traffic=true"
+  "saml2.enabled=true"
+  "saml2.idp.metadata.url=http://$ccvm:7070/realms/saml/protocol/saml/descriptor"
+  "saml2.redirect.url=http://$ccvm:8080/client"
+  "saml2.sp.id=http://$ccvm:8080"
+  "saml2.sp.slo.url=http://$ccvm:8080"
+  "saml2.sp.sso.url=http://$ccvm:8080/client/api?command=samlSso"
+  "saml2.user.attribute=username"
+  "saml2.failed.login.redirect.url=http://$ccvm:8080/client/#/user/login?ssoLogin=false"
+  "saml2.check.signature=false"
 )
 
 for i in "${global_settings[@]}"; do
@@ -69,6 +79,10 @@ for i in "${global_settings[@]}"; do
 done
 
 cloudstack-setup-management  2>&1 | tee -a $LOGFILE
+
+#admin 계정 로그인타입 변경(SAML)
+mysql --user=root --password="$DATABASE_PASSWD" -e \
+"USE cloud; UPDATE user SET source='SAML2', external_entity='http://$ccvm:7070/realms/saml' WHERE username='admin';"
 
 systemctl enable --now mold.service
 
@@ -117,6 +131,10 @@ fi
 
 # ccvm 로그 정리 스크립트 등록
 (crontab -l 2>/dev/null; echo "0 0 * * 7 /usr/local/sbin/ccvm_log_maintainer.sh") | crontab -
+
+# sso 로그인을 위한 스크립트 실행
+sh /usr/local/sbin/sso_setting.sh
+rm -rf /usr/local/sbin/sso_setting.sh
 
 # Delete bootstrap script file
 rm -rf /root/bootstrap.sh
