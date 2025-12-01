@@ -167,6 +167,17 @@ fi
 echo "[OK] Access Token 발급 성공"
 
 # ---------------------------------------------
+# 초기 비밀번호 변경
+# ---------------------------------------------
+USER_ID=$(curl -s -H "Authorization: Bearer ${TOKEN}" \
+  "${KC_URL}/admin/realms/master/users?username=${ADMIN_USER}" | jq -r '.[0].id')
+
+curl -s -X PUT "${KC_URL}/admin/realms/master/users/${USER_ID}" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -d '{"requiredActions":["UPDATE_PASSWORD"]}'
+
+# ---------------------------------------------
 # Realm 생성 or 확인
 # ---------------------------------------------
 echo "[INFO] '${REALM_NAME}' Realm 확인 중..."
