@@ -630,6 +630,13 @@ function checkConfigStatus(){
                         .then(function(data){
                             var clusterJsonConf = JSON.parse(data);
                             sessionStorage.setItem("iscsi_check", clusterJsonConf.clusterConfig.iscsi_storage);
+                            cockpit.spawn(["cat", pluginpath + "/tools/properties/ablestack.json"]).then(function(data){
+                                var ablestackJsonConf = JSON.parse(data);
+                                sessionStorage.setItem("security_patch", ablestackJsonConf.security_patch.status);
+                            }).catch(function(data){
+                                createLoggerInfo("ablestack.json 파일 읽기 실패");
+                                console.log("ablestack.json 파일 읽기 실패" + data);
+                            })
                         })
                         .catch(function(data){
                             createLoggerInfo("cluster.json 파일 읽기 실패");
@@ -1379,6 +1386,7 @@ function checkDeployStatus(){
 
         const step11 = sessionStorage.getItem("gfs_configure");
         const step12 = sessionStorage.getItem("local_configure");
+        const step13 = sessionStorage.getItem("security_patch");
 
         // 배포 상태조회
         if (os_type == "ablestack-hci"){
@@ -1438,6 +1446,7 @@ function checkDeployStatus(){
                                             }else{
                                                 // 모니터링센터 구성 연결 버튼 show
                                                 $('#button-link-monitoring-center').show();
+                                                $('#button-cloud-cluster-ssh-port').removeClass('pf-m-disabled');
 
                                                 showRibbon('success','ABLESTACK 스토리지센터 및 클라우드센터 VM 배포되었으며 모니터링센터 구성이 완료되었습니다. 가상어플라이언스 상태가 정상입니다.');
                                                 // 운영 상태조회
@@ -1458,6 +1467,11 @@ function checkDeployStatus(){
                                                     msg += '클라우드센터 가상머신 Mold 서비스 , DB 상태를 확인하여 정지상태일 경우 서비스 재시작\n';
                                                     msg += '또는 클라우드센터 클러스터 상태 카드에서 가상머신 시작하여 문제를 해결할 수 있습니다.';
                                                     showRibbon('warning', msg);
+                                                }
+                                                if(step13=="false"){
+                                                    $('#button-open-modal-security-update').show();
+                                                }else{
+                                                    $('#button-open-modal-security-update').hide();
                                                 }
                                             }
                                         }
@@ -1523,6 +1537,7 @@ function checkDeployStatus(){
                                                 }else{
                                                     // 모니터링센터 구성 연결 버튼 show
                                                     $('#button-link-monitoring-center').show();
+                                                    $('#button-cloud-cluster-ssh-port').removeClass('pf-m-disabled');
 
                                                     showRibbon('success','ABLESTACK 스토리지센터 및 클라우드센터 VM 배포되었으며 모니터링센터 구성이 완료되었습니다. 가상어플라이언스 상태가 정상입니다.');
                                                     // 운영 상태조회
@@ -1543,6 +1558,11 @@ function checkDeployStatus(){
                                                         msg += '클라우드센터 가상머신 Mold 서비스 , DB 상태를 확인하여 정지상태일 경우 서비스 재시작\n';
                                                         msg += '또는 클라우드센터 클러스터 상태 카드에서 가상머신 시작하여 문제를 해결할 수 있습니다.';
                                                         showRibbon('warning', msg);
+                                                    }
+                                                    if(step13=="false"){
+                                                        $('#button-open-modal-security-update').show();
+                                                    }else{
+                                                        $('#button-open-modal-security-update').hide();
                                                     }
                                                 }
                                             }
@@ -1583,6 +1603,7 @@ function checkDeployStatus(){
                                                 }else{
                                                     // 모니터링센터 구성 연결 버튼 show
                                                     $('#button-link-monitoring-center').show();
+                                                    $('#button-cloud-cluster-ssh-port').removeClass('pf-m-disabled');
 
                                                     showRibbon('success','ABLESTACK 스토리지센터 및 클라우드센터 VM 배포되었으며 모니터링센터 구성이 완료되었습니다. 가상어플라이언스 상태가 정상입니다.');
                                                     // 운영 상태조회
@@ -1603,6 +1624,11 @@ function checkDeployStatus(){
                                                         msg += '클라우드센터 가상머신 Mold 서비스 , DB 상태를 확인하여 정지상태일 경우 서비스 재시작\n';
                                                         msg += '또는 클라우드센터 클러스터 상태 카드에서 가상머신 시작하여 문제를 해결할 수 있습니다.';
                                                         showRibbon('warning', msg);
+                                                    }
+                                                    if(step13=="false"){
+                                                        $('#button-open-modal-security-update').show();
+                                                    }else{
+                                                        $('#button-open-modal-security-update').hide();
                                                     }
                                                 }
                                             }
@@ -1658,6 +1684,7 @@ function checkDeployStatus(){
                                     }else{
                                         // 모니터링센터 구성 연결 버튼 show
                                         $('#button-link-monitoring-center').show();
+                                        $('#button-cloud-cluster-ssh-port').removeClass('pf-m-disabled');
 
                                         showRibbon('success','ABLESTACK 클라우드센터 VM 배포되었으며 모니터링센터 구성이 완료되었습니다. 가상어플라이언스 상태가 정상입니다.');
                                         // 운영 상태조회
@@ -1669,6 +1696,11 @@ function checkDeployStatus(){
                                                 msg += '또는 클라우드센터 클러스터 상태 카드에서 가상머신 시작하여 문제를 해결할 수 있습니다.';
                                                 showRibbon('warning', msg);
                                             }
+                                        }
+                                        if(step13=="false"){
+                                            $('#button-open-modal-security-update').show();
+                                        }else{
+                                            $('#button-open-modal-security-update').hide();
                                         }
                                     }
                                 }
@@ -1713,6 +1745,7 @@ function checkDeployStatus(){
                                 }else{
                                     // 모니터링센터 구성 연결 버튼 show
                                     $('#button-link-monitoring-center').show();
+                                    $('#button-cloud-cluster-ssh-port').removeClass('pf-m-disabled');
 
                                     showRibbon('success','ABLESTACK 클라우드센터 VM 배포되었으며 모니터링센터 구성이 완료되었습니다. 가상어플라이언스 상태가 정상입니다.');
                                     // 운영 상태조회
@@ -1724,6 +1757,11 @@ function checkDeployStatus(){
                                             msg += '또는 클라우드센터 클러스터 상태 카드에서 가상머신 시작하여 문제를 해결할 수 있습니다.';
                                             showRibbon('warning', msg);
                                         }
+                                    }
+                                    if(step13=="false"){
+                                        $('#button-open-modal-security-update').show();
+                                    }else{
+                                        $('#button-open-modal-security-update').hide();
                                     }
                                 }
                             }
@@ -3049,6 +3087,7 @@ $('#button-execution-modal-gfs-maintenance-setting').on('click', function(){
         $('#div-modal-spinner').show();
         cockpit.spawn(['python3', pluginpath + '/python/gfs/gfs_manage.py', '--check-stonith', '--control', 'enable'])
         .then(function(data){
+            $('#div-modal-spinner').hide();
             var retVal = JSON.parse(data);
             if (retVal.code == "200"){
                 $("#modal-status-alert-title").html("펜스 장치 유지보수 해제 완료");
@@ -4360,3 +4399,479 @@ $(document).on('click', '#button-cloud-vm-snap-rollback', function(){
     $('#div-modal-cloud-vm-snap-rollback').show();
 });
 /** 스냅샷 복구 제어 관련 action end */
+
+/** 보안 패치 제어 관련 action start */
+$('#button-open-modal-security-update').on('click',function(){
+    $('#div-modal-security-update').show();
+});
+$('#button-close-modal-security-update, #button-cancel-modal-security-update').on('click',function(){
+    $('#div-modal-security-update').hide();
+});
+$('#modal-input-security-update-check').on('click', function(){
+    var condition = $("#button-execution-modal-security-update").prop( 'disabled' );
+    $("#button-execution-modal-security-update").prop("disabled", condition ? false : true);
+});
+// 간단 jQuery 버전입니다.
+// eslint: space-infix-ops, comma-spacing 준수
+$(function () {
+    const $modal     = $('#div-modal-security-update');
+    const $sshToggle = $modal.find('#modal-input-ssh-port-change');
+    const $confirm   = $modal.find('#modal-input-security-update-check');
+    const $portWrap  = $modal.find('#modal-div-ssh-port');
+    const $port      = $modal.find('#modal-input-ssh-port');
+    const $help      = $modal.find('#modal-help-ssh-port');
+    const $exec      = $modal.find('#button-execution-modal-security-update');
+    const $btnClose  = $modal.find('#button-close-modal-security-update');
+    const $btnCancel = $modal.find('#button-cancel-modal-security-update');
+
+    // 숫자 인풋 정규화: 숫자만, 최대 5자리, 1~65535
+    function clampPortInput (el) {
+      let v = String(el.value || '').replace(/\D/g, '');
+      if (v.length > 5) { v = v.slice(0, 5); }
+      if (v !== '' && Number(v) > 65535) { v = '65535'; }
+      el.value = v;
+    }
+
+    function isValidPort (v) {
+      const n = Number($.trim(v));
+      return Number.isInteger(n) && n >= 1 && n <= 65535;
+    }
+
+    // 화면 상태 갱신(실행 버튼 활성/비활성 포함)
+    function refresh () {
+      const tOn = $sshToggle.is(':checked');
+      const cOn = $confirm.is(':checked');
+
+      if (tOn) {
+        $portWrap.show();
+      } else {
+        $portWrap.hide();
+        $port.val('');
+        $help.text('');
+      }
+
+      let portOk = true;
+      if (tOn) {
+        const v = $port.val();
+        if (v === '') {
+          $help.text('포트를 입력해 주세요(1~65535)입니다.');
+          portOk = false;
+        } else if (!isValidPort(v)) {
+          $help.text('유효하지 않은 포트입니다. 1~65535 범위를 입력해 주세요.');
+          portOk = false;
+        } else {
+          $help.text('사용 가능한 포트입니다.');
+          portOk = true;
+        }
+      }
+
+      const canExec = cOn && portOk;
+      $exec.prop('disabled', !canExec).attr('aria-disabled', String(!canExec));
+    }
+
+    // 초기화: 이벤트는 유지, 값/표시만 리셋
+    function resetModalState () {
+      // 입력 타입/마스크 영향 제거 및 안전 속성
+      $port.attr({ type: 'number', inputmode: 'numeric', pattern: '[0-9]*' }).removeAttr('maxlength');
+
+      $sshToggle.prop('checked', false);
+      $confirm.prop('checked', false);
+      $port.val('');
+      $help.text('');
+      $portWrap.hide();
+
+      $exec.prop('disabled', true).attr('aria-disabled', 'true');
+    }
+
+    // 열기: 리셋 후 show
+    function openSecurityUpdateModal () {
+      resetModalState();
+      $modal.show();
+
+      // 다른 스크립트가 뒤에서 버튼을 바꾸는 경우 대비(안전장치)
+      setTimeout(function () {
+        $exec.prop('disabled', true).attr('aria-disabled', 'true');
+      }, 0);
+    }
+
+    // 닫기: 이벤트는 유지(재열림 시 동작 보장)
+    function closeSecurityUpdateModal () {
+      $modal.hide();
+    }
+
+    // ===== 이벤트 바인딩(한 번만) =====
+    // 전역 바인딩/마스크가 있었다면 이 인풋에 한해 제거 후 우리 필터 적용
+    $port.off('input.sshport keydown.sshport keyup.sshport');
+    try { $port.inputmask && $port.inputmask('remove'); } catch (e) {}
+    try { $port.unmask && $port.unmask(); } catch (e) {}
+
+    $port.on('input.sshport keydown.sshport keyup.sshport', function (e) {
+      // 전역 위임 핸들러가 잘라내는 것을 방지
+      e.stopPropagation();
+      if (e.stopImmediatePropagation) { e.stopImmediatePropagation(); }
+      clampPortInput(this);
+      if (e.type === 'input') { refresh(); }
+    });
+
+    $sshToggle.on('change.sshport', refresh);
+    $confirm.on('change.sshport', refresh);
+
+    $btnClose.on('click.sshport', closeSecurityUpdateModal);
+    $btnCancel.on('click.sshport', closeSecurityUpdateModal);
+
+    // 페이지 로드시 즉시 초기 상태로 만들어 둠(처음 열 때 disabled 보장)
+    resetModalState();
+
+    // 외부 버튼에서 호출해 여세요(예: “보안 패치” 버튼)
+    // $('#button-open-modal-security-update').on('click', openSecurityUpdateModal);
+    // 필요 시 전역으로 노출
+    window.openSecurityUpdateModal = openSecurityUpdateModal;
+
+    // ====================================================
+    // === SSH Port 변경 모달(#div-modal-ssh-port-change) 추가 ===
+    // ====================================================
+    const $portChangeModal  = $('#div-modal-ssh-port-change');
+    const $pcPortWrapBefore = $portChangeModal.find('#modal-div-ssh-port-change-before');
+    const $pcPortBefore     = $portChangeModal.find('#modal-input-ssh-port-change-before');
+    const $pcHelpBefore     = $portChangeModal.find('#modal-help-ssh-port-change-before');
+    const $pcPortWrapAfter  = $portChangeModal.find('#modal-div-ssh-port-change-after');
+    const $pcPortAfter      = $portChangeModal.find('#modal-input-ssh-port-change-after');
+    const $pcHelpAfter      = $portChangeModal.find('#modal-help-ssh-port-change-after');
+    const $pcCheck          = $portChangeModal.find('#modal-input-ssh-port-change-check');
+    const $pcExec           = $portChangeModal.find('#button-execution-modal-ssh-port-change');
+    const $pcBtnClose       = $portChangeModal.find('#button-close-modal-ssh-port-change');
+    const $pcBtnCancel      = $portChangeModal.find('#button-cancel-modal-ssh-port-change');
+
+    // 실행 버튼 활성/비활성 + 포트 유효성 검사
+    function refreshPortChangeModal () {
+      const v_after = $pcPortAfter.val();
+      const v_before = $pcPortBefore.val();
+      let portOk = false;
+
+      if (v_after === '') {
+        $pcHelpAfter.text('포트를 입력해 주세요(1~65535)입니다.');
+      } else if (!isValidPort(v_after)) {
+        $pcHelpAfter.text('유효하지 않은 포트입니다. 1~65535 범위를 입력해 주세요.');
+      } else {
+        $pcHelpAfter.text('사용 가능한 포트입니다.');
+        portOk = true;
+      }
+      if (v_before === ''){
+        $pcHelpBefore.text('포트를 입력해 주세요(1~65535)입니다.');
+      } else if (!isValidPort(v_before)) {
+        $pcHelpBefore.text('유효하지 않은 포트입니다. 1~65535 범위를 입력해 주세요.');
+      } else {
+        $pcHelpBefore.text('사용 가능한 포트입니다.');
+        portOk = true;
+      }
+      const canExec = portOk && $pcCheck.is(':checked');
+      $pcExec.prop('disabled', !canExec).attr('aria-disabled', String(!canExec));
+    }
+
+    // 모달 초기 상태
+    function resetPortChangeModal () {
+      // 포트 입력 영역이 숨겨져 있다면 보이게 처리
+      $pcPortWrapAfter.removeClass('is-hidden');
+      $pcPortWrapBefore.removeClass('is-hidden');
+
+      $pcPortBefore.attr({ type: 'number', inputmode: 'numeric', pattern: '[0-9]*', min: 1, max: 65535 });
+      $pcPortBefore.val('');
+      $pcHelpBefore.text('');
+
+      $pcPortAfter.attr({ type: 'number', inputmode: 'numeric', pattern: '[0-9]*', min: 1, max: 65535 });
+      $pcPortAfter.val('');
+      $pcHelpAfter.text('');
+      $pcCheck.prop('checked', false);
+      $pcExec.prop('disabled', true).attr('aria-disabled', 'true');
+    }
+
+    // 모달 열기/닫기
+    function openSshPortChangeModal () {
+      resetPortChangeModal();
+      $portChangeModal.show();
+    }
+
+    function closeSshPortChangeModal () {
+      $portChangeModal.hide();
+    }
+
+    // 입력 이벤트: 자리수 제한 + 숫자만 + 유효성 검사
+    $pcPortAfter.off('input.sshportchange keydown.sshportchange keyup.sshportchange');
+    $pcPortAfter.on('input.sshportchange keydown.sshportchange keyup.sshportchange', function (e) {
+      e.stopPropagation();
+      if (e.stopImmediatePropagation) { e.stopImmediatePropagation(); }
+      clampPortInput(this);
+      if (e.type === 'input') {
+        refreshPortChangeModal();
+      }
+    });
+    $pcPortBefore.off('input.sshportchange keydown.sshportchange keyup.sshportchange');
+    $pcPortBefore.on('input.sshportchange keydown.sshportchange keyup.sshportchange', function (e) {
+      e.stopPropagation();
+      if (e.stopImmediatePropagation) { e.stopImmediatePropagation(); }
+      clampPortInput(this);
+      if (e.type === 'input') {
+        refreshPortChangeModal();
+      }
+    });
+    // “SSH Port 확인” 스위치 체크 시 실행 버튼 상태 갱신
+    $pcCheck.on('change.sshportchange', refreshPortChangeModal);
+
+    // 닫기/취소 버튼
+    $pcBtnClose.on('click.sshportchange', closeSshPortChangeModal);
+    $pcBtnCancel.on('click.sshportchange', closeSshPortChangeModal);
+
+    // 필요하면 외부에서 열기용으로 사용
+    window.openSshPortChangeModal = openSshPortChangeModal;
+});
+
+  $('#button-execution-modal-security-update').on('click',function(){
+    $('#div-modal-security-update').hide();
+    $('#div-modal-spinner-header-txt').text('보안 패치 적용 중');
+    $('#div-modal-spinner').show();
+
+    const changeSshPort = $('#modal-input-ssh-port-change').is(':checked');
+    const changeAddHost = $('#modal-input-add-host-security-update-run').is(':checked');
+    if (changeSshPort){
+        port = $('#modal-input-ssh-port').val();
+        if (changeAddHost){
+            cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py', '--add-host', '-P', port];
+            console.log(cmd);
+            cockpit.spawn(cmd).then(function(data){
+                var retVal = JSON.parse(data);
+                if (retVal.code == 200){
+                    cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py', '--update-json-file' , '--local'];
+                    console.log(cmd);
+                    cockpit.spawn(cmd).then(function(data){
+                        var retVal = JSON.parse(data);
+                        if(retVal.code == 200){
+                            $('#div-modal-spinner').hide();
+                            $("#modal-status-alert-title").html("보안 패치 적용");
+                            $("#modal-status-alert-body").html("보안 패치 적용이 완료되었습니다.");
+                            $('#div-modal-status-alert').show();
+                        }else{
+                            $('#div-modal-spinner').hide();
+                            $("#modal-status-alert-title").html("보안 패치 적용");
+                            $("#modal-status-alert-body").html("보안 패치를 적용하는 중 오류가 발생했습니다.");
+                            $('#div-modal-status-alert').show();
+                        }
+                    })
+                }else{
+                    $('#div-modal-spinner').hide();
+                    $("#modal-status-alert-title").html("보안 패치 적용");
+                    $("#modal-status-alert-body").html("보안 패치를 적용하는 중 오류가 발생했습니다.");
+                    $('#div-modal-status-alert').show();
+                }
+            }).catch(function(){
+                $('#div-modal-spinner').hide();
+                $("#modal-status-alert-title").html("보안 패치 적용");
+                $("#modal-status-alert-body").html("보안 패치를 적용하는 중 오류가 발생했습니다.");
+                $('#div-modal-status-alert').show();
+            })
+        }else{
+            cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py', '-P', port];
+            console.log(cmd);
+            cockpit.spawn(cmd).then(function(data){
+                var retVal = JSON.parse(data);
+                if (retVal.code == 200){
+                    cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py', '--update-json-file'];
+                    console.log(cmd);
+                    cockpit.spawn(cmd).then(function(data){
+                        var retVal = JSON.parse(data);
+                        if(retVal.code == 200){
+                            if (os_type == "ablestack-hci"){
+                                cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py', '--ceph-ssh-change', '-P', port];
+                                console.log(cmd);
+                                cockpit.spawn(cmd).then(function(data){
+                                    var retVal = JSON.parse(data);
+                                    if(retVal.code == 200){
+                                        $('#div-modal-spinner').hide();
+                                        $("#modal-status-alert-title").html("보안 패치 적용");
+                                        $("#modal-status-alert-body").html("보안 패치 적용이 완료되었습니다.");
+                                        $('#div-modal-status-alert').show();
+                                    }else{
+                                        $('#div-modal-spinner').hide();
+                                        $("#modal-status-alert-title").html("보안 패치 적용");
+                                        $("#modal-status-alert-body").html("보안 패치를 적용하는 중 오류가 발생했습니다.");
+                                        $('#div-modal-status-alert').show();
+                                    }
+                                }).catch(function(){
+                                    $('#div-modal-spinner').hide();
+                                    $("#modal-status-alert-title").html("보안 패치 적용");
+                                    $("#modal-status-alert-body").html("보안 패치를 적용하는 중 오류가 발생했습니다.");
+                                    $('#div-modal-status-alert').show();
+                                })
+                            }
+                            $('#div-modal-spinner').hide();
+                            $("#modal-status-alert-title").html("보안 패치 적용");
+                            $("#modal-status-alert-body").html("보안 패치 적용이 완료되었습니다.");
+                            $('#div-modal-status-alert').show();
+                        }else{
+                            $('#div-modal-spinner').hide();
+                            $("#modal-status-alert-title").html("보안 패치 적용");
+                            $("#modal-status-alert-body").html("보안 패치를 적용하는 중 오류가 발생했습니다.");
+                            $('#div-modal-status-alert').show();
+                        }
+                    }).catch(function(){
+                        $('#div-modal-spinner').hide();
+                        $("#modal-status-alert-title").html("보안 패치 적용");
+                        $("#modal-status-alert-body").html("보안 패치를 적용하는 중 오류가 발생했습니다.");
+                        $('#div-modal-status-alert').show();
+                    })
+                }else{
+                    $('#div-modal-spinner').hide();
+                    $("#modal-status-alert-title").html("보안 패치 적용");
+                    $("#modal-status-alert-body").html("보안 패치를 적용하는 중 오류가 발생했습니다.");
+                    $('#div-modal-status-alert').show();
+                }
+            }).catch(function(){
+                $('#div-modal-spinner').hide();
+                $("#modal-status-alert-title").html("보안 패치 적용");
+                $("#modal-status-alert-body").html("보안 패치를 적용하는 중 오류가 발생했습니다.");
+                $('#div-modal-status-alert').show();
+            })
+        }
+    }else{
+        if (changeAddHost){
+            cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py', '--add-host'];
+            console.log(cmd);
+            cockpit.spawn(cmd).then(function(data){
+                var retVal = JSON.parse(data);
+                if (retVal.code == 200){
+                    cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py', '--update-json-file' , '--local'];
+                    console.log(cmd);
+                    cockpit.spawn(cmd).then(function(data){
+                        var retVal = JSON.parse(data);
+                        if(retVal.code == 200){
+                            $('#div-modal-spinner').hide();
+                            $("#modal-status-alert-title").html("보안 패치 적용");
+                            $("#modal-status-alert-body").html("보안 패치 적용이 완료되었습니다.");
+                            $('#div-modal-status-alert').show();
+                        }else{
+                            $('#div-modal-spinner').hide();
+                            $("#modal-status-alert-title").html("보안 패치 적용");
+                            $("#modal-status-alert-body").html("보안 패치를 적용하는 중 오류가 발생했습니다.");
+                            $('#div-modal-status-alert').show();
+                        }
+                    }).catch(function(){
+                        $('#div-modal-spinner').hide();
+                        $("#modal-status-alert-title").html("보안 패치 적용");
+                        $("#modal-status-alert-body").html("보안 패치를 적용하는 중 오류가 발생했습니다.");
+                        $('#div-modal-status-alert').show();
+                    })
+
+                }else{
+                    $('#div-modal-spinner').hide();
+                    $("#modal-status-alert-title").html("보안 패치 적용");
+                    $("#modal-status-alert-body").html("보안 패치를 적용하는 중 오류가 발생했습니다.");
+                    $('#div-modal-status-alert').show();
+                }
+            }).catch(function(){
+                $('#div-modal-spinner').hide();
+                $("#modal-status-alert-title").html("보안 패치 적용");
+                $("#modal-status-alert-body").html("보안 패치를 적용하는 중 오류가 발생했습니다.");
+                $('#div-modal-status-alert').show();
+            })
+        }else{
+            cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py'];
+            console.log(cmd);
+            cockpit.spawn(cmd).then(function(data){
+                var retVal = JSON.parse(data);
+                if (retVal.code == 200){
+                    cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py', '--update-json-file'];
+                    console.log(cmd);
+                    cockpit.spawn(cmd).then(function(data){
+                        var retVal = JSON.parse(data);
+                        if(retVal.code == 200){
+                            $('#div-modal-spinner').hide();
+                            $("#modal-status-alert-title").html("보안 패치 적용");
+                            $("#modal-status-alert-body").html("보안 패치 적용이 완료되었습니다.");
+                            $('#div-modal-status-alert').show();
+                        }else{
+                            $('#div-modal-spinner').hide();
+                            $("#modal-status-alert-title").html("보안 패치 적용");
+                            $("#modal-status-alert-body").html("보안 패치를 적용하는 중 오류가 발생했습니다.");
+                            $('#div-modal-status-alert').show();
+                        }
+                    }).catch(function(){
+                                $('#div-modal-spinner').hide();
+                                $("#modal-status-alert-title").html("보안 패치 적용");
+                                $("#modal-status-alert-body").html("보안 패치를 적용하는 중 오류가 발생했습니다.");
+                                $('#div-modal-status-alert').show();
+                            })
+                }else{
+                    $('#div-modal-spinner').hide();
+                    $("#modal-status-alert-title").html("보안 패치 적용");
+                    $("#modal-status-alert-body").html("보안 패치를 적용하는 중 오류가 발생했습니다.");
+                    $('#div-modal-status-alert').show();
+                }
+            }).catch(function(){
+                $('#div-modal-spinner').hide();
+                $("#modal-status-alert-title").html("보안 패치 적용");
+                $("#modal-status-alert-body").html("보안 패치를 적용하는 중 오류가 발생했습니다.");
+                $('#div-modal-status-alert').show();
+            })
+        }
+    }
+
+  });
+
+  $('#button-cloud-cluster-ssh-port').on('click', function(){
+    $('#div-modal-ssh-port-change').show();
+  });
+  $('#button-close-modal-ssh-port-change, #button-cancel-modal-ssh-port-change').on('click', function(){
+    $('#div-modal-ssh-port-change').hide();
+  });
+  $('#button-execution-modal-ssh-port-change').on('click', function(){
+    $('#div-modal-ssh-port-change').hide();
+    $('#div-modal-spinner-header-txt').text('SSH 포트 변경 중');
+    $('#div-modal-spinner').show();
+
+    const beforePort = $('#modal-input-ssh-port-change-before').val();
+    const afterPort = $('#modal-input-ssh-port-change-after').val();
+
+    cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py', '--ssh-port', beforePort, '-P', afterPort, '--port-change'];
+    console.log(cmd);
+    cockpit.spawn(cmd).then(function(data){
+        var retVal = JSON.parse(data);
+        if (retVal.code == 200){
+            if (os_type == "ablestack-hci"){
+                cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py', '--ceph-ssh-change', '-P', afterPort];
+                console.log(cmd);
+                cockpit.spawn(cmd).then(function(data){
+                    var retVal = JSON.parse(data);
+                    if(retVal.code == 200){
+                        $('#div-modal-spinner').hide();
+                        $("#modal-status-alert-title").html("SSH 포트 변경");
+                        $("#modal-status-alert-body").html("SSH 포트 변경이 완료되었습니다.");
+                        $('#div-modal-status-alert').show();
+                    }else{
+                        $('#div-modal-spinner').hide();
+                        $("#modal-status-alert-title").html("보안 패치 적용");
+                        $("#modal-status-alert-body").html("보안 패치를 적용하는 중 오류가 발생했습니다.");
+                        $('#div-modal-status-alert').show();
+                    }
+                }).catch(function(){
+                    $('#div-modal-spinner').hide();
+                    $("#modal-status-alert-title").html("보안 패치 적용");
+                    $("#modal-status-alert-body").html("보안 패치를 적용하는 중 오류가 발생했습니다.");
+                    $('#div-modal-status-alert').show();
+                })
+            }
+            $('#div-modal-spinner').hide();
+            $("#modal-status-alert-title").html("SSH 포트 변경");
+            $("#modal-status-alert-body").html("SSH 포트 변경이 완료되었습니다.");
+            $('#div-modal-status-alert').show();
+        }else{
+            $('#div-modal-spinner').hide();
+            $("#modal-status-alert-title").html("SSH 포트 변경");
+            $("#modal-status-alert-body").html("SSH 포트 변경 중 오류가 발생했습니다.");
+            $('#div-modal-status-alert').show();
+        }
+    }).catch(function(){
+        $('#div-modal-spinner').hide();
+        $("#modal-status-alert-title").html("SSH 포트 변경");
+        $("#modal-status-alert-body").html("SSH 포트 변경 중 오류가 발생했습니다.");
+        $('#div-modal-status-alert').show();
+    })
+  });
