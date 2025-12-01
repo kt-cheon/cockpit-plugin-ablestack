@@ -12,5 +12,8 @@
     "license": {
         "status": "false",
         "type": ""
+    },
+    "security_patch": {
+        "status": "false"
     }
 }

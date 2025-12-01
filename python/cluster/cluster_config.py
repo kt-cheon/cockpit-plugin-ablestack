@@ -334,8 +334,11 @@ def insertAllHost(args):
                         return createReturn(code=500, val=return_val + " : " + p_val2["ablecube"])
                     os.system("touch /var/lib/libvirt/images/ccvm-cloudinit.iso")
                     os.system("chmod 777 /var/lib/libvirt/images/ccvm-cloudinit.iso")
+                    # 추가 호스트인 경우 tpm.properties, uefi.properties 파일도 복사
+                    os.system("scp /etc/cloudstack/agent/tpm.properties "+p_val2["ablecube"]+":/etc/cloudstack/agent/tpm.properties")
+                    os.system("scp /etc/cloudstack/agent/uefi.properties "+p_val2["ablecube"]+":/etc/cloudstack/agent/uefi.properties")
                     # 호스트 추가시 클러스터 구성단계에서는 scvm이 배포되기 전이므로 해당 scvm에 echo 테스트 명령을 수행할 수 없음
-                    if args.type != "ablestack-vm":
+                    if args.type == "ablestack-hci":
                         if args.exclude_hostname != p_val2["hostname"]:
                             ret = ssh('-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=5', p_val2["scvmMngt"], "echo ok").strip()
                             if ret != "ok":

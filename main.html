@@ -40,6 +40,7 @@
                         id="button-config-file-download" aria-disabled="false" type="button" data-ouia-safe="true">설정파일
                         다운로드</button>
                     <button class="pf-c-button pf-m-link pf-m-inline" type="button" id="button-open-modal-license-register">라이센스 관리</button>
+                    <button style="display: none; "class="pf-c-button pf-m-link pf-m-inline" type="button" id="button-open-modal-security-update">보안 패치</button>
                 </div>
             </div>
         </section>
@@ -390,6 +391,12 @@
                                                     <button id="button-cloud-cluster-migration"
                                                         class="pf-c-dropdown__menu-item pf-m-disabled"
                                                         type="button">클라우드센터VM 마이그레이션</button>
+                                                </li>
+                                                <li class="pf-c-divider" role="separator"></li>
+                                                <li>
+                                                    <button id="button-cloud-cluster-ssh-port"
+                                                        class="pf-c-dropdown__menu-item pf-m-disabled"
+                                                        type="button">SSH Port 변경</button>
                                                 </li>
                                                 <li class="pf-c-divider" role="separator"></li>
                                                 <li id="ccvm-after-bootstrap-run"></li>
@@ -2171,6 +2178,116 @@
 </div>
 <!-- 라이센스 관리 : Modal 영역 끝 -->
 
+<!-- 보안 패치  : Modal 영역 시작 -->
+<div id="div-modal-security-update" class="pf-c-backdrop" style="display: none;">
+    <div class="pf-l-bullseye">
+        <div class="pf-c-modal-box pf-m-sm" role="dialog" aria-modal="true" aria-label="Security Update">
+            <button id="button-close-modal-security-update" aria-disabled="false" aria-label="Close"
+                class="pf-c-button pf-m-plain" type="button">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <header class="pf-c-modal-box__header">
+                <h1 class="pf-c-modal-box__title"><span class="pf-c-modal-box__title-text">보안 패치</span>
+                </h1>
+            </header>
+            <div class="pf-c-modal-box__body">
+                <div> 보안 패치를 진행하시겠습니까?<br/></div>
+            </div>
+            <div id="modal-div-ssh-port" class="pf-c-modal-box__body is-hidden">
+                <label for="modal-input-ssh-port" class="pf-c-form__label">
+                  <span class="pf-c-form__label-text">SSH 포트</span>
+                </label>
+                <input id="modal-input-ssh-port" type="number" min="1" max="65535"
+                       placeholder="example: 10022" class="pf-c-form-control" style="max-width:300px">
+                <div id="modal-help-ssh-port" class="pf-c-form__helper-text" aria-live="polite"></div>
+              </div>
+              <div id="modal-div-ssh-port-change" class="pf-c-modal-box__body pf-l-flex pf-m-align-items-center">
+                <p>SSH PORT 변경</p>
+                <label class="pf-c-switch">
+                    <input id="modal-input-ssh-port-change" class="pf-c-switch__input" type="checkbox" aria-label="ssh port 변경">
+                    <span class="pf-c-switch__toggle">
+                        <div id="modal-switch-ssh-port-change" class="pf-c-switch__toggle-icon" aria-hidden="true"></div>
+                    </span>
+                </label>
+            </div>
+            <div id="modal-div-add-host-security-update-run" class="pf-c-modal-box__body pf-l-flex pf-m-align-items-center">
+                <p>추가된 호스트 보안 패치 실행</p>
+                <label class="pf-c-switch">
+                    <input id="modal-input-add-host-security-update-run" class="pf-c-switch__input" type="checkbox" aria-label="추가된 호스트 보안 패치 실행">
+                    <span class="pf-c-switch__toggle">
+                        <div id="modal-switch-add-host-security-update-run" class="pf-c-switch__toggle-icon" aria-hidden="true"></div>
+                    </span>
+                </label>
+            </div>
+            <div id="modal-div-security-update-check" class="pf-c-modal-box__body pf-l-flex pf-m-align-items-center">
+                <p>보안 패치 확인</p>
+                <label class="pf-c-switch">
+                    <input id="modal-input-security-update-check" class="pf-c-switch__input" type="checkbox" aria-label="보안 패치 체크">
+                    <span class="pf-c-switch__toggle">
+                        <div id="modal-switch-security-update-check" class="pf-c-switch__toggle-icon" aria-hidden="true"></div>
+                    </span>
+                </label>
+            </div>
+            <footer class="pf-c-modal-box__footer">
+                <button id="button-execution-modal-security-update" aria-disabled="false"
+                    class="pf-c-button pf-m-primary" type="button" data-ouia-safe="true" disabled>실행</button>
+                <button id="button-cancel-modal-security-update" aria-disabled="false" class="pf-c-button pf-m-link"
+                    type="button" data-ouia-safe="true">취소</button>
+            </footer>
+        </div>
+    </div>
+</div>
+<!-- 보안 패치 : Modal 영역 끝 -->
+<!-- ssh port 변경  : Modal 영역 시작 -->
+<div id="div-modal-ssh-port-change" class="pf-c-backdrop" style="display: none;">
+    <div class="pf-l-bullseye">
+        <div class="pf-c-modal-box pf-m-sm" role="dialog" aria-modal="true" aria-label="SSH Port Change">
+            <button id="button-close-modal-ssh-port-change" aria-disabled="false" aria-label="Close"
+                class="pf-c-button pf-m-plain" type="button">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <header class="pf-c-modal-box__header">
+                <h1 class="pf-c-modal-box__title"><span class="pf-c-modal-box__title-text">SSH Port 변경</span>
+                </h1>
+            </header>
+            <div class="pf-c-modal-box__body">
+                <div>SSH Port를 변경하시겠습니까?<br/></div>
+            </div>
+            <div id="modal-div-ssh-port-change-before" class="pf-c-modal-box__body is-hidden">
+                <label for="modal-input-ssh-port-change-before" class="pf-c-form__label">
+                  <span class="pf-c-form__label-text">현재 SSH 포트</span>
+                </label>
+                <input id="modal-input-ssh-port-change-before" type="number" min="1" max="65535"
+                       placeholder="example: 22" class="pf-c-form-control" style="max-width:300px">
+                <div id="modal-help-ssh-port-change-before" class="pf-c-form__helper-text" aria-live="polite"></div>
+            </div>
+            <div id="modal-div-ssh-port-change-after" class="pf-c-modal-box__body is-hidden">
+                <label for="modal-input-ssh-port-change-after" class="pf-c-form__label">
+                  <span class="pf-c-form__label-text">변경할 SSH 포트</span>
+                </label>
+                <input id="modal-input-ssh-port-change-after" type="number" min="1" max="65535"
+                       placeholder="example: 10022" class="pf-c-form-control" style="max-width:300px">
+                <div id="modal-help-ssh-port-change-after" class="pf-c-form__helper-text" aria-live="polite"></div>
+            </div>
+            <div id="modal-div-ssh-port-change-check" class="pf-c-modal-box__body pf-l-flex pf-m-align-items-center">
+                <p>SSH Port 확인</p>
+                <label class="pf-c-switch">
+                    <input id="modal-input-ssh-port-change-check" class="pf-c-switch__input" type="checkbox" aria-label="SSH Port 확인">
+                    <span class="pf-c-switch__toggle">
+                        <div id="modal-switch-ssh-port-change-check" class="pf-c-switch__toggle-icon" aria-hidden="true"></div>
+                    </span>
+                </label>
+            </div>
+            <footer class="pf-c-modal-box__footer">
+                <button id="button-execution-modal-ssh-port-change" aria-disabled="false"
+                    class="pf-c-button pf-m-primary" type="button" data-ouia-safe="true" disabled>실행</button>
+                <button id="button-cancel-modal-ssh-port-change" aria-disabled="false" class="pf-c-button pf-m-link"
+                    type="button" data-ouia-safe="true">취소</button>
+            </footer>
+        </div>
+    </div>
+</div>
+<!-- ssh port 변경 : Modal 영역 끝 -->
 </body>
 
 </html>
