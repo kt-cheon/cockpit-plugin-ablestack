@@ -2660,6 +2660,7 @@ function setDiskAction(type, action, extend){
             var result = JSON.parse(data);
             var diskList = result.val;
 
+            if (diskList.type == "multipath"){
             // 테이블 헤더 작성
             var output = `
                 <table border="1" style="width: 100%; border-collapse: collapse; text-align: left;">
@@ -2701,6 +2702,49 @@ function setDiskAction(type, action, extend){
                     </tbody>
                 </table>
             `;
+            }else{
+                            // 테이블 헤더 작성
+            var output = `
+            <table border="1" style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr>
+                        <th style="padding: 8px; background-color: #f2f2f2;">싱글패스 이름</th>
+                        <th style="padding: 8px; background-color: #f2f2f2;">싱글패스 UUID 경로</th>
+                        <th style="padding: 8px; background-color: #f2f2f2;">싱글패스 SCSI 이름</th>
+                        <th style="padding: 8px; background-color: #f2f2f2;">싱글패스 WWN 이름</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        // 결과 데이터 순회
+        Object.entries(diskList).forEach(([dm, info]) => {
+            var singleName = info.single_name?.[0] || '-';
+            var singleUUID = info.single_id?.[0] || '-';
+            var scsi = info.scsi?.join('<br>') || '-';
+            var wwn = info.wwn?.join('<br>') || '-';
+
+            output += `
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd;">${singleName}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd;">
+                        <a href="#" onclick="copyToClipboard('${singleUUID}'); return false;"
+                        style="color: black; text-decoration: underline; margin-left: 10px; cursor: pointer;">
+                        ${singleUUID}
+                        </a>
+
+                    </td>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd;">${scsi}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd;">${wwn}</td>
+                </tr>
+            `;
+        });
+
+        output += `
+                </tbody>
+            </table>
+        `;
+            }
 
             $('#disk-detail-info').append(output);
 

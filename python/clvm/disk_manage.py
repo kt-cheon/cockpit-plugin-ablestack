@@ -202,8 +202,17 @@ def list_clvm():
                 dm_name = os.path.basename(real_path)
                 by_id_path = '/dev/disk/by-id'
 
-                for entry in os.listdir(by_id_path):
-                    if entry.startswith("dm-uuid-part1-mpath"):
+                if mpath_status == "active":
+                    for entry in os.listdir(by_id_path):
+                        if entry.startswith("dm-uuid-part1-mpath"):
+                            full_path = os.path.join(by_id_path, entry)
+                            if os.path.islink(full_path):
+                                resolved = os.path.realpath(full_path)
+                                if os.path.basename(resolved) == dm_name:
+                                    disk_id = entry
+                                    break  # 하나만 필요하므로 종료
+                else:
+                    for entry in os.listdir(by_id_path):
                         full_path = os.path.join(by_id_path, entry)
                         if os.path.islink(full_path):
                             resolved = os.path.realpath(full_path)
