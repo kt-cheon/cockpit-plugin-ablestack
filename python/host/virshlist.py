@@ -96,7 +96,7 @@ def collect_vm_info(vm):
             command = '''
             output=$(/usr/sbin/route -n | grep -P "^0.0.0.0|UG" | awk '{print $2}');
             echo "${output:-""}";
-            output=$(/usr/bin/awk '/^nameserver/ {print $2}' /etc/resolv.conf);
+            output=$(/usr/bin/awk '/^nameserver/ {print $2}' /etc/resolv.conf | head -n 1);
             echo "${output:-""}";
             output=$(systemctl is-active mold.service);
             echo "${output:-"inactive"}";
