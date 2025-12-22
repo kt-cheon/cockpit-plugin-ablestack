@@ -487,6 +487,8 @@ GLUE_EOF
   if [ $? -ne 0 ]; then
     echo "[ERROR] 원격 서버로 파일 전송 실패"
   fi
+  ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $SCVM_HOST_NAME "echo 'ablestack1!' > ${INSTALL_DIR}/user.txt" # 계정생성시 사용할 임시 비밀번호 파일(sso 계정생성시 필요)
+
   echo "✅ 원격 서버에 파일 전송 완료 ($CERT_TARGET_PATH/)"
 
   # 6. 원격 서버($SCVM_HOST_NAME)에서 MGR 컨테이너에 인증서 복사 및 saml관련 패키지 설치
