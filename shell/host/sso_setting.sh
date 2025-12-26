@@ -688,7 +688,10 @@ fi
 echo "✅ WALL 클라이언트 secret: $CLIENT_SECRET_WALL"
 
 # defaults.ini 파일 업데이트
-# [auth] 섹션에 signout_redirect_url, signout_url 항목 추가
+# [user] 섹션에 auto_assign_org_role 권한 변경(Viewer->Admin)
+sed -i 's/^\(auto_assign_org_role *= *\)Viewer/\1Admin/' "$GRAFANA_CONFIG_PATH"
+
+# [auth] 섹션에 signout_redirect_url, signout_url 항목 추가(saml 로그아웃시 세션삭제)
 awk \
   -v HOST_IP="$HOST_IP" \
   -v KC_URL="$KC_URL" \
@@ -738,7 +741,7 @@ NEW_SECTION=$(cat <<EOF
 [auth.generic_oauth]
 name = OAuth
 enabled = true
-allow_sign_up = true
+allow_sign_up = false
 client_id = ${CLIENT_ID_WALL}
 client_secret = ${CLIENT_SECRET_WALL}
 auth_url = ${KC_URL}/realms/${REALM_NAME}/protocol/openid-connect/auth
