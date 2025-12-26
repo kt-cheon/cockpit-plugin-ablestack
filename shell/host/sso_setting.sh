@@ -688,8 +688,50 @@ fi
 echo "✅ WALL 클라이언트 secret: $CLIENT_SECRET_WALL"
 
 # defaults.ini 파일 업데이트
+# [auth] 섹션에 signout_redirect_url, signout_url 항목 추가
+awk \
+  -v HOST_IP="$HOST_IP" \
+  -v KC_URL="$KC_URL" \
+  -v REALM_NAME="$REALM_NAME" '
+BEGIN {
+  in_auth=0
+  printed_signout_url=0
+}
+
+/^\[auth\]/ {
+  in_auth=1
+  printed_signout_url=0
+  print
+  next
+}
+
+/^\[/ && in_auth {
+  in_auth=0
+}
+
+in_auth {
+  if ($0 ~ /^signout_url[[:space:]]*=/) {
+    next
+  }
+
+  if ($0 ~ /^signout_redirect_url[[:space:]]*=/) {
+    print "signout_redirect_url = " HOST_IP ":3000/login?disableAutoLogin=true"
+
+    if (!printed_signout_url) {
+      print "signout_url = " KC_URL "/realms/" REALM_NAME "/protocol/openid-connect/logout"
+      printed_signout_url=1
+    }
+    next
+  }
+}
+
+{ print }
+' "$GRAFANA_CONFIG_PATH" > "${GRAFANA_CONFIG_PATH}.tmp" \
+&& mv "${GRAFANA_CONFIG_PATH}.tmp" "$GRAFANA_CONFIG_PATH"
+
 sed -i 's/^\[auth\.generic_oauth\]/[auth.generic_oauth_2]/' "$GRAFANA_CONFIG_PATH"
 
+# [auth.generic_oauth] 섹션 추가
 echo "[INFO] 새로운 [auth.generic_oauth] 섹션 추가 중..."
 
 NEW_SECTION=$(cat <<EOF
