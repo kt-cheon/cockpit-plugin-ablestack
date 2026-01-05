@@ -24,7 +24,6 @@ def openClusterJson():
     return ret
 
 json_data = openClusterJson()
-
 def parse_size(size_str):
     # 단위 변환 로직 (t → TB, g → GB, m → MB)
     import re
@@ -126,6 +125,12 @@ def create_clvm(disks):
                 # 디스크에 파티션 생성 및 LVM 설정
                 run_command(f"parted -s {disk} mklabel gpt mkpart {name} 0% 100% set 1 lvm on")
                 partition = disk.replace("dm-uuid-mpath-","dm-uuid-part1-mpath-")
+                run_command(f"pvcreate -y {partition}")
+                run_command(f"vgcreate {vg_name} {partition}")
+            else:
+                # 디스크에 파티션 생성 및 LVM 설정
+                run_command(f"parted -s {disk} mklabel gpt mkpart {name} 0% 100% set 1 lvm on")
+                partition = disk + "1"
                 run_command(f"pvcreate -y {partition}")
                 run_command(f"vgcreate {vg_name} {partition}")
 
@@ -340,8 +345,9 @@ def delete_gfs(disks, gfs_name, lv_name, vg_name):
 
                     ssh_client.close()
             else:
-                run_command(f"pvremove {partition}")
-                run_command(f"parted -s {disk} rm 1")
+                partition_path = partition + "1"
+                run_command(f"pvremove {partition_path}")
+                run_command(f"parted -s {partition} rm 1")
 
                 for host in json_data["clusterConfig"]["hosts"]:
                     ssh_client = connect_to_host(host["ablecube"])
@@ -397,6 +403,7 @@ def list_hba_wwn():
         print(json.dumps(json.loads(ret), indent=4))
 
 def rescan_and_extend_gfs_disk(action, vg_name, lv_name, mount_point, mpath_disks, gfs_name, non_stop_check):
+    multipath_check = os.popen("multipath -l -v 1").read().strip()
     try:
         if action == "rescan":
             for i in range(len(json_data["clusterConfig"]["hosts"])):
@@ -408,7 +415,62 @@ def rescan_and_extend_gfs_disk(action, vg_name, lv_name, mount_point, mpath_disk
                 gfs_disks = []
                 mpath_name = []
                 mpath_path = []
+                if multipath_check != "":
+                    for bd in disk_list['val']['blockdevices']:
+                        if 'children' in bd and bd['children']:
+                            first_level = bd['children'][0]
+                            if 'children' in first_level and first_level['children']:
+                                second_level = first_level['children'][0]
+                                if 'children' in second_level and second_level['children']:
+                                    third_level = second_level['children'][0]
+                                    if third_level.get('name') == vg_name+"-"+lv_name:
+                                        if bd['name'] not in gfs_disks:
+                                            gfs_disks.append(bd['name'])
 
+                                        if first_level['name'] not in mpath_name:
+                                            mpath_name.append(first_level['name'])
+
+                                        if first_level['path'] not in mpath_path:
+                                            mpath_path.append(first_level['path'])
+                    for disk in gfs_disks:
+                        run_command(f"echo 1 > /sys/block/{disk}/device/rescan", ssh_client)
+                    for mpath in mpath_name:
+                        run_command(f'multipathd -k"resize map {mpath}"', ssh_client)
+                    ssh_client.close()
+                else:
+                    for bd in disk_list['val']['blockdevices']:
+                        if 'children' in bd and bd['children']:
+                            first_level = bd['children'][0]
+                            if 'children' in first_level and first_level['children']:
+                                second_level = first_level['children'][0]
+                                if second_level.get('name') == vg_name+"-"+lv_name:
+                                    if bd['name'] not in gfs_disks:
+                                        gfs_disks.append(bd['name'])
+
+                                    if first_level['name'] not in mpath_name:
+                                        mpath_name.append(bd['name'])
+
+                                    if first_level['path'] not in mpath_path:
+                                        mpath_path.append(bd['path'])
+                    for disk in gfs_disks:
+                        run_command(f"echo 1 > /sys/block/{disk}/device/rescan", ssh_client)
+                    ssh_client.close()
+
+            ret = createReturn(code=200, val="Success to scan GFS Disk")
+            print(json.dumps(json.loads(ret), indent=4))
+
+        elif action == "extend":
+            if non_stop_check == "true":
+                run_command("pcs property set maintenance-mode=true")
+
+            disk_list = run_command(f"python3 {pluginpath}/python/disk/disk_action.py mpath-list")
+            disk_list = json.loads(disk_list)
+            gfs_disks = []
+            mpath_name = []
+            mpath_path = []
+            mpath_path_partition = []
+            lv_path = []
+            if multipath_check != "":
                 for bd in disk_list['val']['blockdevices']:
                     if 'children' in bd and bd['children']:
                         first_level = bd['children'][0]
@@ -425,50 +487,35 @@ def rescan_and_extend_gfs_disk(action, vg_name, lv_name, mount_point, mpath_disk
 
                                     if first_level['path'] not in mpath_path:
                                         mpath_path.append(first_level['path'])
-                for disk in gfs_disks:
-                    run_command(f"echo 1 > /sys/block/{disk}/device/rescan", ssh_client)
-                for mpath in mpath_name:
-                    run_command(f'multipathd -k"resize map {mpath}"', ssh_client)
-                ssh_client.close()
 
-            ret = createReturn(code=200, val="Success to scan GFS Disk")
-            print(json.dumps(json.loads(ret), indent=4))
+                                    partition_path = first_level['path'] + "1"
+                                    if partition_path not in mpath_path_partition:
+                                        mpath_path_partition.append(partition_path)
 
-        elif action == "extend":
-            if non_stop_check == "true":
-                run_command("pcs property set maintenance-mode=true")
-
-            disk_list = run_command(f"python3 {pluginpath}/python/disk/disk_action.py mpath-list")
-            disk_list = json.loads(disk_list)
-            gfs_disks = []
-            mpath_name = []
-            mpath_path = []
-            mpath_path_partition = []
-            lv_path = []
-            for bd in disk_list['val']['blockdevices']:
-                if 'children' in bd and bd['children']:
-                    first_level = bd['children'][0]
-                    if 'children' in first_level and first_level['children']:
-                        second_level = first_level['children'][0]
-                        if 'children' in second_level and second_level['children']:
-                            third_level = second_level['children'][0]
-                            if third_level.get('name') == vg_name+"-"+lv_name:
+                                    if third_level['path'] not in lv_path:
+                                        lv_path.append(third_level['path'])
+            else:
+                for bd in disk_list['val']['blockdevices']:
+                    if 'children' in bd and bd['children']:
+                        first_level = bd['children'][0]
+                        if 'children' in first_level and first_level['children']:
+                            second_level = first_level['children'][0]
+                            if second_level.get('name') == vg_name+"-"+lv_name:
                                 if bd['name'] not in gfs_disks:
                                     gfs_disks.append(bd['name'])
 
-
                                 if first_level['name'] not in mpath_name:
-                                    mpath_name.append(first_level['name'])
+                                    mpath_name.append(bd['name'])
 
                                 if first_level['path'] not in mpath_path:
-                                    mpath_path.append(first_level['path'])
+                                    mpath_path.append(bd['path'])
 
-                                partition_path = first_level['path'] + "1"
+                                partition_path = first_level['path']
                                 if partition_path not in mpath_path_partition:
                                     mpath_path_partition.append(partition_path)
 
-                                if third_level['path'] not in lv_path:
-                                    lv_path.append(third_level['path'])
+                                if second_level['path'] not in lv_path:
+                                    lv_path.append(second_level['path'])
 
             for path in mpath_path:
                 run_command(f"parted -s {path} resizepart 1 100% -f")
@@ -517,13 +564,20 @@ def rescan_and_extend_gfs_disk(action, vg_name, lv_name, mount_point, mpath_disk
             mpath_partition = []
 
             for mpath in mpath_disks:
-                disk_partition = mpath.replace("dm-uuid-mpath-","dm-uuid-part1-mpath-")
+                if multipath_check != "":
+                    disk_partition = mpath.replace("dm-uuid-mpath-","dm-uuid-part1-mpath-")
+                else:
+                    disk_partition = mpath + "1"
                 mpath_partition.append(disk_partition)
                 run_command(f"parted -s {mpath} mklabel gpt mkpart {gfs_name} 0% 100% set 1 lvm on")
                 run_command(f"pvcreate {disk_partition}")
 
             for mpath in mpath_disks:
-                disk_partition = mpath.replace("dm-uuid-mpath-","dm-uuid-part1-mpath-")
+                if multipath_check != "":
+                    disk_partition = mpath.replace("dm-uuid-mpath-","dm-uuid-part1-mpath-")
+                else:
+                    disk_partition = mpath + "1"
+
                 for i in range(len(json_data["clusterConfig"]["hosts"])):
                     host = json_data["clusterConfig"]["hosts"][i]
                     ip = host["ablecube"]
