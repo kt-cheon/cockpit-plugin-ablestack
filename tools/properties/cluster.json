@@ -22,7 +22,8 @@
             "hostname3": ""
         },
         "hosts": [
-        ]
-
+        ],
+        "extenal_timeserver": "",
+        "iscsi_storage":"false"
     }
 }

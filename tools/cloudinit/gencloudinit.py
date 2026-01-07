@@ -59,7 +59,7 @@ def argumentParser():
     subparsers = tmp_parser.add_subparsers(help='select vm type action', dest='type')
     ccvm_parser = subparsers.add_parser('ccvm', help='Cloud Center Virtual Machine을 위한 cloudinit')
     scvm_parser = subparsers.add_parser('scvm', help='Storage Center Virtual Machine을 위한 cloudinit')
-    pfmp_parser = subparsers.add_parser('pfmp', help='PowerFlex Install을 위한 cloudinit')
+    pfmp_parser = subparsers.add_parser('pfmp', help='powerflex Install을 위한 cloudinit')
     gwvm_parser = subparsers.add_parser('gwvm', help='GateWay Virtual Machine을 위한 cloudinit')
     # 선택지 추가(동작 선택)
     tmp_parser.add_argument('--iso-path', metavar='ISO file', help="저장할 ISO파일 이름")
@@ -260,7 +260,7 @@ def genUserFromFile(pubkeyfile: str, privkeyfile: str, hostsfile: str):
     # privkey = privkey.replace("\n", "")
     with open(hostsfile, 'rt') as f:
         hosts = f.read()
-    if os_type == "ABLESTACK-HCI":
+    if os_type == "ablestack-hci":
         yam = {
             'disable_root': False,
             'ssh_pwauth': True,
@@ -343,7 +343,7 @@ def genUserFromFile(pubkeyfile: str, privkeyfile: str, hostsfile: str):
                     }
                 ]
         }
-    elif os_type == 'PowerFlex' or os_type == 'general-virtualization':
+    else:
                 yam = {
             'disable_root': False,
             'ssh_pwauth': True,
@@ -489,7 +489,7 @@ def scvmGen(pn_nic=None, pn_ip=None, pn_prefix=24, cn_nic=None, cn_ip=None, cn_p
     #     yam2['bootcmd'].append(
     #         [f'/usr/bin/script', '-c', '/root/bootstrap.sh', 'bootstrap.log']
     #     )
-    if os_type == "ABLESTACK-HCI":
+    if os_type == "ablestack-hci":
         yam2['bootcmd'] = [
         ['/usr/bin/systemctl', 'enable', '--now', 'cockpit.socket'],
         ['/usr/bin/systemctl', 'enable', '--now', 'cockpit.service'],
@@ -516,7 +516,18 @@ def scvmGen(pn_nic=None, pn_ip=None, pn_prefix=24, cn_nic=None, cn_ip=None, cn_p
                     'permissions': '0777'
                 }
             )
-    elif os_type == "PowerFlex":
+        with open(f'{pluginpath}/tools/properties/cluster.json', 'rt') as cluster_json_file:
+            cluster_json = cluster_json_file.read()
+            yam2['write_files'].append(
+                {
+                    'encoding': 'base64',
+                    'content': base64.encodebytes(cluster_json.encode()),
+                    'owner': 'root:root',
+                    'path': f'{pluginpath}/tools/properties/cluster.json',
+                    'permissions': '0777'
+                }
+            )
+    elif os_type == "powerflex":
         with open(f'{pluginpath}/shell/host/scvm_pf_bootstrap.sh', 'rt') as bootstrapfile:
             bootstrap = bootstrapfile.read()
             yam2['write_files'].append(
