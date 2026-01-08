@@ -13,7 +13,6 @@ LOGFILE="/var/log/cloud_install.log"
 
 os_type=$(cat /etc/cluster.json | grep '"type"' | awk -F'"' '{print $4}')
 hosts=$(grep -v mngt /etc/hosts | grep -v scvm | grep -v pn | grep -v localhost | awk {'print $1'})
-ccvm=$(grep ccvm /etc/hosts | awk {'print $1'})
 
 systemctl enable --now mysqld
 DATABASE_PASSWD="Ablecloud1!"
@@ -24,7 +23,7 @@ firewall-cmd --reload
 firewall-cmd --list-all 2>&1 | tee -a $LOGFILE
 
 # 라이선스 종류에 따라 설정 $1="hv" or "ablestack" or "clostack"
-sh /usr/share/cloudstack-common/scripts/util/update-mold-theme-from-license.sh "$1"
+sh /usr/share/cloudstack-common/scripts/util/update-mold-theme-from-license.sh $1
 
 if [ "${os_type}" = "ablestack-hci" ]; then
   # Crushmap 설정 추가 (ceph autoscale)
@@ -52,18 +51,9 @@ mysqladmin -uroot password $DATABASE_PASSWD
 systemctl enable --now mold-usage.service
 cloudstack-setup-databases cloud:$DATABASE_PASSWD --deploy-as=root:$DATABASE_PASSWD  2>&1 | tee -a $LOGFILE
 
-# 글로벌설정 DB 업데이트(네트워크필터, saml)
+# 글로벌설정 DB 업데이트
 global_settings=(
   "enable.vm.network.filter.allow.all.traffic=true"
-  "saml2.enabled=true"
-  "saml2.idp.metadata.url=http://$ccvm:7070/realms/saml/protocol/saml/descriptor"
-  "saml2.redirect.url=http://$ccvm:8080/client"
-  "saml2.sp.id=http://$ccvm:8080"
-  "saml2.sp.slo.url=http://$ccvm:8080"
-  "saml2.sp.sso.url=http://$ccvm:8080/client/api?command=samlSso"
-  "saml2.user.attribute=username"
-  "saml2.failed.login.redirect.url=http://$ccvm:8080/client/#/user/login?ssoLogin=false"
-  "saml2.check.signature=false"
 )
 
 for i in "${global_settings[@]}"; do
@@ -79,10 +69,6 @@ for i in "${global_settings[@]}"; do
 done
 
 cloudstack-setup-management  2>&1 | tee -a $LOGFILE
-
-#admin 계정 로그인타입 변경(SAML)
-mysql --user=root --password="$DATABASE_PASSWD" -e \
-"USE cloud; UPDATE user SET source='SAML2', external_entity='http://$ccvm:7070/realms/saml' WHERE username='admin';"
 
 systemctl enable --now mold.service
 
@@ -134,3 +120,4 @@ fi
 
 # Delete bootstrap script file
 rm -rf /root/bootstrap.sh
+
