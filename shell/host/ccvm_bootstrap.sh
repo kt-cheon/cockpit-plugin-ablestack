@@ -132,9 +132,5 @@ fi
 # ccvm 로그 정리 스크립트 등록
 (crontab -l 2>/dev/null; echo "0 0 * * 7 /usr/local/sbin/ccvm_log_maintainer.sh") | crontab -
 
-# sso 로그인을 위한 스크립트 실행
-sh /usr/local/sbin/sso_setting.sh
-rm -rf /usr/local/sbin/sso_setting.sh
-
 # Delete bootstrap script file
 rm -rf /root/bootstrap.sh
