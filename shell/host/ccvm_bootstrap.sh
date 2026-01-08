@@ -120,3 +120,4 @@ fi
 
 # Delete bootstrap script file
 rm -rf /root/bootstrap.sh
+
