@@ -73,9 +73,9 @@ def wallCenter(action, H=False):
 
     if action == 'wallCenter':
         try:
-            # 클라우드센터
+            # 모니터링센터
             value = "https://"+ip+":8081/login"
-            request = requests.get(value, verify=False, timeout=3) 
+            request = requests.get(value, verify=False, timeout=3)
 
         except:
              # http 접속되지않는 경우
