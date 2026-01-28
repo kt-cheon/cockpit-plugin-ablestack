@@ -2240,7 +2240,7 @@ function setDiskAction(type, action, extend){
                                 var disk_name = clvm_list[i].name;
                                 if (!displayedName.has(disk_name)) {
                                     el += '<div class="pf-c-check">';
-                                    el += '<input class="pf-c-check__input" type="checkbox" id="form-clvm-checkbox-disk-add' + i + '" name="form-clvm-checkbox-disk-add" value="' + clvm_list[i].path + '" ' + check_disable + ' />';
+                                    el += '<input class="pf-c-check__input" type="checkbox" id="form-clvm-checkbox-disk-add' + i + '" name="form-clvm-checkbox-disk-add" value="' + clvm_list[i].path + '" ' + 'data-disk_id="' + clvm_list[i].path + '" ' + check_disable + ' />';
                                     // el += '<input class="pf-c-check__input" type="checkbox" id="form-clvm-checkbox-disk-add' + i + '" name="form-clvm-checkbox-disk-add" value="' + clvm_list[i].path + '" />';
                                     el += '<label class="pf-c-check__label" style="margin-top:5px" for="form-clvm-checkbox-disk-add' + i + '">' + clvm_list[i].path + ' ' + clvm_list[i].state + ' (' + clvm_list[i].tran + ') ' + clvm_list[i].size + ' ' + clvm_list[i].model + ' ' + clvm_list[i].wwn + partition_text + '</label>';
                                     el += '</div>';
@@ -2254,7 +2254,7 @@ function setDiskAction(type, action, extend){
                             clvm_list[i].wwn = ""; // 값을 공백으로 설정
                         }
                         el += '<div class="pf-c-check">';
-                        el += '<input class="pf-c-check__input" type="checkbox" id="form-clvm-checkbox-disk-add' + i + '" name="form-clvm-checkbox-disk-add" value="' + clvm_list[i].path + '" ' + check_disable + ' />';
+                        el += '<input class="pf-c-check__input" type="checkbox" id="form-clvm-checkbox-disk-add' + i + '" name="form-clvm-checkbox-disk-add" value="' + clvm_list[i].path + '" ' + 'data-disk_id="' + clvm_list[i].path + '" ' + check_disable + ' />';
                         // el += '<input class="pf-c-check__input" type="checkbox" id="form-clvm-checkbox-disk-add' + i + '" name="form-clvm-checkbox-disk-add" value="' + clvm_list[i].path + '" />';
                         el += '<label class="pf-c-check__label" style="margin-top:5px" for="form-clvm-checkbox-disk-add' + i + '">' + clvm_list[i].path + ' ' + clvm_list[i].state + ' (' + clvm_list[i].tran + ') ' + clvm_list[i].size + ' ' + clvm_list[i].model + ' ' + clvm_list[i].wwn + partition_text + '</label>';
                         el += '</div>';
@@ -2413,13 +2413,13 @@ function setDiskAction(type, action, extend){
                                 if (!displayedName.has(disk_name)) {
                                     if (extend == "true"){
                                         el += '<div class="pf-c-check">';
-                                        el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-extend-add' + i + '" name="form-gfs-checkbox-disk-extend-add" value="' + gfs_list[i].path + '" ' + check_disable + ' />';
+                                        el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-extend-add' + i + '" name="form-gfs-checkbox-disk-extend-add" value="' + gfs_list[i].path + '" ' + 'data-disk_id="' + gfs_list[i].path + '" ' + check_disable + ' />';
                                         // el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-extend-add' + i + '" name="form-gfs-checkbox-disk-extend-add" value="' + gfs_list[i].path + '" />';
                                         el += '<label class="pf-c-check__label" style="margin-top:5px" for="form-gfs-checkbox-disk-extend-add' + i + '">' + gfs_list[i].path + ' ' + gfs_list[i].state + ' (' + gfs_list[i].tran + ') ' + gfs_list[i].size + ' ' + gfs_list[i].model + ' ' + gfs_list[i].wwn + partition_text + '</label>';
                                         el += '</div>';
                                     }else{
                                         el += '<div class="pf-c-check">';
-                                        el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].path + '" ' + check_disable + ' />';
+                                        el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].path + '" ' + 'data-disk_id="' + gfs_list[i].path + '" ' + check_disable + ' />';
                                         // el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].path + '" />';
                                         el += '<label class="pf-c-check__label" style="margin-top:5px" for="form-gfs-checkbox-disk-add' + i + '">' + gfs_list[i].path + ' ' + gfs_list[i].state + ' (' + gfs_list[i].tran + ') ' + gfs_list[i].size + ' ' + gfs_list[i].model + ' ' + gfs_list[i].wwn + partition_text + '</label>';
                                         el += '</div>';
@@ -2435,13 +2435,13 @@ function setDiskAction(type, action, extend){
                         }
                         if (extend == "true"){
                             el += '<div class="pf-c-check">';
-                            el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-extend-add' + i + '" name="form-gfs-checkbox-disk-extend-add" value="' + gfs_list[i].path + '" ' + check_disable + ' />';
+                            el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-extend-add' + i + '" name="form-gfs-checkbox-disk-extend-add" value="' + gfs_list[i].path + '" ' + 'data-disk_id="' + gfs_list[i].path + '" ' + check_disable + ' />';
                             // el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-extend-add' + i + '" name="form-gfs-checkbox-disk-extend-add" value="' + gfs_list[i].path + '" />';
                             el += '<label class="pf-c-check__label" style="margin-top:5px" for="form-gfs-checkbox-disk-extend-add' + i + '">' + gfs_list[i].path + ' ' + gfs_list[i].state + ' (' + gfs_list[i].tran + ') ' + gfs_list[i].size + ' ' + gfs_list[i].model + ' ' + gfs_list[i].wwn + partition_text + '</label>';
                             el += '</div>';
                         }else{
                             el += '<div class="pf-c-check">';
-                            el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].path + '" ' + check_disable + ' />';
+                            el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].path + '" ' + 'data-disk_id="' + gfs_list[i].path + '" ' + check_disable + ' />';
                             // el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].path + '" />';
                             el += '<label class="pf-c-check__label" style="margin-top:5px" for="form-gfs-checkbox-disk-add' + i + '">' + gfs_list[i].path + ' ' + gfs_list[i].state + ' (' + gfs_list[i].tran + ') ' + gfs_list[i].size + ' ' + gfs_list[i].model + ' ' + gfs_list[i].wwn + partition_text + '</label>';
                             el += '</div>';
@@ -2472,13 +2472,18 @@ function setDiskAction(type, action, extend){
             // JSON 데이터 파싱
             var result = JSON.parse(data);
             var gfsList = result.val.blockdevices;
-
+            var mode = result.val.mode;
             var output = '';
 
             if (gfsList.length > 0) {
                 for (var i = 0; i < gfsList.length; i++) {
                     var gfs_disk = gfsList[i];
                     var multipaths = gfs_disk.multipaths.join(', ');
+                    if (mode == "single"){
+                        var disk_id = gfs_disk.devices;
+                    }else{
+                        var disk_id = gfs_disk.disk_id.join(',');
+                    }
 
                     // 각 데이터 길이에 따라 너비 조정
                     var mountpointWidth = Math.max(gfs_disk.mountpoint.length * 10, 160);  // 최소 200px
@@ -2500,7 +2505,7 @@ function setDiskAction(type, action, extend){
                             <input type="checkbox" class="gfs-disk-delete-checkbox" id="gfs-disk-checkbox-delete-${i}"
                                 name="form-gfs-checkbox-disk-delete" data-mountpoint="${gfs_disk.mountpoint}"
                                 data-multipaths="${multipaths}" data-size="${gfs_disk.size}" data-lvm="${gfs_disk.lvm}"
-                                data-disk_id="${gfs_disk.disk_id}" style="margin-left:5px; transform: scale(1.3); margin-right:10px;">
+                                data-disk_id="${disk_id}" style="margin-left:5px; transform: scale(1.3); margin-right:10px;">
 
                             <label for="gfs-disk-checkbox-delete-${i}"
                                 style="display: inline-block; min-width:${mountpointWidth}px; flex-grow: 1; overflow: hidden; text-overflow: ellipsis;">
@@ -2536,6 +2541,7 @@ function setDiskAction(type, action, extend){
             // JSON 데이터 파싱
             var result = JSON.parse(data);
             var gfsList = result.val.blockdevices;
+            var mode = result.val.mode;
 
             var output = '';
 
@@ -2543,7 +2549,11 @@ function setDiskAction(type, action, extend){
                 for (var i = 0; i < gfsList.length; i++) {
                     var gfs_disk = gfsList[i];
                     var multipaths = gfs_disk.multipaths.join(',');
-                    var disk_id = gfs_disk.disk_id.join(',');
+                    if (mode == "single"){
+                        var disk_id = gfs_disk.devices;
+                    }else{
+                        var disk_id = gfs_disk.disk_id.join(',');
+                    }
                     var [vg_name, lv_name] = gfs_disk.lvm.split("/").pop().split(/-(.+)/);
                     var gfs_name = gfs_disk.mountpoint.split("/").pop();
                     var formattedMultipaths = '';
