@@ -38,7 +38,7 @@ def createArgumentParser():
     # 인자 추가: https://docs.python.org/ko/3/library/argparse.html#the-add-argument-method
 
     # 선택지 추가(동작 선택)
-    tmp_parser.add_argument('action', choices=['list', 'gfs-list','mpath-list'], help="disk action")
+    tmp_parser.add_argument('action', choices=['list', 'gfs-list','mpath-list','hci-shared-file-list'], help="disk action")
 
     # output 민감도 추가(v갯수에 따라 output및 log가 많아짐)
     tmp_parser.add_argument("-v", "--verbose", action='count', default=0,
@@ -102,6 +102,14 @@ def listDiskInterface(H=False, classify=None, action=None):
             line_sp = line.split()
             if len(line_sp) == 2:
                 disk_path.append(line_sp)
+    elif action == 'hci-shared-file-list':
+        stream = os.popen("ls -l /dev/rbd/rbd/ | grep 'rbd' | awk '{ if($11 != \"\") print substr($11,\"7\",length($11))\" \"\"/dev/rbd/rbd/\"$9}'")
+        output = stream.read()
+        lines = output.splitlines()
+        for line in lines:
+            line_sp = line.split()
+            if len(line_sp) == 2:
+                disk_path.append(line_sp)
     else:
         stream = os.popen("ls -l /dev/disk/by-id/ | grep 'dm-uuid' | grep -v 'LVM' | awk '{ if($11 != \"\") print substr($11,\"7\",length($11))\" \"\"/dev/disk/by-id/\"$9}'")
         output = stream.read()
@@ -113,6 +121,8 @@ def listDiskInterface(H=False, classify=None, action=None):
 
     if action == 'mpath-list':
         item = json.loads(lsblk_cmd(J=True, o="name,kname,path,state,size"))
+    elif action == 'hci-shared-file-list':
+        item = json.loads(lsblk_cmd(J=True, o="name,kname,path,state,size,type"))
     else:
         item = json.loads(lsblk_cmd(J=True, o="name,kname,path,rota,model,size,state,group,type,tran,subsystems,vendor,wwn"))
 
@@ -141,6 +151,17 @@ def listDiskInterface(H=False, classify=None, action=None):
                         if dev["children"][0]["children"][0]["kname"] == dp[0]:
                             dev["children"][0]["children"][0]["id"] = dp[1]
             newbd.append(dev)
+        elif action == "hci-shared-file-list":
+            if 'loop' not in dev['type'] and 'rbd' in dev['name']:
+                for dp in disk_path:
+                    if "rbd" in dev["name"] :
+                        if dev["name"] == dp[0]:
+                            dev["path"] = "/dev/" + dp[0]
+                            dev["rbd_path"] = dp[1]
+                            if "children" in dev and isinstance(dev["children"], list):
+                                for child in dev["children"]:
+                                    child["rbd_path"] = dp[1] + "-part1"
+                newbd.append(dev)
         else:
             if 'loop' not in dev['type'] and  (dev['tran'] is None or 'usb' not in dev['tran']) and 'cdrom' not in dev['group']:
                 for dp in disk_path:

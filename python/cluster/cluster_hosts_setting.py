@@ -52,7 +52,6 @@ def openClusterJson():
             ret = json.load(json_file)
     except Exception as e:
         ret = createReturn(code=500, val='cluster.json read error')
-        print ('EXCEPTION : ',e)
 
     return ret
 json_data = openClusterJson()
@@ -195,7 +194,7 @@ def hostOnly(args):
 
 def withScvm(args):
     ret = changeHosts(args)
-    if os_type == "ablestack-hci":
+    if os_type == "ablestack-hci" or os_type == "ablestack-hci-filesystem":
         os.system("scp -q -o StrictHostKeyChecking=no " + hosts_file_path + " root@scvm-mngt:/etc/hosts")
     # os.system("scp -q "+ hosts_file_path +" root@scvm-mngt:/etc/hosts")
     return ret

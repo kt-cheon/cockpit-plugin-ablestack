@@ -78,7 +78,7 @@ def ccvm_secondary_resize(args):
         os_type = cfg["clusterConfig"]["type"]
 
         rbd_image = "rbd/ccvm"
-        if os_type == "ablestack-hci":
+        if os_type == "ablestack-hci" or os_type == "ablestack-hci-filesystem":
             info = run(["rbd", "info", rbd_image, "--format", "json"], check=True)
             ccvm_info = json.loads(info.stdout)
             original_gib = ccvm_info["size"] / (1024 ** 3)
@@ -111,7 +111,7 @@ def ccvm_secondary_resize(args):
             run(["qemu-img", "resize", ccvm_file, f"+{args.add_size}G"])
             run(["virsh", "start", "ccvm"])
 
-        if os_type == "ablestack-hci":
+        if os_type == "ablestack-hci" or os_type == "ablestack-hci-filesystem":
             if run(["rbd", "snap", "purge", rbd_image, "--no-progress"], check=False).returncode != 0:
                 return createReturn(code=500, val="CCVM snapshot purge failed.")
             if run(["rbd", "resize", "-s", f"{int(new_image_size)}G", rbd_image], check=False).returncode != 0:

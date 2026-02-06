@@ -42,10 +42,10 @@ def createArgumentParser():
 
     # output 민감도 추가(v갯수에 따라 output및 log가 많아짐):
     parser.add_argument('-v', '--verbose', action='count', default=0, help='increase output verbosity')
-    
+
     # flag 추가(샘플임, 테스트용으로 json이 아닌 plain text로 출력하는 플래그 역할)
     parser.add_argument('-H', '--Human', action='store_const', dest='flag_readerble', const=True, help='Human readable')
-    
+
     # Version 추가
     parser.add_argument('-V', '--Version', action='version', version='%(prog)s 1.0')
 
@@ -60,7 +60,7 @@ def createCcvmSnap(args):
         check_host_in_ccvm = os.system("virsh list --name --state-running |grep "+ccvm_name+" > /dev/null")
         if check_host_in_ccvm == 0:
             now = datetime.datetime.now().strftime('%Y-%m-%d-%H:%M:%S')
-            
+
             # ccvm 중지
             os.system("virsh suspend "+ccvm_name+" > /dev/null")
 
@@ -73,7 +73,7 @@ def createCcvmSnap(args):
             # ccvm 스냅이 10개 이상이면 마지막 스냅 삭제
             output = check_output(["rbd snap list "+ccvm_image_name+" --format json"], universal_newlines=True, shell=True, env=env)
             output_json = json.loads(output)
-            
+
             ccvm_snap_cnt = len(output_json)
             ccvm_snap_limit = 10
 
@@ -84,8 +84,7 @@ def createCcvmSnap(args):
 
     except Exception as e:
         # 결과값 리턴
-        print(e)
-        return createReturn(code=500, val={})
+        return createReturn(code=500, val={e})
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':

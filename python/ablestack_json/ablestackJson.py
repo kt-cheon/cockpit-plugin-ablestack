@@ -31,7 +31,6 @@ def openAblestackJson():
             ret = json.load(json_file)
     except Exception as e:
         ret = createReturn(code=500, val='ERROR')
-        print ('EXCEPTION : ',e)
 
     return ret
 
@@ -41,7 +40,6 @@ def openClusterJson():
             ret = json.load(json_file)
     except Exception as e:
         ret = createReturn(code=500, val='cluster.json read error')
-        print ('EXCEPTION : ',e)
 
     return ret
 
@@ -66,7 +64,6 @@ def jsonStatus():
         ret = createReturn(code=200, val=ret_val)
     except Exception as e:
         ret = createReturn(code=600, val='ERROR')
-        print ('EXCEPTION : ',e)
 
     return ret
 
@@ -99,14 +96,13 @@ def jsonUpdate():
 
     except Exception as e:
         ret = createReturn(code=500, val='ERROR')
-        print ('EXCEPTION : ',e)
 
     return ret
 
 def jsonAllUpdate():
     try:
         json_data = openAblestackJson()
-        if os_type == "ablestack-hci":
+        if os_type == "ablestack-hci" or os_type == "ablestack-hci-filesystem":
             json_data["bootstrap"]["scvm"] = "true"
         elif os_type == "powerflex":
             json_data["bootstrap"]["pfmp"] = "true"
@@ -122,7 +118,6 @@ def jsonAllUpdate():
 
     except Exception as e:
         ret = createReturn(code=500, val='ablestack.json all option change ERROR')
-        print ('EXCEPTION : ',e)
 
     return ret
 
@@ -142,7 +137,6 @@ def jsonAllReset():
 
     except Exception as e:
         ret = createReturn(code=500, val='ablestack.json all option change ERROR')
-        print ('EXCEPTION : ',e)
 
     return ret
 

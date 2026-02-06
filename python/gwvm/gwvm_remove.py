@@ -49,7 +49,7 @@ def openClusterJson():
             ret = json.load(json_file)
     except Exception as e:
         ret = createReturn(code=500, val='cluster.json read error')
-        print ('EXCEPTION : ',e)
+
 
     return ret
 
@@ -70,7 +70,7 @@ def removeGatewayCenter(args):
         # gwvm pcs 클러스터 배포
         result = json.loads(python3(pluginpath + '/python/pcs/pcsExehost.py' ))
         pcs_exe_ip = result["val"]
-        
+
         for f_val in json_data["clusterConfig"]["hosts"]:
             cmd = "python3 "+pluginpath + "/python/cluster/gwvm_config.py remove"
             ret = json.loads(ssh('-o', 'StrictHostKeyChecking=no', f_val["ablecube"], cmd))

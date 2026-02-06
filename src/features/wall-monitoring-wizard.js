@@ -427,7 +427,7 @@ function resetWallMonitoringWizard() {
                                 var cubehost_ip = $('#form-input-wall-monitoring-cubehost'+i+'-ip').val();
                                 prometheus_config_cmd.push(cubehost_ip);
                             }
-                            if (os_type == "ablestack-hci"){
+                            if (os_type == "ablestack-hci" || os_type == "ablestack-hci-filesystem"){
                                 prometheus_config_cmd.push('--scvm');
                                 for(var i = 1 ; i <= host_count ; i ++ ){
                                     var scvm_ip = $('#form-input-wall-monitoring-scvm'+i+'-ip').val();
@@ -665,7 +665,7 @@ function setWallReviewInfo() {
             $('#span-wall-monitoring-cubehost'+i+'-ip').text(cubehost_ip);
         }
     }
-    if (os_type == "ablestack-hci"){
+    if (os_type == "ablestack-hci" || os_type == "ablestack-hci-filesystem"){
         for(var i = 1 ; i <= host_count ; i ++ ){
             var scvm_ip = $('#form-input-wall-monitoring-scvm'+i+'-ip').val();
             if (scvm_ip == '') {
@@ -768,7 +768,7 @@ function validateWallMonitoringVm() {
             validate_check = false;
         }
     }
-    if (os_type == "ablestack-hci"){
+    if (os_type == "ablestack-hci" || os_type == "ablestack-hci-filesystem"){
         for(var i = 1 ; i <= host_count ; i ++ ){
             if (validate_check && $('#form-input-wall-monitoring-scvm'+i+'-ip').val() == "") {
                 alert('SCVM'+i+' 관리 IP를 입력해주세요.');
@@ -946,7 +946,7 @@ function setWallIpInput(host_count){
     }
     review_el +='            </dd>';
     review_el +='        </div>';
-    if (os_type == "ablestack-hci"){
+    if (os_type == "ablestack-hci" || os_type == "ablestack-hci-filesystem"){
         review_el +='        <div class="pf-c-description-list__group">';
         review_el +='            <dt class="pf-c-description-list__term">';
         review_el +='                <span class="pf-c-description-list__text">스토리지센터 VM</span>';
@@ -964,7 +964,7 @@ function setWallIpInput(host_count){
 
     $('#div-wall-ccvm-ip-area').append(ccvm_el);
     $('#div-wall-cubehost-ip-area').append(cube_host_el);
-    if (os_type == "ablestack-hci"){
+    if (os_type == "ablestack-hci" || os_type == "ablestack-hci-filesystem"){
         $('#div-wall-scvm-ip-area').append(scvm_el);
     }
     $('#div-wall-review-area').append(review_el);

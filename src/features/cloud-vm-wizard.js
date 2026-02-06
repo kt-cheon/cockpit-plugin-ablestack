@@ -102,7 +102,7 @@ $('#nav-button-cloud-vm-appliance').on('click',function(){
     $('#div-modal-wizard-cloud-vm-cluster-sync-mechanism').show();
     $('#nav-button-cloud-vm-appliance').addClass('pf-m-current');
 
-    if (os_type == "ablestack-hci"){
+    if (os_type == "ablestack-hci" || os_type == "ablestack-hci-filesystem"){
         $('#nav-button-cloud-vm-compute').addClass('pf-m-current');
     }else{
         $('#nav-button-cloud-vm-cluster-sync-mechanism').addClass('pf-m-current');
@@ -138,7 +138,7 @@ $('#nav-button-cloud-vm-compute').on('click',function(){
     $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
     $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
     $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-    if (os_type == "ablestack-hci" || os_type == "ablestack-standalone"){
+    if (os_type == "ablestack-hci" || os_type == "ablestack-standalone" || os_type == "ablestack-hci-filesystem"){
         cur_step_wizard_cloud_vm = "2";
     }else{
         cur_step_wizard_cloud_vm = "3";
@@ -155,7 +155,7 @@ $('#nav-button-cloud-vm-network').on('click',function(){
     $('#button-next-step-modal-wizard-cloud-vm').attr('disabled', false);
     $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
     $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
-    if (os_type == "ablestack-hci" || os_type == "ablestack-standalone"){
+    if (os_type == "ablestack-hci" || os_type == "ablestack-standalone" || os_type == "ablestack-hci-filesystem"){
         cur_step_wizard_cloud_vm = "3";
     }else{
         cur_step_wizard_cloud_vm = "4";
@@ -173,7 +173,7 @@ $('#nav-button-cloud-vm-additional').on('click',function(){
     $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
     $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
 
-    if (os_type == "ablestack-hci" || os_type == "ablestack-standalone"){
+    if (os_type == "ablestack-hci" || os_type == "ablestack-standalone" || os_type == "ablestack-hci-filesystem"){
         cur_step_wizard_cloud_vm = "4";
     }else{
         cur_step_wizard_cloud_vm = "5";
@@ -190,7 +190,7 @@ $('#nav-button-cloud-vm-ssh-key').on('click',function(){
     $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
     $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
 
-    if(os_type == "ablestack-hci" || os_type == "ablestack-standalone"){
+    if(os_type == "ablestack-hci" || os_type == "ablestack-standalone" || os_type == "ablestack-hci-filesystem"){
         cur_step_wizard_cloud_vm = "5";
     }else{
         cur_step_wizard_cloud_vm = "6";
@@ -207,7 +207,7 @@ $('#nav-button-cloud-vm-cluster').on('click',function(){
     $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
     $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
 
-    if(os_type == "ablestack-hci"){
+    if(os_type == "ablestack-hci" || os_type == "ablestack-hci-filesystem"){
         cur_step_wizard_cloud_vm = "6";
     }else if(os_type == "ablestack-standalone"){
         cur_step_wizard_cloud_vm = "5";
@@ -232,7 +232,7 @@ $('#nav-button-cloud-vm-review').on('click',function(){
     $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', false);
     $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
 
-    if(os_type == "ablestack-hci"){
+    if(os_type == "ablestack-hci" || os_type == "ablestack-hci-filesystem"){
         cur_step_wizard_cloud_vm = "7";
     }else if(os_type == "ablestack-standalone"){
         cur_step_wizard_cloud_vm = "6";
@@ -253,7 +253,7 @@ $('#nav-button-cloud-vm-finish').on('click',function(){
     $('#button-before-step-modal-wizard-cloud-vm').attr('disabled', true);
     $('#button-cancel-config-modal-wizard-cloud-vm').attr('disabled', false);
 
-    if(os_type == "ablestack-hci"){
+    if(os_type == "ablestack-hci" || os_type == "ablestack-hci-filesystem"){
         cur_step_wizard_cloud_vm = "8";
     }else if(os_type == "ablestack-standalone"){
         cur_step_wizard_cloud_vm = "7";
@@ -1545,6 +1545,130 @@ function deployCloudCenterVM() {
                     alert("ccvm 폴더에 복사 실패 : "+data);
                 });
 
+    }else if(os_type == "ablestack-hci-filesystem"){
+            //=========== 1. 클러스터 구성 host 네트워크 연결 테스트 ===========
+    setProgressStep("span-ccvm-progress-step1",1,os_type);
+    var console_log = true;
+    createLoggerInfo("deployCloudCenterVM start");
+    var host_ping_test_and_cluster_config_cmd = ['python3', pluginpath + '/python/cluster/cluster_config.py', 'insertScvmHost', '-t', os_type, '-js', ret_json_string, '-cmi', mgmt_ip, '-pcl', all_host_name];
+    if(console_log){console.log(host_ping_test_and_cluster_config_cmd);}
+    cockpit.spawn(host_ping_test_and_cluster_config_cmd)
+        .then(function(data){
+            //결과 값 json으로 return
+            var ping_test_result = JSON.parse(data);
+            if(ping_test_result.code=="200") { //정상
+                //=========== 3. cloudinit iso 파일 생성 ===========
+                // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/ccvm/cloudinit 경로에 hosts, ssh key 파일 저장
+                setProgressStep("span-ccvm-progress-step1",2,os_type);
+                setProgressStep("span-ccvm-progress-step2",2,os_type);
+                setProgressStep("span-ccvm-progress-step3",1,os_type);
+                var host_name = $('#form-input-cloud-vm-hostname').val();
+                var mgmt_ip = $('#form-input-cloud-vm-mngt-nic-ip').val().split("/")[0];
+                var mgmt_prefix = $('#form-input-cloud-vm-mngt-nic-ip').val().split("/")[1];
+                var mngt_gw = $('#form-input-cloud-vm-mngt-gw').val();
+                var dns = $('#form-input-cloud-vm-dns').val();
+
+                create_ccvm_cloudinit_cmd = ['python3', pluginpath + '/python/vm/create_ccvm_cloudinit.py'
+                                        ,"-f1",pluginpath+"/tools/vmconfig/ccvm/hosts","-t1", local_host+$("#div-textarea-cluster-config-confirm-hosts-file-ccvm").val() // hosts 파일
+                                        ,"-f2",pluginpath+"/tools/vmconfig/ccvm/id_rsa","-t2", $("#form-textarea-cloud-vm-ssh-private-key-file").val() // ssh 개인 key 파일
+                                        ,"-f3",pluginpath+"/tools/vmconfig/ccvm/id_rsa.pub","-t3", $("#form-textarea-cloud-vm-ssh-public-key-file").val() // ssh 공개 key 파일
+                                        ,'--hostname',host_name
+                                        ,'-hns', all_host_name
+                                        ,'--mgmt-nic','enp0s20'
+                                        ,'--mgmt-ip',mgmt_ip
+                                        ,'--mgmt-prefix',mgmt_prefix
+                                    ];
+                //GATEWAY가 공백이 아닐 시 삽입
+                if(mngt_gw != ""){
+                    create_ccvm_cloudinit_cmd.push('--mgmt-gw',mngt_gw);
+                }
+                // DNS가 공백이 아닐 시 삽입
+                if(dns != ""){
+                    create_ccvm_cloudinit_cmd.push('--dns',dns);
+                }
+                var svc_bool = $('input[type=checkbox][id="form-checkbox-svc-network"]').is(":checked");
+                if(svc_bool){
+                    var sn_ip = $('#form-input-cloud-vm-svc-nic-ip').val().split("/")[0];
+                    var sn_prefix = $('#form-input-cloud-vm-svc-nic-ip').val().split("/")[1];
+                    var sn_gw = $('#form-input-cloud-vm-svc-gw').val();
+                    var sn_dns = $('#form-input-cloud-vm-svc-dns').val();
+                    create_ccvm_cloudinit_cmd.push('--sn-nic','enp0s21','--sn-ip',sn_ip,'--sn-prefix',sn_prefix,'--sn-gw',sn_gw,'--sn-dns',sn_dns);
+                }
+                if(console_log){console.log(create_ccvm_cloudinit_cmd);}
+                cockpit.spawn(create_ccvm_cloudinit_cmd)
+                    .then(function(data){
+                        //결과 값 json으로 return
+                        var create_ccvm_cloudinit_result = JSON.parse(data);
+                        if(create_ccvm_cloudinit_result.code=="200"){
+                            //=========== 4. 클라우드센터 가상머신 구성 ===========
+                            setProgressStep("span-ccvm-progress-step3",2,os_type);
+                            setProgressStep("span-ccvm-progress-step4",1,os_type);
+                            xml_create_cmd.push("-hns",all_host_name);
+                            if(console_log){console.log(xml_create_cmd);}
+                            cockpit.spawn(xml_create_cmd)
+                                .then(function(data){
+                                    //결과 값 json으로 return
+                                    var create_ccvm_xml_result = JSON.parse(data);
+                                    if(create_ccvm_xml_result.code=="200"){
+                                        //=========== 5. 클러스터 구성 및 클라우드센터 가상머신 배포 ===========
+                                        //클러스터 생성
+                                        setProgressStep("span-ccvm-progress-step4",2,os_type);
+                                        setProgressStep("span-ccvm-progress-step5",1,os_type);
+                                        var pcs_config = ['python3', pluginpath + '/python/vm/setup_pcs_cluster.py', '-hns', all_host_name];
+                                        if(console_log){console.log(pcs_config);}
+                                        cockpit.spawn(pcs_config)
+                                            .then(function(data){
+                                                //결과 값 json으로 return
+                                                var ccvm_result = JSON.parse(data);
+                                                if(ccvm_result.code=="200"){
+                                                    createLoggerInfo("deployCloudCenterVM success");
+                                                    setProgressStep("span-ccvm-progress-step5",2,os_type);
+                                                    //최종 화면 호출
+                                                    showDivisionCloudVMConfigFinish();
+                                                } else {
+                                                    setProgressFail(5);
+                                                    createLoggerInfo(ccvm_result.val);
+                                                    alert(ccvm_result.val);
+                                                }
+                                            })
+                                            .catch(function(data){
+                                                setProgressFail(5);
+                                                createLoggerInfo("Cluster configuration and cloud center virtual machine deployment failed");
+                                                alert("클러스터 구성 및 클라우드센터 가상머신 배포 실패 : "+data);
+                                            });
+                                    } else {
+                                        setProgressFail(4);
+                                        createLoggerInfo(create_ccvm_xml_result.val);
+                                        alert(create_ccvm_xml_result.val);
+                                    }
+                                })
+                                .catch(function(data){
+                                    setProgressFail(4);
+                                    createLoggerInfo("Cloud Center Virtual Machine XML Creation Failed");
+                                    alert("클라우드센터 가상머신 XML 생성 실패 : "+data);
+                                });
+                        } else {
+                            setProgressFail(3);
+                            createLoggerInfo(create_ccvm_cloudinit_result.val);
+                            alert(create_ccvm_cloudinit_result.val);
+                        }
+                    })
+                    .catch(function(data){
+                        setProgressFail(3);
+                        createLoggerInfo("Failed to create cloudinit iso file");
+                        alert("cloudinit iso 파일 생성 실패 : "+data);
+                    });
+            } else {
+                setProgressFail(1);
+                createLoggerInfo(ping_test_result.val);
+                alert(ping_test_result.val);
+            }
+        })
+        .catch(function(data){
+            setProgressFail(1);
+            createLoggerInfo("Failed to check connection status of host to configure cluster");
+            alert("클러스터 구성할 host 연결 상태 확인 및 cluster.json config 실패 : "+data);
+        });
     }
 }
 /**
@@ -1989,7 +2113,6 @@ function setTypeByChange(){
         $('#nav-button-cloud-vm-cluster').hide();
         $('#cloud-iscsi-storage-exclusive').hide();
     }else{
-        $('#nav-button-cloud-vm-cluster-sync-mechanism').show();
         $('#cloud-iscsi-storage-exclusive').hide();
     }
 }

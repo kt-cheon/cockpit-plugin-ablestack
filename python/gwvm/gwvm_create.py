@@ -68,7 +68,7 @@ def openClusterJson():
             ret = json.load(json_file)
     except Exception as e:
         ret = createReturn(code=500, val='cluster.json read error')
-        print ('EXCEPTION : ',e)
+
 
     return ret
 
@@ -82,7 +82,7 @@ def create(args):
         json_data = openClusterJson()
 
         return_val = "The ping test failed. Check ablecube cube hosts and scvms network IPs. Please check the config.json file."
-        
+
         # 호스트의 cluster.json 파일 scvm에 복사
         # os.system("rm -f "+json_file_path)
         os.system("scp -q -o StrictHostKeyChecking=no root@"+ablecube_host+":" + json_file_path + " " + json_file_path)
@@ -95,7 +95,7 @@ def create(args):
         ping_result = json.loads(python3(pluginpath+'/python/vm/host_ping_test.py', '-hns', host_list))
 
         if ping_result["code"] == 200:
-            
+
             for f_val in json_data["clusterConfig"]["hosts"]:
                 cmd = "python3 "+pluginpath + "/python/cluster/gwvm_config.py create --mgmt-ip "+args.mngt_ip+" --sn-ip "+args.sn_ip
                 ret = json.loads(ssh('-o', 'StrictHostKeyChecking=no', f_val["ablecube"], cmd))
@@ -211,8 +211,8 @@ def create(args):
 
             gwvm_add_check = os.system("ceph orch host add "+host_name+" "+pn_ip+" > /dev/null 2>&1")
             if gwvm_add_check != 0:
-                return createReturn(code=500, val="gwvm did not add glue cluster. : "+e)   
-            
+                return createReturn(code=500, val="gwvm did not add glue cluster. : "+e)
+
             return createReturn(code=200, val="Gateway VM Create Success")
         else:
             return createReturn(code=500, val=return_val)

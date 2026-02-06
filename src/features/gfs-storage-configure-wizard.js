@@ -992,8 +992,23 @@ function validateIpmiCredentials(index, type) {
 function setGfsReviewInfo(){
 
     var externel_storage_sync = $('input[type=radio][name="form-radio-gfs-external-storage-sync"]:checked').next('label').text();
+    var externel_storage_sync_value = $('input[type=radio][name="form-radio-gfs-external-storage-sync"]:checked').val();
+    if (externel_storage_sync_value == "duplication" || externel_storage_sync_value == "skip"){
+        var gfs_disk = $('input[type=checkbox][name="form-gfs-storage-checkbox-disk"]:checked')
+        .map(function () {
+            return $(this).data("data-id"); // 체크된 값 가져오기
+        })
+        .get() // jQuery 객체를 배열로 변환
+        .join(', '); // 쉼표로 연결
+    }else{
+        var gfs_disk = $('input[type=checkbox][name="form-gfs-storage-checkbox-disk"]:checked')
+        .map(function () {
+            return $(this).val(); // 체크된 값 가져오기
+        })
+        .get() // jQuery 객체를 배열로 변환
+        .join(', '); // 쉼표로 연결
+    }
 
-    var gfs_disk = $('input[type=checkbox][name="form-gfs-storage-checkbox-disk"]:checked').val();
     var ipmi_check_val = $('input[name="radio-gfs-ipmi"]:checked').val();
 
     $('#span-gfs-externel-storage-sync').text(externel_storage_sync);

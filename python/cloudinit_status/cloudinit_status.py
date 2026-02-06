@@ -38,7 +38,6 @@ def cloudinitStatus():
         ret = createReturn(code=200, val=ret_val)
     except Exception as e:
         ret = createReturn(code=500, val='ERROR')
-        print ('EXCEPTION : ',e)
 
     return ret
 
@@ -54,7 +53,6 @@ def guestvmPing():
 
     except Exception as e:
         ret = createReturn(code=500, val='ERROR')
-        print ('EXCEPTION : ',e)
 
     return ret
 

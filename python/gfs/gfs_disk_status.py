@@ -19,6 +19,8 @@ import distro
 lsblk_cmd = sh.Command('/usr/bin/lsblk')
 lspci_cmd = sh.Command('/usr/sbin/lspci')
 
+cluster_json_file_path = pluginpath + "/tools/properties/cluster.json"
+
 env = os.environ.copy()
 env['LANG'] = "en_US.utf-8"
 env['LANGUAGE'] = "en"
@@ -28,6 +30,19 @@ env['LANGUAGE'] = "en"
 
 :return: argparse.ArgumentParser
 """
+
+def openClusterJson():
+    try:
+        with open(cluster_json_file_path, 'r') as json_file:
+            ret = json.load(json_file)
+    except Exception as e:
+        ret = createReturn(code=500, val='cluster.json read error')
+
+
+    return ret
+
+cluster_json_data = openClusterJson()
+os_type = cluster_json_data["clusterConfig"]["type"]
 def createArgumentParser():
     # 참조: https://docs.python.org/ko/3/library/argparse.html
     # 프로그램 설명
@@ -114,20 +129,35 @@ def filter_gfs2_mounted_devices(blockdevices, gfs2_mounts):
                 for child in device['children']:
                     if 'children' in child:
                         for sub_child in child['children']:
-                            if 'children' in sub_child:
-                                for lvm in sub_child['children']:
-                                    for gfs2_dev, gfs2_mount in gfs2_mounts:
-                                        if lvm['path'] == gfs2_dev:
-                                            kname = sub_child['kname']
-                                            id = os.popen(f"ls -al /dev/disk/by-id/ | grep -w {kname} | grep 'dm-uuid' | awk '{{print $9}}'").read().strip()
-                                            filtered_devices.append({
-                                                "lvm": lvm['path'],
-                                                "multipath": sub_child['path'],
-                                                "device": device['path'],
-                                                "mountpoint": gfs2_mount,
-                                                "size": lvm['size'],
-                                                "disk_id": "/dev/disk/by-id/"+id
-                                            })
+                            if os_type == "ablestack-hci-filesystem":
+                                for gfs2_dev, gfs2_mount in gfs2_mounts:
+                                            if sub_child['path'] == gfs2_dev:
+                                                kname = sub_child['kname']
+                                                id = os.popen(f"ls -al /dev/disk/by-id/ | grep -w {kname} | grep 'dm-uuid' | awk '{{print $9}}'").read().strip()
+                                                if os_type == "ablestack-hci-filesystem":
+                                                    filtered_devices.append({
+                                                    "lvm": sub_child['path'],
+                                                    "multipath": sub_child['path'],
+                                                    "device": device['path'],
+                                                    "mountpoint": gfs2_mount,
+                                                    "size": sub_child['size'],
+                                                    "disk_id": "/dev/disk/by-id/"+id
+                                                })
+                            else:
+                                if 'children' in sub_child:
+                                    for lvm in sub_child['children']:
+                                        for gfs2_dev, gfs2_mount in gfs2_mounts:
+                                            if lvm['path'] == gfs2_dev:
+                                                kname = sub_child['kname']
+                                                id = os.popen(f"ls -al /dev/disk/by-id/ | grep -w {kname} | grep 'dm-uuid' | awk '{{print $9}}'").read().strip()
+                                                filtered_devices.append({
+                                                    "lvm": lvm['path'],
+                                                    "multipath": sub_child['path'],
+                                                    "device": device['path'],
+                                                    "mountpoint": gfs2_mount,
+                                                    "size": lvm['size'],
+                                                    "disk_id": "/dev/disk/by-id/"+id
+                                                })
     else:
         for device in blockdevices:
             if 'children' in device:
@@ -137,13 +167,22 @@ def filter_gfs2_mounted_devices(blockdevices, gfs2_mounts):
                             if "vg_glue" in lvm["name"]:
                                 for gfs2_dev, gfs2_mount in gfs2_mounts:
                                     if lvm['path'] == gfs2_dev:
-                                        filtered_devices.append({
+                                        if os_type == "ablestack-hci-filesystem":
+                                            filtered_devices.append({
                                             "lvm": lvm['path'],
-                                            "multipath": device['path'],
+                                            "multipath": child['path'],
                                             "device": device['path'],
                                             "mountpoint": gfs2_mount,
                                             "size": lvm['size']
                                         })
+                                        else:
+                                            filtered_devices.append({
+                                                "lvm": lvm['path'],
+                                                "multipath": device['path'],
+                                                "device": device['path'],
+                                                "mountpoint": gfs2_mount,
+                                                "size": lvm['size']
+                                            })
     return filtered_devices
 
 def group_by_mountpoint(devices):
@@ -205,11 +244,11 @@ def listDiskInterface(H=False, classify=None):
 
     # 디스크 정보 수집
     item = json.loads(lsblk_cmd(J=True, o="name,kname,path,size,group,type,mountpoint"))
+
     bd = item['blockdevices']
 
     # GFS2로 마운트된 디스크만 필터링
     filtered_devices = filter_gfs2_mounted_devices(bd, gfs2_mounts)
-
     # mountpoint 기준으로 그룹화
     grouped_devices = group_by_mountpoint(filtered_devices)
 

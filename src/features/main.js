@@ -30,6 +30,7 @@ $(document).ready(function(){
     $('#dropdown-menu-cloud-vm-status').hide();
     $('#dropdown-menu-gfs-cluster-status').hide();
     $('#dropdown-menu-gfs-disk-status').hide();
+    $('#dropdown-menu-gfs-integration-status').hide();
 
     $('#button-open-modal-wizard-storage-cluster').hide();
     $('#button-open-modal-wizard-storage-vm').hide();
@@ -72,6 +73,9 @@ $(document).ready(function(){
 
     $('#div-modal-wizard-local-storage-configure').load("./src/features/local-storage-configure-wizard.html");
     $('#div-modal-wizard-local-storage-configure').hide();
+
+    $('#div-modal-wizard-hci-shared-file-configure').load("./src/features/hci-shared-file-configure-wizard.html");
+    $('#div-modal-wizard-hci-shared-file-configure').hide();
 
     // 스토리지 센터 가상머신 자원변경 페이지 로드
     $('#div-modal-storage-vm-resource-update').load("./src/features/storage-vm-resource-update.html");
@@ -314,7 +318,9 @@ $('#card-action-gfs-cluster-status').on('click', function(){
 $('#card-action-storage-vm-status').on('click', function(){
     $('#dropdown-menu-storage-vm-status').toggle();
 });
-
+$('#card-action-gfs-integration-status').on('click', function(){
+    $('#dropdown-menu-gfs-integration-status').toggle();
+});
 $(document).on('click', '#card-action-cloud-vm-status', function () {
     $('#dropdown-menu-cloud-vm-status').toggle();
 });
@@ -349,6 +355,9 @@ $('#button-open-modal-wizard-cloud-vm').on('click', function(){
     $('#div-modal-wizard-cloud-vm').show();
 });
 
+$('#button-link-hci-shared-file-configure').on('click', function(){
+    $('#div-modal-wizard-hci-shared-file-configure').show();
+});
 $('#button-open-modal-wizard-monitoring-center').on('click', function(){
     $('#div-modal-wizard-wall-monitoring').show();
     autoConfigWallIP();
@@ -1095,6 +1104,9 @@ function checkStorageClusterStatus(){
                                 $('#scc-status-check').attr("style","color: var(--pf-global--success-color--100)");
                                 $("#menu-item-linkto-storage-center").removeClass('pf-m-disabled');
                                 $("#menu-item-update-glue-config").removeClass('pf-m-disabled');
+                                $('#menu-item-set-disk-image-add').removeClass('pf-m-disabled');
+                                $('#menu-item-set-disk-image-delete').removeClass('pf-m-disabled');
+
                                 $("#scc-css").attr('class','pf-c-label pf-m-green');
                                 $("#scc-icon").attr('class','fas fa-fw fa-check-circle');
                             }else if(retVal.val.cluster_status == "HEALTH_WARN"){
@@ -1115,6 +1127,8 @@ function checkStorageClusterStatus(){
                                 $('#scc-status-check').attr("style","color: var(--pf-global--danger-color--100)");
                                 $("#menu-item-linkto-storage-center").addClass('pf-m-disabled');
                                 $("#menu-item-update-glue-config").addClass('pf-m-disabled');
+                                $('#menu-item-set-disk-image-add').addClass('pf-m-disabled');
+                                $('#menu-item-set-disk-image-delete').addClass('pf-m-disabled');
                             }
                             $('#manage-daemon').show();
                             //json으로 넘겨 받은 값들 세팅
@@ -1172,6 +1186,8 @@ function checkStorageClusterStatus(){
                             $("#menu-item-linkto-storage-center").addClass('pf-m-disabled');
                             $("#menu-item-update-glue-config").addClass('pf-m-disabled');
                             $("#menu-item-bootstrap-run").addClass('pf-m-disabled');
+                            $('#menu-item-set-disk-image-add').addClass('pf-m-disabled');
+                            $('#menu-item-set-disk-image-delete').addClass('pf-m-disabled');
                             resolve();
                         });
             }//else문
@@ -1275,7 +1291,7 @@ function checkStorageVmStatus(){
                     }else{ //가상머신 상태 running && sc상태 ok, warn 일때
                         $("#menu-item-set-storage-center-vm-delete").addClass('pf-m-disabled');
                     }
-                    if (os_type == "ablestack-hci"){
+                    if (os_type == "ablestack-hci" || os_type == "ablestack-hci-filesystem"){
                         if(sessionStorage.getItem("storage_cluster_maintenance_status") == "true"){ //가상머신 상태 running && sc 유지보수모드일때
                             $("#menu-item-set-storage-center-vm-stop").removeClass('pf-m-disabled');
                         }else{//가상머신 상태 running && sc 유지보수모드 아닐때
@@ -1354,6 +1370,7 @@ function checkDeployStatus(){
         $('#button-open-modal-wizard-cloud-vm').hide();
         $('#button-link-storage-center-dashboard').hide();
         $('#button-link-gfs-storage-configure').hide();
+        $('#button-link-hci-shared-file-configure').hide();
         $('#button-link-cloud-center').hide();
         $('#button-open-modal-wizard-monitoring-center').hide();
         $('#button-link-monitoring-center').hide();
@@ -1769,6 +1786,105 @@ function checkDeployStatus(){
 
                     }
                 }
+        }else if (os_type == "ablestack-hci-filesystem"){
+            console.log("step0 :: " + step0 + ", step1 :: " + step1 + ", step2 :: " + step2 + " , step3 :: " + step3 + ", step4 :: " + step4 + ", step5 :: " + step5 + ", step6 :: " + step6 + ", step7 :: " + step7 + ", step8 :: " + step8 + ", step11 :: " + step11);
+            if(step1!="true"){
+                // 클러스터 구성준비 버튼 show
+                $('#button-open-modal-wizard-storage-cluster').show();
+                showRibbon('warning','스토리지센터, HCI 공유 파일, 클라우드센터 VM이 배포되지 않았습니다. 클러스터 구성 준비를 진행하십시오.');
+            }else{
+                $('#button-config-file-download').show();
+                if(step2=="HEALTH_ERR"||step2==null){
+                    // 외부 스토리지 버튼 활성화
+                    $('#button-hci-multipath-sync').prop('disabled', false);
+                    $('#button-hci-storage-rescan').prop('disabled', false);
+                    // 클러스터 구성준비 버튼, 스토리지센터 VM 배포 버튼 show
+                    $('#button-open-modal-wizard-storage-cluster').show();
+                    $('#button-open-modal-wizard-storage-vm').show();
+                    showRibbon('warning','스토리지센터 및 클라우드센터 VM이 배포되지 않았습니다. 스토리지센터 VM 배포를 진행하십시오.');
+                }else{
+                    $('#button-hci-multipath-sync').prop('disabled', false);
+                    $('#button-hci-storage-rescan').prop('disabled', false);
+                    if(step3!="true"){
+                        showRibbon('warning','스토리지센터 대시보드에 연결할 수 있도록 스토리지센터 구성하기 작업을 진행하십시오.');
+                    }else{
+                        if(step11!="true"){
+                            // 스토리지센터 연결 버튼 show, HCI 공유 파일 구성 버튼 show
+                            $('#button-link-storage-center-dashboard').show();
+                            $("#button-link-hci-shared-file-configure").show();
+                            showRibbon('warning', 'HCI 공유 파일이 구성되지 않았습니다. 스토리지센터에 연결하여 스토리지 클러스터를 구성한 후 HCI 공유 파일 구성을 진행하십시오.')
+                        }else{
+                            if(step8!="true" && step4=="Health Err"||step4==null){
+                                // 스토리지센터 연결 버튼 show
+                                $('#button-open-modal-wizard-cloud-vm').show();
+                                $('#button-link-storage-center-dashboard').show();
+                                showRibbon('warning','클라우드센터 VM이 배포되지 않았습니다. 클라우드센터 VM 배포를 진행하십시오.');
+                            }else{
+                                if(step8!="true" && step5=="HEALTH_ERR1"||step5=="HEALTH_ERR2"||step5==null){
+                                    //클라우드센터 VM 배포 버튼, 스토리지센터 연결 버튼 show
+                                    $('#button-open-modal-wizard-cloud-vm').show();
+                                    $('#button-link-storage-center-dashboard').show();
+                                    if(step8!="true" && step5=="HEALTH_ERR1"||step5==null){
+                                        showRibbon('warning','클라우드센터 클러스터가 구성되지 않았습니다. 클라우드센터 클러스터 구성을 진행하십시오.');
+                                    }else{
+                                        showRibbon('warning','클라우드센터 클러스터는 구성되었으나 리소스 구성이 되지 않았습니다. 리소스 구성을 진행하십시오.');
+                                    }
+                                }else{
+                                    if(step8!="true" && step6=="HEALTH_ERR"||step6==null){
+                                        //클라우드센터 VM 배포 버튼, 스토리지센터 연결 버튼 show
+                                        $('#button-open-modal-wizard-cloud-vm').show();
+                                        $('#button-link-storage-center-dashboard').show();
+                                        showRibbon('warning','클라우드센터 VM이 배포되지 않았습니다. 클라우드센터 VM 배포를 진행하십시오.');
+                                    }else{
+                                        if(step8!="true" && step7!="true"){
+                                            showRibbon('warning','클라우드센터에 연결할 수 있도록 클라우드센터 구성하기 작업을 진행하십시오.');
+                                        }else{
+                                            // 스토리지센터 연결 버튼, 클라우드센터 연결 버튼 show, 모니터링센터 구성 버튼 show
+                                            $('#button-link-storage-center-dashboard').show();
+                                            $('#button-link-cloud-center').show();
+
+                                                if(step8!="true"){
+                                                    $('#button-open-modal-wizard-monitoring-center').show();
+                                                    showRibbon('warning','모니터링센터에 연결할 수 있도록 모니터링센터 구성 작업을 진행하십시오.');
+                                                }else{
+                                                    // 모니터링센터 구성 연결 버튼 show
+                                                    $('#button-link-monitoring-center').show();
+                                                    $('#button-cloud-cluster-ssh-port').removeClass('pf-m-disabled');
+
+                                                    showRibbon('success','ABLESTACK 스토리지센터 및 클라우드센터 VM 배포되었으며 모니터링센터 구성이 완료되었습니다. 가상어플라이언스 상태가 정상입니다.');
+                                                    // 운영 상태조회
+                                                    let msg ="";
+                                                    if(step2!="RUNNING"){
+                                                        msg += '스토리지센터 가상머신이 '+step2+' 상태 입니다.\n';
+                                                        msg += '스토리지센터 가상머신이 shut off 상태일 경우 스토리지센터 가상머신 카드에서 스토리지센터 VM을 시작해주세요.\n';
+                                                        showRibbon('warning', msg);
+                                                    }
+                                                    if(step4!="HEALTH_OK"){
+                                                        msg += '스토리지센터 클러스터가 '+step4+' 상태 입니다.\n';
+                                                        msg += 'oout, nobackfill, norecover flag인 경우 의도하지 않은 유지보수 모드일 경우 스토리지센터 클러스터 상태 카드에서 유지보수 모드 해제해주세요.\n';
+                                                        msg += '스토리지센터 클러스터 상태가 Monitor clock detected 인 경우 cube host, scvm, ccvm의 ntp 시간 동기화 작업을 해야합니다.';
+                                                        showRibbon('warning', msg);
+                                                    }
+                                                    if(step6!="RUNNING"){
+                                                        msg += '클라우드센터 가상머신이 '+step6+' 상태 입니다.\n';
+                                                        msg += '클라우드센터 가상머신 Mold 서비스 , DB 상태를 확인하여 정지상태일 경우 서비스 재시작\n';
+                                                        msg += '또는 클라우드센터 클러스터 상태 카드에서 가상머신 시작하여 문제를 해결할 수 있습니다.';
+                                                        showRibbon('warning', msg);
+                                                    }
+                                                    if(step13=="false"){
+                                                        $('#button-open-modal-security-update').show();
+                                                    }else{
+                                                        $('#button-open-modal-security-update').hide();
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
         }else{
             $('#button-open-modal-wizard-storage-cluster').show();
             showRibbon('warning','스토리지센터 및 클라우드센터 VM이 배포되지 않았습니다. 클러스터 구성준비를 진행하십시오.');
@@ -1943,7 +2059,27 @@ function ribbonWorker() {
                 license_check();
 
             });
-    }else{
+        }else if(os_type == "ablestack-hci-filesystem"){
+            Promise.all([
+                pcsExeHost(),
+                checkLicenseStatus(),
+                checkConfigStatus(),
+                checkStorageVmStatus(),
+                checkStorageClusterStatus(),
+                CardCloudClusterStatus(),
+                gfsDiskStatus(),
+                gfsResourceStatus(),
+                new CloudCenterVirtualMachine().checkCCVM()
+            ])
+                .then(function () {
+                    scanHostKey();
+                })
+                .finally(function () {
+                    checkDeployStatus();
+                    license_check();
+
+                });
+        }else{
         Promise.all([pcsExeHost(), checkLicenseStatus(), checkConfigStatus(), checkStorageClusterStatus(),
             checkStorageVmStatus(), CardCloudClusterStatus(), new CloudCenterVirtualMachine().checkCCVM()]).then(function(){
                 scanHostKey();
@@ -2034,7 +2170,10 @@ function screenConversion(){
         $('#div-card-storage-vm-status').hide();
         $('#div-card-gfs-disk-status').show();
         $('#gfs-maintenance-update').show();
-        // $('#gfs-qdevice-init').show();
+        $('#div-disk-image-create').hide();
+        $('#button-refresh-modal-gfs-disk-add').hide();
+        $('#button-refresh-modal-gfs-disk-extend').hide();
+        $('#div-disk-image-create-expand').hide();
     }else if(os_type == "ablestack-standalone"){
         $('#div-card-gfs-cluster-status').hide();
         $('#div-card-storage-cluster-status').hide();
@@ -2048,6 +2187,13 @@ function screenConversion(){
         $('#div-card-cloud-vm-status-2').show();
         // 로컬 디스크 상태 show
         $('#div-card-local-disk-status').show();
+    }else if(os_type == "ablestack-hci-filesystem"){
+        $('#div-card-gfs-integration-status').removeClass('pf-m-6-col').addClass('pf-m-3-col');
+        $('#div-card-storage-cluster-status').removeClass('pf-m-6-col').addClass('pf-m-3-col');
+        $('#div-card-gfs-integration-status').show();
+        $('#div-card-storage-cluster-status').show();
+        $('#div-card-storage-vm-status').show();
+        $('#gfs-integration-maintenance-update').show();
     }else{
 
     }
@@ -2091,7 +2237,7 @@ function gfsDiskStatus(){
                 }else{
                     $('#page-gfs-disk-mode').text("단일 모드");
                 }
-                $('#page-gfs-disk-mount-info').html("");
+                $('#page-gfs-disk-mount-info, #page-gfs-integration-disk-mount-info').html("");
                 $('#gfs-disk-deploy-status-check').text("GFS 디스크가 생성되었습니다.");
                 $('#gfs-disk-deploy-status-check').attr("style","color: var(--pf-global--success-color--100)");
                 $('#gfs-disk-status').text("Health OK");
@@ -2131,15 +2277,19 @@ function gfsDiskStatus(){
                     }
 
                     // Append the link to the container
-                    $('#page-gfs-disk-mount-info').append(linkHTML);
+                    $('#page-gfs-disk-mount-info, #page-gfs-integration-disk-mount-info').append(linkHTML);
                 }
                 $('#menu-item-set-gfs-clvm-disk-add').removeClass('pf-m-disabled');
                 $('#menu-item-set-gfs-clvm-disk-delete').removeClass('pf-m-disabled');
                 $('#menu-item-set-gfs-clvm-disk-info').removeClass('pf-m-disabled');
                 $('#menu-item-set-disk-detail-info').removeClass('pf-m-disabled');
+                $('#menu-item-set-disk-integration-detail-info').removeClass('pf-m-disabled');
                 $('#menu-item-set-gfs-disk-add').removeClass('pf-m-disabled');
+                $('#menu-item-set-gfs-integration-disk-add').removeClass('pf-m-disabled');
                 $('#menu-item-set-gfs-disk-delete').removeClass('pf-m-disabled');
+                $('#menu-item-set-gfs-integration-disk-delete').removeClass('pf-m-disabled');
                 $('#menu-item-set-gfs-disk-extend').removeClass('pf-m-disabled');
+                $('#menu-item-set-gfs-integration-disk-extend').removeClass('pf-m-disabled');
                 // Add click event to show detailed information in a modal
                 $('.gfs-mount-link').on('click', function() {
                     var mountPoint = $(this).data('mountpoint');
@@ -2157,8 +2307,8 @@ function gfsDiskStatus(){
             } else {
                 $('#gfs-disk-deploy-status-check').text("GFS 디스크가 생성되지 않았습니다.");
                 $('#gfs-disk-deploy-status-check').attr("style","color: var(--pf-global--danger-color--100)");
-                $('#page-gfs-disk-mount-info').html("");
-                $('#page-gfs-disk-mount-info').text("N/A");
+                $('#page-gfs-disk-mount-info, #page-gfs-integration-disk-mount-info').html("");
+                $('#page-gfs-disk-mount-info, #page-gfs-integration-disk-mount-info').text("N/A");
                 $('#page-gfs-disk-mode').text("N/A");
 
                 sessionStorage.setItem("gfs_configure", "false");
@@ -2503,7 +2653,7 @@ function setDiskAction(type, action, extend){
                     output += `
                         <div style="margin-bottom: 8px; display: flex; align-items: center; font-family: monospace;">
                             <input type="checkbox" class="gfs-disk-delete-checkbox" id="gfs-disk-checkbox-delete-${i}"
-                                name="form-gfs-checkbox-disk-delete" data-mountpoint="${gfs_disk.mountpoint}"
+                                name="form-gfs-checkbox-disk-delete" data-mountpoint="${gfs_disk.mountpoint}" data-devices="${gfs_disk.devices}"
                                 data-multipaths="${multipaths}" data-size="${gfs_disk.size}" data-lvm="${gfs_disk.lvm}"
                                 data-disk_id="${disk_id}" style="margin-left:5px; transform: scale(1.3); margin-right:10px;">
 
@@ -2670,7 +2820,7 @@ function setDiskAction(type, action, extend){
             var result = JSON.parse(data);
             var diskList = result.val;
 
-            if (diskList.type == "multipath"){
+            if (result.type == "multipath"){
             // 테이블 헤더 작성
             var output = `
                 <table border="1" style="width: 100%; border-collapse: collapse; text-align: left;">
@@ -2761,55 +2911,224 @@ function setDiskAction(type, action, extend){
         }).catch(function() {
             createLoggerInfo("setDiskAction error");
         });
+    }else if(type == "hci-gfs" && action == "add"){
+        var cmd = ["python3", pluginpath + "/python/disk/disk_action.py", "hci-shared-file-list"];
+
+        cockpit.spawn(cmd).then(function(data) {
+            // 초기화
+            if (extend == "true"){
+                $('#gfs-disk-extend-add-list').empty();
+            }else{
+                $('#gfs-disk-add-list').empty();
+            }
+
+            var el = '';
+            var multipathElements = ''; // MultiPath 정보를 저장할 변수
+            var result = JSON.parse(data);
+            var gfs_list = result.val.blockdevices;
+
+            // MultiPath 중복 제거용 세트
+            var displayedMultipaths = new Set();
+            var displayedName = new Set();
+
+            if (gfs_list.length > 0) {
+                for (var i = 0; i < gfs_list.length; i++) {
+                    var partition_text = '';
+                    var check_disable = '';
+
+                    if (gfs_list[i].children != undefined) {
+                        for (var j = 0; j < gfs_list[i].children.length; j++) {
+                            if (!gfs_list[i].wwn) {
+                                gfs_list[i].wwn = ""; // 값을 공백으로 설정
+                            }
+                            var mpathName = gfs_list[i].children[j].name;
+                            if (gfs_list[i].children[j].name.includes('mpath')) {
+                                if (gfs_list[i].children[j].children != undefined) {
+                                    partition_text = '( Partition exists count : ' + gfs_list[i].children[j].children.length + ' )';
+                                    check_disable = 'disabled';
+                                }
+                                // MultiPath가 이미 표시된 경우 스킵
+                                if (!displayedMultipaths.has(mpathName)) {
+                                    var mpathHtml = '';
+                                    if (extend == "true"){
+                                        mpathHtml += '<div class="pf-c-check">';
+                                        mpathHtml += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-extend-add' + i + '" name="form-gfs-checkbox-disk-extend-add" value="' + gfs_list[i].children[j].path + '" ' + 'data-disk_id="' + gfs_list[i].children[j].rbd_path + '" ' + check_disable + ' />';
+                                        // mpathHtml += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-extend-add' + i + '" name="form-gfs-checkbox-disk-extend-add" value="' + gfs_list[i].children[j].path + '" />';
+                                        mpathHtml += '<label class="pf-c-check__label" style="margin-top:5px" for="form-gfs-checkbox-disk-extend-add' + i + '">' + gfs_list[i].children[j].path + ' ' + gfs_list[i].children[j].state + ' (' + gfs_list[i].children[j].type + ') ' + gfs_list[i].children[j].size  + ' ' + partition_text + '</label>';
+                                        mpathHtml += '</div>';
+                                    }else{
+                                        mpathHtml += '<div class="pf-c-check">';
+                                        mpathHtml += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].children[j].path + '" ' + 'data-disk_id="' + gfs_list[i].children[j].rbd_path + '" ' + check_disable + ' />';
+                                        // mpathHtml += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].children[j].path + '" />';
+                                        mpathHtml += '<label class="pf-c-check__label" style="margin-top:5px" for="form-gfs-checkbox-disk-add' + i + '">' + gfs_list[i].children[j].path + ' ' + gfs_list[i].children[j].state + ' (' + gfs_list[i].children[j].type + ') ' + gfs_list[i].children[j].size + ' ' + partition_text + '</label>';
+                                        mpathHtml += '</div>';
+                                    }
+
+                                    multipathElements += mpathHtml; // MultiPath 요소를 multipathElements에 저장
+
+                                    displayedMultipaths.add(mpathName);  // MultiPath 이름을 Set에 추가
+                                }
+                            } else {
+                                partition_text = '( Partition exists count : ' + gfs_list[i].children.length + ' )';
+                                check_disable = 'disabled';
+
+                                var disk_name = gfs_list[i].name;
+                                if (!displayedName.has(disk_name)) {
+                                    if (extend == "true"){
+                                        el += '<div class="pf-c-check">';
+                                        el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-extend-add' + i + '" name="form-gfs-checkbox-disk-extend-add" value="' + gfs_list[i].path + '" ' + 'data-disk_id="' + gfs_list[i].rbd_path + '" ' + check_disable + ' />';
+                                        // el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-extend-add' + i + '" name="form-gfs-checkbox-disk-extend-add" value="' + gfs_list[i].path + '" />';
+                                        el += '<label class="pf-c-check__label" style="margin-top:5px" for="form-gfs-checkbox-disk-extend-add' + i + '">' + gfs_list[i].path + ' ' + gfs_list[i].state + ' ' + gfs_list[i].size  + ' ' + partition_text + '</label>';
+                                        el += '</div>';
+                                    }else{
+                                        el += '<div class="pf-c-check">';
+                                        el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].path + '" ' + 'data-disk_id="' + gfs_list[i].rbd_path + '" ' + check_disable + ' />';
+                                        // el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].path + '" />';
+                                        el += '<label class="pf-c-check__label" style="margin-top:5px" for="form-gfs-checkbox-disk-add' + i + '">' + gfs_list[i].path + ' ' + gfs_list[i].state + ' ' + gfs_list[i].size + ' ' + partition_text + '</label>';
+                                        el += '</div>';
+                                    }
+
+                                    displayedName.add(disk_name);
+                                }
+                            }
+                        }
+                    } else {
+                        if (!gfs_list[i].wwn) {
+                            gfs_list[i].wwn = ""; // 값을 공백으로 설정
+                        }
+                        if (extend == "true"){
+                            el += '<div class="pf-c-check">';
+                            el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-extend-add' + i + '" name="form-gfs-checkbox-disk-extend-add" value="' + gfs_list[i].path + '" ' + 'data-disk_id="' + gfs_list[i].rbd_path + '" ' + check_disable + ' />';
+                            // el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-extend-add' + i + '" name="form-gfs-checkbox-disk-extend-add" value="' + gfs_list[i].path + '" />';
+                            el += '<label class="pf-c-check__label" style="margin-top:5px" for="form-gfs-checkbox-disk-extend-add' + i + '">' + gfs_list[i].path + ' ' + gfs_list[i].state + ' ' + gfs_list[i].size + ' ' + partition_text + '</label>';
+                            el += '</div>';
+                        }else{
+                            el += '<div class="pf-c-check">';
+                            el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].path + '" ' + 'data-disk_id="' + gfs_list[i].rbd_path + '" ' + check_disable + ' />';
+                            // el += '<input class="pf-c-check__input" type="checkbox" id="form-gfs-checkbox-disk-add' + i + '" name="form-gfs-checkbox-disk-add" value="' + gfs_list[i].path + '" />';
+                            el += '<label class="pf-c-check__label" style="margin-top:5px" for="form-gfs-checkbox-disk-add' + i + '">' + gfs_list[i].path + ' ' + gfs_list[i].state + ' '+ gfs_list[i].size + ' ' + partition_text + '</label>';
+                            el += '</div>';
+                        }
+                    }
+                }
+            }else {
+                el += '<div class="pf-c-check">';
+                el += '<label class="pf-c-check__label" style="margin-top:5px">데이터가 존재하지 않습니다.</label>';
+                el += '</div>';
+            }
+
+            // 일반 장치 정보를 먼저 추가하고, 마지막에 MultiPath 정보를 추가
+            if (extend == "true"){
+                $('#gfs-disk-extend-add-list').append(multipathElements + el);
+            }else{
+                $('#gfs-disk-add-list').append(multipathElements + el);
+            }
+        }).catch(function() {
+            createLoggerInfo("setDiskAction error");
+        });
+    }else if(type == "hci-gfs" && action == "delete"){
+        var cmd = ["python3", pluginpath + "/python/disk/disk_action.py", "hci-shared-file-list"];
+
+        cockpit.spawn(cmd).then(function(data) {
+            // 초기화
+            $('#disk-image-delete-list').empty();
+
+            // JSON 데이터 파싱
+            var result = JSON.parse(data);
+            var blockdevices = result.val.blockdevices;
+            var output = '';
+
+            if (blockdevices.length > 0) {
+                for (var i = 0; i < blockdevices.length; i++) {
+                    var disk_id = blockdevices[i].rbd_path;
+
+                    // 각 데이터 길이에 따라 너비 조정
+                    var sizeWidth = Math.max(blockdevices[i].size.length * 10, 160);      // 최소 200px
+                    var pathWidth = Math.max(blockdevices[i].path.length * 10, 200);           // 최소 300px
+                    var rbaPathWidth = Math.max(blockdevices[i].rbd_path.length * 10, 200); // 최소 300px
+
+                    output += `
+                        <div style="margin-bottom: 8px; display: flex; align-items: center; font-family: monospace;">
+                            <input type="checkbox" class="disk-image-delete-checkbox" id="disk-image-checkbox-delete-${i}"
+                                name="form-disk-image-checkbox-delete" data-size="${blockdevices[i].size}"
+                                data-disk_id="${disk_id}" style="margin-left:5px; transform: scale(1.3); margin-right:10px;">
+                            <label for="disk-image-checkbox-delete-${i}"
+                                style="display: inline-block; min-width:${sizeWidth}px; flex-grow: 2; overflow: hidden; text-overflow: ellipsis;">
+                                ${blockdevices[i].path}
+                            </label>
+                            <label for="disk-image-checkbox-delete-${i}"
+                                style="display: inline-block; min-width:${sizeWidth}px; flex-grow: 1; overflow: hidden; text-overflow: ellipsis;">
+                                ${blockdevices[i].size}
+                            </label>
+                            <label for="disk-image-checkbox-delete-${i}"
+                                style="display: inline-block; min-width:${rbaPathWidth}px; flex-grow: 2; overflow: hidden; text-overflow: ellipsis;">
+                                ${blockdevices[i].rbd_path}
+                            </label>
+
+                        </div>
+                    `;
+                }
+            }else {
+                output = '데이터가 존재하지 않습니다.<br>';
+            }
+
+            $('#disk-image-delete-list').append(output);
+        });
+
     }
 }
-    // 복사 함수
-    function copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(() => {
-            showCopyNotification("클립보드에 복사되었습니다: " + text);
-        }).catch(err => {
-            showCopyNotification("복사 실패: " + err);
-        });
-    }
 
-    function showCopyNotification(message) {
-        const notification = document.createElement("div");
-        notification.innerText = message;
-        notification.style.position = "fixed";
-        notification.style.bottom = "30px";
-        notification.style.right = "30px";
-        notification.style.backgroundColor = "#333";
-        notification.style.color = "#fff";
-        notification.style.padding = "10px 20px";
-        notification.style.borderRadius = "8px";
-        notification.style.boxShadow = "0 4px 12px rgba(0,0,0,0.2)";
-        notification.style.zIndex = "1000";
+// 복사 함수
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        showCopyNotification("클립보드에 복사되었습니다: " + text);
+    }).catch(err => {
+        showCopyNotification("복사 실패: " + err);
+    });
+}
+
+function showCopyNotification(message) {
+    const notification = document.createElement("div");
+    notification.innerText = message;
+    notification.style.position = "fixed";
+    notification.style.bottom = "30px";
+    notification.style.right = "30px";
+    notification.style.backgroundColor = "#333";
+    notification.style.color = "#fff";
+    notification.style.padding = "10px 20px";
+    notification.style.borderRadius = "8px";
+    notification.style.boxShadow = "0 4px 12px rgba(0,0,0,0.2)";
+    notification.style.zIndex = "1000";
+    notification.style.opacity = "0";
+    notification.style.transition = "opacity 0.5s";
+
+    document.body.appendChild(notification);
+
+    // fade in
+    setTimeout(() => {
+        notification.style.opacity = "1";
+    }, 10);
+
+    // fade out and remove
+    setTimeout(() => {
         notification.style.opacity = "0";
-        notification.style.transition = "opacity 0.5s";
-
-        document.body.appendChild(notification);
-
-        // fade in
         setTimeout(() => {
-            notification.style.opacity = "1";
-        }, 10);
-
-        // fade out and remove
-        setTimeout(() => {
-            notification.style.opacity = "0";
-            setTimeout(() => {
-                document.body.removeChild(notification);
-            }, 500);
-        }, 2000);
-    }
+            document.body.removeChild(notification);
+        }, 500);
+    }, 2000);
+}
 
 function applyExtendMethodStyles() {
     const checkedRadio = document.querySelector('input[name="extend-method"]:checked');
     const lunSection = document.getElementById('lun-selection-section');
+    const diskImageCreate = document.getElementById('div-disk-image-create-extend');
 
     // 확장 방식에 따라 LUN 선택 영역 표시/숨김
     if (checkedRadio && lunSection) {
       lunSection.style.display = checkedRadio.value === 'add-lun' ? 'block' : 'none';
+    }
+    if (os_type == "ablestack-hci-filesystem" && (checkedRadio && diskImageCreate)) {
+      diskImageCreate.style.display = checkedRadio.value === 'add-lun' ? 'flex' : 'none';
     }
 
     // 모든 라디오 버튼 초기화
@@ -2851,7 +3170,11 @@ $('#div-modal-gfs-disk-extend').on('change', 'input[type=checkbox][name="form-gf
 });
 $('#button-execution-modal-gfs-disk-extend').on('click',function(){
     $('#div-modal-gfs-disk-extend').hide();
-    $('#div-modal-spinner-header-txt').text("GFS 디스크를 스캔 중입니다.")
+    if (os_type == "ablestack-hci-filesystem"){
+        $('#div-modal-spinner-header-txt').text("GFS 디스크를 확장 중입니다.");
+    }else{
+        $('#div-modal-spinner-header-txt').text("GFS 디스크를 스캔 중입니다.");
+    }
     $('#div-modal-spinner').show();
 
     var extend_method = $('input[name="extend-method"]:checked').val();
@@ -2889,90 +3212,141 @@ $('#button-execution-modal-gfs-disk-extend').on('click',function(){
     })
     .get().join(',');
 
-    if (extend_method == "resize"){
-        cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--rescan', '--vg-names', vg_name, '--lv-names', lv_name, '--mount-point', mount_point];
-        console.log(cmd);
-        cockpit.spawn(cmd).then(function(data){
-            var retVal = JSON.parse(data);
-            console.log(retVal);
-            if (retVal.code == "200"){
-                $('#div-modal-spinner-header-txt').text("GFS 디스크 논리 볼륨을 확장 중입니다.")
-                cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--extend', '--vg-names', vg_name, '--lv-names', lv_name, '--mount-point', mount_point, '--non-stop-check', non_stop_check];
-                console.log(cmd);
-                cockpit.spawn(cmd).then(function(data){
-                    var retVal = JSON.parse(data);
-                    console.log(retVal);
-                    if (retVal.code == "200"){
-                        $('#div-modal-spinner').hide();
-                        $('#modal-status-alert-title').html("GFS 디스크 확장");
-                        $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 확장했습니다.");
-                        $('#div-modal-status-alert').show();
-                    }else{
-                        $('#div-modal-spinner').hide();
-                        $('#modal-status-alert-title').html("GFS 디스크 확장");
-                        $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 실패했습니다.");
-                        $('#div-modal-status-alert').show();
-                    }
-                }).catch(function(){
-                    $('#div-modal-spinner').hide();
-                    $('#modal-status-alert-title').html("GFS 디스크 확장");
-                    $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 실패했습니다.");
-                    $('#div-modal-status-alert').show();
-                });
-            }else{
-                $('#div-modal-spinner').hide();
-                $('#modal-status-alert-title').html("GFS 디스크 확장");
-                $("#modal-status-alert-body").html("GFS 디스크 스캔을 실패했습니다.");
-                $('#div-modal-status-alert').show();
-            }
-        }).catch(function(){
-            $('#div-modal-spinner').hide();
-            $('#modal-status-alert-title').html("GFS 디스크 확장");
-            $("#modal-status-alert-body").html("GFS 디스크 스캔을 실패했습니다.");
-            $('#div-modal-status-alert').show();
-        })
-    }else if (extend_method == "add-lun"){
-        cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--scan'];
-        console.log(cmd);
-        cockpit.spawn(cmd).then(function(data){
-            var retVal = JSON.parse(data);
-            console.log(retVal);
-            if (retVal.code == "200"){
-                $('#div-modal-spinner-header-txt').text("GFS 디스크 논리 볼륨을 확장 중입니다.")
-                cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--add-extend', '--vg-names', vg_name, '--lv-names', lv_name, '--mount-point', mount_point, '--disks', disks, '--gfs-name', gfs_name, '--non-stop-check', non_stop_check];
-                console.log(cmd);
-                cockpit.spawn(cmd).then(function(data){
-                    var retVal = JSON.parse(data);
-                    console.log(retVal);
-                    if (retVal.code == "200"){
-                        $('#div-modal-spinner').hide();
-                        $('#modal-status-alert-title').html("GFS 디스크 확장");
-                        $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 확장했습니다.");
-                        $('#div-modal-status-alert').show();
-                    }else{
+    if (os_type == "ablestack-hci-filesystem"){
+        if (extend_method == "resize"){
+                    cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--extend', '--vg-names', vg_name, '--lv-names', lv_name, '--mount-point', mount_point, '--non-stop-check', non_stop_check];
+                    console.log(cmd);
+                    cockpit.spawn(cmd).then(function(data){
+                        var retVal = JSON.parse(data);
+                        console.log(retVal);
+                        if (retVal.code == "200"){
+                            $('#div-modal-spinner').hide();
+                            $('#modal-status-alert-title').html("GFS 디스크 확장");
+                            $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 확장했습니다.");
+                            $('#div-modal-status-alert').show();
+                        }else{
+                            $('#div-modal-spinner').hide();
+                            $('#modal-status-alert-title').html("GFS 디스크 확장");
+                            $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 실패했습니다.");
+                            $('#div-modal-status-alert').show();
+                        }
+                    }).catch(function(){
                         $('#div-modal-spinner').hide();
                         $('#modal-status-alert-title').html("GFS 디스크 확장");
                         $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 실패했습니다.");
                         $('#div-modal-status-alert').show();
-                    }
-                }).catch(function(){
+                    });
+        }else if (extend_method == "add-lun"){
+                    $('#div-modal-spinner-header-txt').text("GFS 디스크 논리 볼륨을 확장 중입니다.")
+                    cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--add-extend', '--vg-names', vg_name, '--lv-names', lv_name, '--mount-point', mount_point, '--disks', disks, '--gfs-name', gfs_name, '--non-stop-check', non_stop_check];
+                    console.log(cmd);
+                    cockpit.spawn(cmd).then(function(data){
+                        var retVal = JSON.parse(data);
+                        console.log(retVal);
+                        if (retVal.code == "200"){
+                            $('#div-modal-spinner').hide();
+                            $('#modal-status-alert-title').html("GFS 디스크 확장");
+                            $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 확장했습니다.");
+                            $('#div-modal-status-alert').show();
+                        }else{
+                            $('#div-modal-spinner').hide();
+                            $('#modal-status-alert-title').html("GFS 디스크 확장");
+                            $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 실패했습니다.");
+                            $('#div-modal-status-alert').show();
+                        }
+                    }).catch(function(){
+                        $('#div-modal-spinner').hide();
+                        $('#modal-status-alert-title').html("GFS 디스크 확장");
+                        $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 실패했습니다.");
+                        $('#div-modal-status-alert').show();
+                    });
+        }
+    }else{
+        if (extend_method == "resize"){
+            cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--rescan', '--vg-names', vg_name, '--lv-names', lv_name, '--mount-point', mount_point];
+            console.log(cmd);
+            cockpit.spawn(cmd).then(function(data){
+                var retVal = JSON.parse(data);
+                console.log(retVal);
+                if (retVal.code == "200"){
+                    $('#div-modal-spinner-header-txt').text("GFS 디스크 논리 볼륨을 확장 중입니다.")
+                    cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--extend', '--vg-names', vg_name, '--lv-names', lv_name, '--mount-point', mount_point, '--non-stop-check', non_stop_check];
+                    console.log(cmd);
+                    cockpit.spawn(cmd).then(function(data){
+                        var retVal = JSON.parse(data);
+                        console.log(retVal);
+                        if (retVal.code == "200"){
+                            $('#div-modal-spinner').hide();
+                            $('#modal-status-alert-title').html("GFS 디스크 확장");
+                            $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 확장했습니다.");
+                            $('#div-modal-status-alert').show();
+                        }else{
+                            $('#div-modal-spinner').hide();
+                            $('#modal-status-alert-title').html("GFS 디스크 확장");
+                            $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 실패했습니다.");
+                            $('#div-modal-status-alert').show();
+                        }
+                    }).catch(function(){
+                        $('#div-modal-spinner').hide();
+                        $('#modal-status-alert-title').html("GFS 디스크 확장");
+                        $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 실패했습니다.");
+                        $('#div-modal-status-alert').show();
+                    });
+                }else{
                     $('#div-modal-spinner').hide();
                     $('#modal-status-alert-title').html("GFS 디스크 확장");
-                    $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 실패했습니다.");
+                    $("#modal-status-alert-body").html("GFS 디스크 스캔을 실패했습니다.");
                     $('#div-modal-status-alert').show();
-                });
-            }else{
+                }
+            }).catch(function(){
                 $('#div-modal-spinner').hide();
                 $('#modal-status-alert-title').html("GFS 디스크 확장");
                 $("#modal-status-alert-body").html("GFS 디스크 스캔을 실패했습니다.");
                 $('#div-modal-status-alert').show();
-            }
-        }).catch(function(){
-            $('#div-modal-spinner').hide();
-            $('#modal-status-alert-title').html("GFS 디스크 확장");
-            $("#modal-status-alert-body").html("GFS 디스크 스캔을 실패했습니다.");
-            $('#div-modal-status-alert').show();
-        });
+            })
+        }else if (extend_method == "add-lun"){
+            cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--scan'];
+            console.log(cmd);
+            cockpit.spawn(cmd).then(function(data){
+                var retVal = JSON.parse(data);
+                console.log(retVal);
+                if (retVal.code == "200"){
+                    $('#div-modal-spinner-header-txt').text("GFS 디스크 논리 볼륨을 확장 중입니다.")
+                    cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--add-extend', '--vg-names', vg_name, '--lv-names', lv_name, '--mount-point', mount_point, '--disks', disks, '--gfs-name', gfs_name, '--non-stop-check', non_stop_check];
+                    console.log(cmd);
+                    cockpit.spawn(cmd).then(function(data){
+                        var retVal = JSON.parse(data);
+                        console.log(retVal);
+                        if (retVal.code == "200"){
+                            $('#div-modal-spinner').hide();
+                            $('#modal-status-alert-title').html("GFS 디스크 확장");
+                            $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 확장했습니다.");
+                            $('#div-modal-status-alert').show();
+                        }else{
+                            $('#div-modal-spinner').hide();
+                            $('#modal-status-alert-title').html("GFS 디스크 확장");
+                            $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 실패했습니다.");
+                            $('#div-modal-status-alert').show();
+                        }
+                    }).catch(function(){
+                        $('#div-modal-spinner').hide();
+                        $('#modal-status-alert-title').html("GFS 디스크 확장");
+                        $("#modal-status-alert-body").html("GFS 디스크 논리 볼륨을 실패했습니다.");
+                        $('#div-modal-status-alert').show();
+                    });
+                }else{
+                    $('#div-modal-spinner').hide();
+                    $('#modal-status-alert-title').html("GFS 디스크 확장");
+                    $("#modal-status-alert-body").html("GFS 디스크 스캔을 실패했습니다.");
+                    $('#div-modal-status-alert').show();
+                }
+            }).catch(function(){
+                $('#div-modal-spinner').hide();
+                $('#modal-status-alert-title').html("GFS 디스크 확장");
+                $("#modal-status-alert-body").html("GFS 디스크 스캔을 실패했습니다.");
+                $('#div-modal-status-alert').show();
+            });
+        }
     }
 });
 $('#menu-item-set-gfs-clvm-disk-add').on('click',function(){
@@ -3089,7 +3463,7 @@ $('#div-modal-clvm-disk-delete').on('change', 'input[type=checkbox][name="form-c
     // 체크되면 버튼 활성화, 아니면 비활성화
     $('#button-execution-modal-clvm-disk-delete').prop('disabled', !isChecked);
 });
-$('#menu-item-set-disk-detail-info').on('click', function(){
+$('#menu-item-set-disk-detail-info, #menu-item-set-disk-integration-detail-info').on('click', function(){
     setDiskAction("disk", "detail");
     $('#div-modal-disk-detail-info').show();
 });
@@ -3257,6 +3631,10 @@ $('#menu-item-set-gfs-disk-add').on('click',function(){
     setDiskAction("gfs","add");
     $('#div-modal-gfs-disk-add').show();
 });
+$('#menu-item-set-gfs-integration-disk-add').on('click', function(){
+    setDiskAction("hci-gfs","add");
+    $('#div-modal-gfs-disk-add').show();
+})
 $('#menu-item-set-gfs-disk-extend').on('click', function(){
     $('#button-execution-modal-gfs-disk-extend').attr('disabled',true);
     $('#method-resize').is(":checked");
@@ -3264,6 +3642,13 @@ $('#menu-item-set-gfs-disk-extend').on('click', function(){
     setDiskAction("gfs", "add", "true");
     $('#div-modal-gfs-disk-extend').show();
 });
+$('#menu-item-set-gfs-integration-disk-extend').on('click',function(){
+    $('#button-execution-modal-gfs-disk-extend').attr('disabled',true);
+    $('#method-resize').is(":checked");
+    setDiskAction("gfs", "extend");
+    setDiskAction("hci-gfs", "add", "true");
+    $('#div-modal-gfs-disk-extend').show();
+})
 $('#button-close-modal-gfs-disk-extend, #button-cancel-modal-gfs-disk-extend').on('click',function(){
     $('#div-modal-gfs-disk-extend').hide();
 });
@@ -3367,7 +3752,7 @@ $('#div-modal-gfs-disk-add').on('change', 'input[type=checkbox][name="form-gfs-c
 $('#button-close-modal-gfs-disk-info,#button-cancel-modal-gfs-disk-info').on('click', function(){
     $('#div-modal-gfs-disk-info').hide();
 });
-$('#menu-item-set-gfs-disk-delete').on('click', function(){
+$('#menu-item-set-gfs-disk-delete, #menu-item-set-gfs-integration-disk-delete').on('click', function(){
     setDiskAction("gfs","delete");
     $('#div-modal-gfs-disk-delete').show();
 });
@@ -3404,7 +3789,11 @@ $('#button-execution-modal-gfs-disk-delete').on('click', function() {
 
     var gfs_disk_name = $('input[type=checkbox][name="form-gfs-checkbox-disk-delete"]:checked')
     .map(function () {
-        return $(this).data('disk_id');
+        if (os_type == "ablestack-hci-filesystem"){
+            return $(this).data('devices');
+        }else{
+            return $(this).data('disk_id');
+        }
     })
     .get()
     .join(','); // 최종적으로 모든 결과를 콤마로 연결
@@ -3422,6 +3811,11 @@ $('#button-execution-modal-gfs-disk-delete').on('click', function() {
                 $('#div-modal-spinner').hide();
                 $("#modal-status-alert-title").html("GFS 디스크 삭제");
                 $("#modal-status-alert-body").html("GFS 디스크를 삭제하였습니다.");
+                $('#div-modal-status-alert').show();
+            }else{
+                $('#div-modal-spinner').hide();
+                $("#modal-status-alert-title").html("GFS 디스크 삭제");
+                $("#modal-status-alert-body").html("GFS 디스크 삭제를 실패하였습니다.");
                 $('#div-modal-status-alert').show();
             }
         }).catch(function() {
@@ -3507,9 +3901,9 @@ $('#button-execution-modal-gfs-host-remove').on('click', function(){
 function gfsResourceStatus() {
     return new Promise((resolve) => {
         //초기 상태 체크 중 표시
-        $('#gfs-fence-status, #gfs-lock-status').html("상태 체크 중 &bull;&bull;&bull;&nbsp;&nbsp;&nbsp;<svg class='pf-c-spinner pf-m-md' role='progressbar' aria-valuetext='Loading...' viewBox='0 0 100 100' ><circle class='pf-c-spinner__path' cx='50' cy='50' r='45' fill='none'></circle></svg>");
-        $('#gfs-fence-back-color, #gfs-lock-back-color').attr('class','pf-c-label pf-m-orange');
-        $('#gfs-fence-icon, #gfs-lock-icon').attr('class','fas fa-fw fa-exclamation-triangle');
+        $('#gfs-fence-status, #gfs-lock-status, #gfs-integration-fence-status, #gfs-integration-lock-status').html("상태 체크 중 &bull;&bull;&bull;&nbsp;&nbsp;&nbsp;<svg class='pf-c-spinner pf-m-md' role='progressbar' aria-valuetext='Loading...' viewBox='0 0 100 100' ><circle class='pf-c-spinner__path' cx='50' cy='50' r='45' fill='none'></circle></svg>");
+        $('#gfs-fence-back-color, #gfs-lock-back-color, #gfs-integration-fence-back-color, #gfs-integration-lock-back-color').attr('class','pf-c-label pf-m-orange');
+        $('#gfs-fence-icon, #gfs-lock-icon, #gfs-integration-fence-icon, #gfs-integration-lock-icon').attr('class','fas fa-fw fa-exclamation-triangle');
 
         cockpit.spawn(['python3', pluginpath + '/python/gfs/gfs_resource_status.py'])
         .then(function(data){
@@ -3633,32 +4027,32 @@ function gfsResourceStatus() {
                 }
                 if (gfs_fence_offline_arr.length == 0){
                     if (gfs_fence_stopped_arr.length == 0){
-                        $("#gfs-fence-back-color").attr('class','pf-c-label pf-m-green');
-                        $("#gfs-fence-icon").attr('class','fas fa-fw fa-check-circle');
-                        $('#gfs-fence-status').text("Health OK");
-                        $('#gfs-fence-text').text('Started ( ' + gfs_fence_started_arr.join(', ') + ' )');
+                        $("#gfs-fence-back-color, #gfs-integration-fence-back-color").attr('class','pf-c-label pf-m-green');
+                        $("#gfs-fence-icon, #gfs-integration-fence-icon").attr('class','fas fa-fw fa-check-circle');
+                        $('#gfs-fence-status, #gfs-integration-fence-status').text("Health OK");
+                        $('#gfs-fence-text, #gfs-integration-fence-text').text('Started ( ' + gfs_fence_started_arr.join(', ') + ' )');
                     }else if (gfs_fence_started_arr.length == 0){
-                        $("#gfs-fence-back-color").attr('class','pf-c-label pf-m-orange');
-                        $('#gfs-fence-status').text("Health Warn");
-                        $('#gfs-fence-text').text('Stopped ( ' + gfs_fence_stopped_arr.join(', ') + ' )');
+                        $("#gfs-fence-back-color, #gfs-integration-fence-back-color").attr('class','pf-c-label pf-m-orange');
+                        $('#gfs-fence-status, #gfs-integration-fence-status').text("Health Warn");
+                        $('#gfs-fence-text, #gfs-integration-fence-text').text('Stopped ( ' + gfs_fence_stopped_arr.join(', ') + ' )');
                     }else{
-                        $("#gfs-fence-back-color").attr('class','pf-c-label pf-m-orange');
-                        $('#gfs-fence-status').text("Health Warn");
-                        $('#gfs-fence-text').text('Started ( ' + gfs_fence_started_arr.join(', ') + ' ), '+ 'Stopped ( ' + gfs_fence_stopped_arr.join(', ') + ' )');
+                        $("#gfs-fence-back-color, #gfs-integration-fence-back-color").attr('class','pf-c-label pf-m-orange');
+                        $('#gfs-fence-status, #gfs-integration-fence-status').text("Health Warn");
+                        $('#gfs-fence-text, #gfs-integration-fence-text').text('Started ( ' + gfs_fence_started_arr.join(', ') + ' ), '+ 'Stopped ( ' + gfs_fence_stopped_arr.join(', ') + ' )');
                     }
                 }else{
                     if (gfs_fence_stopped_arr.length == 0){
-                        $("#gfs-fence-back-color").attr('class','pf-c-label pf-m-orange');
-                        $('#gfs-fence-status').text("Health Warn");
-                        $('#gfs-fence-text').text('Started ( ' + gfs_fence_started_arr.join(', ') + ' ), Offline ( ' + gfs_fence_offline_arr.join(', ') + ' )');
+                        $("#gfs-fence-back-color, #gfs-integration-fence-back-color").attr('class','pf-c-label pf-m-orange');
+                        $('#gfs-fence-status, #gfs-integration-fence-status').text("Health Warn");
+                        $('#gfs-fence-text, #gfs-integration-fence-text').text('Started ( ' + gfs_fence_started_arr.join(', ') + ' ), Offline ( ' + gfs_fence_offline_arr.join(', ') + ' )');
                     }else if (gfs_fence_started_arr.length == 0){
-                        $("#gfs-fence-back-color").attr('class','pf-c-label pf-m-orange');
-                        $('#gfs-fence-status').text("Health Warn");
-                        $('#gfs-fence-text').text('Stopped ( ' + gfs_fence_stopped_arr.join(', ') + ' ), Offline ( ' + gfs_fence_offline_arr.join(', ') + ' )');
+                        $("#gfs-fence-back-color, #gfs-integration-fence-back-color").attr('class','pf-c-label pf-m-orange');
+                        $('#gfs-fence-status, #gfs-integration-fence-status').text("Health Warn");
+                        $('#gfs-fence-text, #gfs-integration-fence-text').text('Stopped ( ' + gfs_fence_stopped_arr.join(', ') + ' ), Offline ( ' + gfs_fence_offline_arr.join(', ') + ' )');
                     }else{
-                        $("#gfs-fence-back-color").attr('class','pf-c-label pf-m-orange');
-                        $('#gfs-fence-status').text("Health Warn");
-                        $('#gfs-fence-text').text('Started ( ' + gfs_fence_started_arr.join(', ') + ' ), '+ 'Stopped ( ' + gfs_fence_stopped_arr.join(', ') + ' ), Offline ( ' + gfs_fence_offline_arr.join(', ') + ' )');
+                        $("#gfs-fence-back-color, #gfs-integration-fence-back-color").attr('class','pf-c-label pf-m-orange');
+                        $('#gfs-fence-status, #gfs-integration-fence-status').text("Health Warn");
+                        $('#gfs-fence-text, #gfs-integration-fence-text').text('Started ( ' + gfs_fence_started_arr.join(', ') + ' ), '+ 'Stopped ( ' + gfs_fence_stopped_arr.join(', ') + ' ), Offline ( ' + gfs_fence_offline_arr.join(', ') + ' )');
                     }
                 }
                 try {
@@ -3669,21 +4063,22 @@ function gfsResourceStatus() {
                             if (gfs_lvmlockd_arr[l][1] == "stop") {
                                 gfs_lvmlockd_stop_arr.push(gfs_lvmlockd_arr[l][0]);
                             }else if (gfs_lvmlockd_arr[l][1] == "start(error)") {
-                                $('#gfs-lock-status, #gfs-resource-status, #gfs-file-system-status').text("Health Err");
-                                $('#gfs-lock-back-color, #gfs-resource-back-color, #gfs-file-system-back-color').attr('class','pf-c-label pf-m-red');
-                                $('#gfs-lock-icon, #gfs-resource-icon, #gfs-file-system-icon').attr('class','fas fa-fw fa-exclamation-triangle');
-                                $('#gfs-low-info').attr("style", "color: var(--pf-global--danger-color--100)");
-                                $('#gfs-low-info').text("GFS 잠금 장치 구성 중 오류가 발생했습니다.");
+                                $('#gfs-lock-status, #gfs-integration-lock-status').text("Health Err");
+                                $('#gfs-lock-back-color, #gfs-integration-lock-back-color').attr('class','pf-c-label pf-m-red');
+                                $('#gfs-lock-icon, #gfs-integration-lock-icon').attr('class','fas fa-fw fa-exclamation-triangle');
+                                $('#gfs-low-info, #gfs-integration-low-info').attr("style", "color: var(--pf-global--danger-color--100)");
+                                $('#gfs-low-info, #gfs-integration-low-info').text("GFS 잠금 장치 구성 중 오류가 발생했습니다.");
+
                                 return;
                             }else {
                                 gfs_lvmlockd_start_arr.push(gfs_lvmlockd_arr[l][0]);
                             }
                         } else {
-                            $('#gfs-lock-status, #gfs-resource-status, #gfs-file-system-status').text("Health Err");
-                            $('#gfs-lock-back-color, #gfs-resource-back-color, #gfs-file-system-back-color').attr('class','pf-c-label pf-m-red');
-                            $('#gfs-lock-icon, #gfs-resource-icon, #gfs-file-system-icon').attr('class','fas fa-fw fa-exclamation-triangle');
-                            $('#gfs-low-info').attr("style", "color: var(--pf-global--danger-color--100)");
-                            $('#gfs-low-info').text("GFS 잠금 장치 구성 중 오류가 발생했습니다.");
+                            $('#gfs-lock-status, #gfs-integration-lock-status').text("Health Err");
+                            $('#gfs-lock-back-color, #gfs-integration-lock-back-color').attr('class','pf-c-label pf-m-red');
+                            $('#gfs-lock-icon, #gfs-integration-lock-icon').attr('class','fas fa-fw fa-exclamation-triangle');
+                            $('#gfs-low-info, #gfs-integration-low-info').attr("style", "color: var(--pf-global--danger-color--100)");
+                            $('#gfs-low-info, #gfs-integration-low-info').text("GFS 잠금 장치 구성 중 오류가 발생했습니다.");
                         }
 
                         // gfs_dlm 처리
@@ -3691,71 +4086,63 @@ function gfsResourceStatus() {
                             if (gfs_dlm_arr[l][1] == "stop") {
                                 gfs_dlm_stop_arr.push(gfs_dlm_arr[l][0]);
                             } else if (gfs_dlm_arr[l][1] == "start(error)"){
-                                $('#gfs-lock-status, #gfs-resource-status, #gfs-file-system-status').text("Health Err");
-                                $('#gfs-lock-back-color, #gfs-resource-back-color, #gfs-file-system-back-color').attr('class','pf-c-label pf-m-red');
-                                $('#gfs-lock-icon, #gfs-resource-icon, #gfs-file-system-icon').attr('class','fas fa-fw fa-exclamation-triangle');
-                                $('#gfs-low-info').attr("style", "color: var(--pf-global--danger-color--100)");
-                                $('#gfs-low-info').text("GFS 잠금 장치 구성 중 오류가 발생했습니다.");
+                                $('#gfs-lock-status, #gfs-integration-lock-status').text("Health Err");
+                                $('#gfs-lock-back-color, #gfs-integration-lock-back-color').attr('class','pf-c-label pf-m-red');
+                                $('#gfs-lock-icon, #gfs-integration-lock-icon').attr('class','fas fa-fw fa-exclamation-triangle');
+                                $('#gfs-low-info, #gfs-integration-low-info').attr("style", "color: var(--pf-global--danger-color--100)");
+                                $('#gfs-low-info, #gfs-integration-low-info').text("GFS 잠금 장치 구성 중 오류가 발생했습니다.");
                                 return;
                             }else {
                                 gfs_dlm_start_arr.push(gfs_dlm_arr[l][0]);
                             }
                         } else {
-                            $('#gfs-lock-status, #gfs-resource-status, #gfs-file-system-status').text("Health Err");
-                            $('#gfs-lock-back-color, #gfs-resource-back-color, #gfs-file-system-back-color').attr('class','pf-c-label pf-m-red');
-                            $('#gfs-lock-icon, #gfs-resource-icon, #gfs-file-system-icon').attr('class','fas fa-fw fa-exclamation-triangle');
-                            $('#gfs-low-info').attr("style", "color: var(--pf-global--danger-color--100)");
-                            $('#gfs-low-info').text("GFS 잠금 장치 구성 중 오류가 발생했습니다.");
+                            $('#gfs-lock-status, #gfs-integration-lock-status').text("Health Err");
+                            $('#gfs-lock-back-color, #gfs-integration-lock-back-color').attr('class','pf-c-label pf-m-red');
+                            $('#gfs-lock-icon, #gfs-integration-lock-icon').attr('class','fas fa-fw fa-exclamation-triangle');
+                            $('#gfs-low-info, #gfs-integration-low-info').attr("style", "color: var(--pf-global--danger-color--100)");
+                            $('#gfs-low-info, #gfs-integration-low-info').text("GFS 잠금 장치 구성 중 오류가 발생했습니다.");
                         }
                     }
                     if (gfs_dlm_offline_arr.length == 0 && gfs_lvmlockd_offline_arr == 0){
                         if (gfs_dlm_stop_arr.length == 0 && gfs_lvmlockd_stop_arr.length == 0) {
-                            $("#gfs-lock-back-color").attr('class', 'pf-c-label pf-m-green');
-                            $("#gfs-lock-icon").attr('class', 'fas fa-fw fa-check-circle');
-                            $('#gfs-lock-status').text("Health OK");
-                            $('#gfs-lock-text').html(
-                                'glue-dlm : Started ( ' + gfs_dlm_start_arr.join(', ') + ' )</br>' +
-                                'glue-lvmlockd : Started ( ' + gfs_lvmlockd_start_arr.join(', ') + ' )'
+                            $("#gfs-lock-back-color, #gfs-integration-lock-back-color").attr('class', 'pf-c-label pf-m-green');
+                            $("#gfs-lock-icon, #gfs-integration-lock-icon").attr('class', 'fas fa-fw fa-check-circle');
+                            $('#gfs-lock-status, #gfs-integration-lock-status').text("Health OK");
+                            $('#gfs-lock-text, #gfs-integration-lock-text').html(
+                                'glue-dlm, glue-lvmlockd : Started ( ' + gfs_lvmlockd_start_arr.join(', ') + ' )'
                             );
                         } else if (gfs_dlm_start_arr.length == 0 && gfs_lvmlockd_start_arr.length == 0) {
-                            $("#gfs-lock-back-color").attr('class', 'pf-c-label pf-m-orange');
-                            $('#gfs-lock-status').text("Health Warn");
-                            $('#gfs-lock-text').html(
-                                'glue-dlm : Stopped ( ' + gfs_dlm_stop_arr.join(', ') + ' )</br> ' +
-                                'glue-lvmlockd : Stopped ( ' + gfs_lvmlockd_stop_arr.join(', ') + ' )'
+                            $("#gfs-lock-back-color, #gfs-integration-lock-back-color").attr('class', 'pf-c-label pf-m-orange');
+                            $('#gfs-lock-status, #gfs-integration-lock-status').text("Health Warn");
+                            $('#gfs-lock-text, #gfs-integration-lock-text').html(
+                                'glue-dlm, glue-lvmlockd : Stopped ( ' + gfs_lvmlockd_stop_arr.join(', ') + ' )'
                             );
                         } else {
-                            $("#gfs-lock-back-color").attr('class', 'pf-c-label pf-m-orange');
-                            $('#gfs-lock-status').text("Health Warn");
-                            $('#gfs-lock-text').html(
-                                'glue-dlm : Started ( ' + gfs_dlm_start_arr.join(', ') + ' ),</br>' +
-                                           'Stopped ( ' + gfs_dlm_stop_arr.join(', ') + ' ) </br>' +
-                                'glue-lvmlockd : Started ( ' + gfs_lvmlockd_start_arr.join(', ') + ' ),</br> ' +
+                            $("#gfs-lock-back-color, #gfs-integration-lock-back-color").attr('class', 'pf-c-label pf-m-orange');
+                            $('#gfs-lock-status, #gfs-integration-lock-status').text("Health Warn");
+                            $('#gfs-lock-text, #gfs-integration-lock-text').html(
+                                'glue-dlm, glue-lvmlockd : Started ( ' + gfs_lvmlockd_start_arr.join(', ') + ' ),</br> ' +
                                                 'Stopped ( ' + gfs_lvmlockd_stop_arr.join(', ') + ' )</br>'
                             );
                         }
                     }else{
                         if (gfs_dlm_stop_arr.length == 0 && gfs_lvmlockd_stop_arr.length == 0) {
-                            $("#gfs-lock-back-color").attr('class', 'pf-c-label pf-m-orange');
-                            $('#gfs-lock-status').text("Health Warn");
-                            $('#gfs-lock-text').html(
-                                'glue-dlm : Started ( ' + gfs_dlm_start_arr.join(', ') + ' ), Offline ( ' + gfs_dlm_offline_arr.join(', ') + ' )</br>' +
-                                'glue-lvmlockd : Started ( ' + gfs_lvmlockd_start_arr.join(', ') + ' ), Offline ( ' + gfs_lvmlockd_offline_arr.join(', ') + ' )'
+                            $("#gfs-lock-back-color, #gfs-integration-lock-back-color").attr('class', 'pf-c-label pf-m-orange');
+                            $('#gfs-lock-status, #gfs-integration-lock-status').text("Health Warn");
+                            $('#gfs-lock-text, #gfs-integration-lock-text').html(
+                                'glue-dlm, glue-lvmlockd : Started ( ' + gfs_lvmlockd_start_arr.join(', ') + ' ), Offline ( ' + gfs_lvmlockd_offline_arr.join(', ') + ' )'
                             );
                         } else if (gfs_dlm_start_arr.length == 0 && gfs_lvmlockd_start_arr.length == 0) {
-                            $("#gfs-lock-back-color").attr('class', 'pf-c-label pf-m-orange');
-                            $('#gfs-lock-status').text("Health Warn");
-                            $('#gfs-lock-text').html(
-                                'glue-dlm : Stopped ( ' + gfs_dlm_stop_arr.join(', ') + ' ), Offline ( ' + gfs_dlm_offline_arr.join(', ') + ' )</br>' +
-                                'glue-lvmlockd : Stopped ( ' + gfs_lvmlockd_stop_arr.join(', ') + ' ), Offline ( ' + gfs_lvmlockd_offline_arr.join(', ') + ' )'
+                            $("#gfs-lock-back-color, #gfs-integration-lock-back-color").attr('class', 'pf-c-label pf-m-orange');
+                            $('#gfs-lock-status, #gfs-integration-lock-status').text("Health Warn");
+                            $('#gfs-lock-text, #gfs-integration-lock-text').html(
+                                'glue-dlm, glue-lvmlockd : Stopped ( ' + gfs_lvmlockd_stop_arr.join(', ') + ' ), Offline ( ' + gfs_lvmlockd_offline_arr.join(', ') + ' )'
                             );
                         } else {
-                            $("#gfs-lock-back-color").attr('class', 'pf-c-label pf-m-orange');
-                            $('#gfs-lock-status').text("Health Warn");
-                            $('#gfs-lock-text').html(
-                                'glue-dlm : Started ( ' + gfs_dlm_start_arr.join(', ') + ' ), Offline ( ' + gfs_dlm_offline_arr.join(', ') + ' )</br>' +
-                                           'Stopped ( ' + gfs_dlm_stop_arr.join(', ') + ' ), Offline ( ' + gfs_lvmlockd_offline_arr.join(', ') + ' )</br>' +
-                                'glue-lvmlockd : Started ( ' + gfs_lvmlockd_start_arr.join(', ') + ' ), Offline ( ' + gfs_dlm_offline_arr.join(', ') + ' )</br>' +
+                            $("#gfs-lock-back-color, #gfs-integration-lock-back-color").attr('class', 'pf-c-label pf-m-orange');
+                            $('#gfs-lock-status, #gfs-integration-lock-status').text("Health Warn");
+                            $('#gfs-lock-text, #gfs-integration-lock-text').html(
+                                'glue-dlm, glue-lvmlockd : Started ( ' + gfs_lvmlockd_start_arr.join(', ') + ' ), Offline ( ' + gfs_dlm_offline_arr.join(', ') + ' )</br>' +
                                                 'Stopped ( ' + gfs_lvmlockd_stop_arr.join(', ') + ' ), Offline ( ' + gfs_lvmlockd_offline_arr.join(', ') + ' )'
                             );
                         }
@@ -3769,23 +4156,26 @@ function gfsResourceStatus() {
                     }
 
                 } catch (error) {
-                    $('#gfs-lock-status').text("Health Err");
-                    $('#gfs-lock-back-color').attr('class','pf-c-label pf-m-red');
-                    $('#gfs-lock-icon').attr('class','fas fa-fw fa-exclamation-triangle');
+                    $('#gfs-lock-status, #gfs-integration-lock-status').text("Health Err");
+                    $('#gfs-lock-back-color, #gfs-integration-lock-back-color').attr('class','pf-c-label pf-m-red');
+                    $('#gfs-lock-icon, #gfs-integration-lock-icon').attr('class','fas fa-fw fa-exclamation-triangle');
                     // 오류 처리 추가 (필요 시 사용자 알림 등)
-                    $('#gfs-low-info').attr("style", "color: var(--pf-global--danger-color--100)");
+                    $('#gfs-low-info, #gfs-integration-low-info').attr("style", "color: var(--pf-global--danger-color--100)");
                     $('#gfs-low-info').text("GFS 리소스 구성 중 오류가 발생했습니다.");
+                    $('#gfs-integration-low-info').text("GFS 통합 구성 중 오류가 발생했습니다.");
                     return;
                 }
-                $('#gfs-low-info').attr("style","color: var(--pf-global--success-color--100)");
+                $('#gfs-low-info, #gfs-integration-low-info').attr("style","color: var(--pf-global--success-color--100)");
                 $('#gfs-low-info').text("GFS 리소스가 구성되었습니다.");
+                $('#gfs-integration-low-info').text("GFS 통합이 구성되었습니다.");
             }else{
-                $('#gfs-fence-status, #gfs-lock-status').text("Health Err");
-                $('#gfs-fence-back-color, #gfs-lock-back-color').attr('class','pf-c-label pf-m-red');
-                $('#gfs-fence-icon, #gfs-lock-icon').attr('class','fas fa-fw fa-exclamation-triangle');
-                $('#gfs-fence-text, #gfs-lock-text').text("N/A");
-                $('#gfs-low-info').attr("style","color: var(--pf-global--danger-color--100)");
+                $('#gfs-fence-status, #gfs-lock-status, #gfs-integration-fence-status, #gfs-integration-lock-status').text("Health Err");
+                $('#gfs-fence-back-color, #gfs-lock-back-color, #gfs-integration-fence-back-color, #gfs-integration-lock-back-color').attr('class','pf-c-label pf-m-red');
+                $('#gfs-fence-icon, #gfs-lock-icon, #gfs-integration-fence-icon, #gfs-integration-lock-icon').attr('class','fas fa-fw fa-exclamation-triangle');
+                $('#gfs-fence-text, #gfs-lock-text, #gfs-integration-fence-text, #gfs-integration-lock-text').text("N/A");
+                $('#gfs-low-info, #gfs-integration-low-info').attr("style","color: var(--pf-global--danger-color--100)");
                 $('#gfs-low-info').text("GFS 리소스가 구성되지 않았습니다.");
+                $('#gfs-integration-low-info').text("GFS 통합이 구성되지 않았습니다.");
             }
 
             resolve();
@@ -3796,12 +4186,12 @@ function gfsResourceStatus() {
             sessionStorage.setItem("stonith_status", retVal.val);
 
             if (retVal.val == "Started"){
-                $('#gfs-maintenance-update').html('<a class="pf-c-dropdown__menu-item" href="#" id="menu-item-gfs-maintenance" onclick="gfs_maintenance_run()">펜스 장치 유지보수 설정</a>');
+                $('#gfs-maintenance-update, #gfs-integration-maintenance-update').html('<a class="pf-c-dropdown__menu-item" href="#" id="menu-item-gfs-maintenance" onclick="gfs_maintenance_run()">펜스 장치 유지보수 설정</a>');
             }else if (retVal.val == "Stopped"){
-                $('#gfs-maintenance-update').html('<a class="pf-c-dropdown__menu-item" href="#" id="menu-item-gfs-maintenance" onclick="gfs_maintenance_run()">펜스 장치 유지보수 해제</a>');
+                $('#gfs-maintenance-update, #gfs-integration-maintenance-update').html('<a class="pf-c-dropdown__menu-item" href="#" id="menu-item-gfs-maintenance" onclick="gfs_maintenance_run()">펜스 장치 유지보수 해제</a>');
             }
             else{
-                $('#gfs-maintenance-update').html('<a class="pf-c-dropdown__menu-item pf-m-disabled" href="#" id="menu-item-gfs-maintenance" onclick="gfs_maintenance_run()">펜스 장치 유지보수 설정</a>');
+                $('#gfs-maintenance-update, #gfs-integration-maintenance-update').html('<a class="pf-c-dropdown__menu-item pf-m-disabled" href="#" id="menu-item-gfs-maintenance" onclick="gfs_maintenance_run()">펜스 장치 유지보수 설정</a>');
             }
             resolve();
         })
@@ -4132,7 +4522,7 @@ function insertCloudVmCard(os_type) {
             <li id="ccvm-before-monitoring-run-local"></li>
             <li id="ccvm-monitoring-config-update-local"></li>
         `;
-    } else if(os_type == "ablestack-hci"){
+    } else if(os_type == "ablestack-hci" || os_type == "ablestack-hci-filesystem"){
         snapshop_button =`
             <li class="pf-c-divider" role="separator"></li>
             <li><button class="pf-c-dropdown__menu-item pf-m-disabled" id="button-cloud-vm-snap-backup" type="button">스냅샷 백업</button></li>
@@ -4391,7 +4781,7 @@ $(document).on('click','#button-close-mold-db-control, #button-cancel-modal-mold
 /** Mold DB 제어 modal 관련 action end */
 /** 2차 스토리지 size 확장 제어 관련 action start */
 $(document).on('click', '#button-mold-secondary-size-expansion', function(){
-    if(os_type == "ablestack-hci"){
+    if(os_type == "ablestack-hci" || os_type == "ablestack-hci-filesystem"){
         $('#input-checkbox-mold-secondary-size-expansion').prop('checked',false);
         $('#label-checkbox-mold-secondary-size-expansion').show();
     }else{
@@ -4733,7 +5123,7 @@ $(function () {
                     cockpit.spawn(cmd).then(function(data){
                         var retVal = JSON.parse(data);
                         if(retVal.code == 200){
-                            if (os_type == "ablestack-hci"){
+                            if (os_type == "ablestack-hci" || os_type == "ablestack-hci-filesystem"){
                                 cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py', '--ceph-ssh-change', '-P', port];
                                 console.log(cmd);
                                 cockpit.spawn(cmd).then(function(data){
@@ -4889,7 +5279,7 @@ $(function () {
     cockpit.spawn(cmd).then(function(data){
         var retVal = JSON.parse(data);
         if (retVal.code == 200){
-            if (os_type == "ablestack-hci"){
+            if (os_type == "ablestack-hci" || os_type == "ablestack-hci-filesystem"){
                 cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py', '--ceph-ssh-change', '-P', afterPort];
                 console.log(cmd);
                 cockpit.spawn(cmd).then(function(data){
@@ -4929,3 +5319,200 @@ $(function () {
         $('#div-modal-status-alert').show();
     })
   });
+
+  $('#button-link-hci-shared-file-configure').on('click', function(){
+    $('#div-modal-wizard-hci-shared-file-configure').show();
+  });
+  // 공유 파일 생성 모달 닫기
+  $('#button-close-modal-hci-shared-file-create, #button-cancel-modal-hci-shared-file-create').on('click', function(){
+    $('#div-modal-hci-shared-file-create').hide();
+  })
+  $('#button-execution-modal-hci-shared-file-create').on('click', function(){
+    $('#div-modal-hci-shared-file-create').hide();
+    $('#div-modal-spinner-header-txt').text('공유 파일 생성 중');
+    $('#div-modal-spinner').show();
+
+    var size = $('#form-input-hci-file-volume').val();
+
+    cockpit.spawn(['cat', pluginpath + '/tools/properties/cluster.json']).then(function(data){
+        var retVal = JSON.parse(data);
+        var hosts = retVal.clusterConfig.hosts;
+        var all_host_name = "";
+        var host_names = [];
+        for (let i = 0; i < hosts.length ; i++) {
+            var hostName = hosts[i].ablecubePn;
+            all_host_name += (all_host_name ? " " : "") + hostName;
+            if (hostName) {
+                host_names.push(hostName); // 유효한 이름만 배열에 추가
+            }
+
+        }
+        cmd = ["python3", "/usr/share/cockpit/ablestack/python/rbd/rbd_manage.py", "--create-rbd-image", "--size", size , "--list-ip", all_host_name];
+        console.log(cmd);
+        cockpit.spawn(cmd).then(function(data){
+            var retVal = JSON.parse(data);
+            if (retVal.code == "200"){
+                $('#div-modal-spinner').hide();
+                $('#button-next-step-modal-hci-shared-file-wizard-config').attr('disabled', false);
+                $('#div-modal-hci-shared-file-create').hide();
+                $("#modal-status-alert-title").html("HCI 공유 파일 생성");
+                $("#modal-status-alert-body").html("HCI 공유 파일 생성이 완료되었습니다.");
+                $('#div-modal-status-alert').show();
+            }else{
+                $('#div-modal-spinner').hide();
+                $('#div-modal-hci-shared-file-create').hide();
+                $("#modal-status-alert-title").html("HCI 공유 파일 생성");
+                $("#modal-status-alert-body").html("HCI 공유 파일 생성 중 오류가 발생했습니다.");
+                $('#div-modal-status-alert').show();
+            }
+        }).catch(function(){
+            $('#div-modal-spinner').hide();
+            $('#div-modal-hci-shared-file-create').hide();
+            $("#modal-status-alert-title").html("HCI 공유 파일 생성");
+            $("#modal-status-alert-body").html("HCI 공유 파일 생성 중 오류가 발생했습니다.");
+            $('#div-modal-status-alert').show();
+        })
+    })
+  })
+$('#modal-input-hci-shared-file-create').on('click', function(){
+    var condition = $("#button-execution-modal-hci-shared-file-create").prop( 'disabled' );
+    $("#button-execution-modal-hci-shared-file-create").prop("disabled", condition ? false : true);
+});
+// 새로 고침 버튼에 대한 액션 정의
+$('#button-refresh-modal-gfs-disk-add').on('click', function(){
+    setDiskAction("hci-gfs", "add");
+});
+$(' #button-refresh-modal-gfs-disk-extend').on('click', function(){
+    setDiskAction("hci-gfs", "add", "true");
+});
+// 디스크 이미지 생성 버튼에 대한 액션 정의
+$('#div-disk-image-create, #div-disk-image-create-extend').on('click', function(){
+    $('#div-modal-disk-image-create').show();
+});
+$('#button-cancel-modal-disk-image-create, #button-close-modal-disk-image-create').on('click', function(){
+    $('#div-modal-disk-image-create').hide();
+});
+$('#modal-input-disk-image-create-confirm').on('click', function(){
+    var condition = $("#button-execution-modal-disk-image-create").prop( 'disabled' );
+    $("#button-execution-modal-disk-image-create").prop("disabled", condition ? false : true);
+});
+$('#button-execution-modal-disk-image-create').on('click',function(){
+    $('#div-modal-disk-image-create').hide();
+    $('#div-modal-spinner-header-txt').text('디스크 이미지 생성 중');
+    $('#div-modal-spinner').detach().appendTo('body').show();
+
+    var size = $('#form-input-disk-image-size').val();
+
+    cockpit.spawn(['cat', pluginpath + '/tools/properties/cluster.json']).then(function(data){
+        var retVal = JSON.parse(data);
+        var hosts = retVal.clusterConfig.hosts;
+        var all_host_name = "";
+        var host_names = [];
+        for (let i = 0; i < hosts.length ; i++) {
+            var hostName = hosts[i].ablecubePn;
+            all_host_name += (all_host_name ? " " : "") + hostName;
+            if (hostName) {
+                host_names.push(hostName); // 유효한 이름만 배열에 추가
+            }
+
+        }
+        cmd = ["python3", pluginpath + "/python/rbd/rbd_manage.py", "--create-rbd-image", "--size", size , "--list-ip", all_host_name];
+        console.log(cmd);
+        cockpit.spawn(cmd).then(function(data){
+            var retVal = JSON.parse(data);
+            if (retVal.code == "200"){
+                $('#div-modal-spinner').hide();
+                $("#modal-status-alert-title").html("디스크 이미지 생성");
+                $("#modal-status-alert-body").html("디스크 이미지 생성이 완료되었습니다.");
+                $('#div-modal-status-alert').detach().appendTo('body').show();
+            }else{
+                $('#div-modal-spinner').hide();
+                $("#modal-status-alert-title").html("디스크 이미지 생성");
+                $("#modal-status-alert-body").html("디스크 이미지 생성 중 오류가 발생했습니다.");
+                $('#div-modal-status-alert').detach().appendTo('body').show();
+            }
+        }).catch(function(){
+            $('#div-modal-spinner').hide();
+            $("#modal-status-alert-title").html("디스크 이미지 파일 생성");
+            $("#modal-status-alert-body").html("디스크 이미지 생성 중 오류가 발생했습니다.");
+            $('#div-modal-status-alert').detach().appendTo('body').show();
+        })
+    })
+});
+
+$('#menu-item-set-disk-image-add').on('click', function(){
+    $('#div-modal-disk-image-create').show();
+});
+$('#menu-item-set-disk-image-delete').on('click', function(){
+    setDiskAction("hci-gfs", "delete");
+    $('#div-modal-disk-image-delete').show();
+});
+$('#button-cancel-modal-disk-image-add, #button-close-modal-disk-image-add').on('click', function(){
+    $('#div-modal-disk-image-add').hide();
+});
+$('#button-cancel-modal-disk-image-delete, #button-close-modal-disk-image-delete').on('click', function(){
+    $('#div-modal-disk-image-delete').hide();
+});
+$('#div-modal-gfs-disk-add').on('change', 'input[type=checkbox][name="form-gfs-checkbox-disk-add"]', function() {
+    // 체크된 항목이 있는지 확인
+    var isChecked = $('input[type=checkbox][name="form-gfs-checkbox-disk-add"]:checked').length > 0;
+
+    // 체크되면 버튼 활성화, 아니면 비활성화
+    $('#button-execution-modal-gfs-disk-add').prop('disabled', !isChecked);
+});
+$('#div-modal-disk-image-delete').on('change', 'input[type=checkbox][name="form-disk-image-checkbox-delete"]', function() {
+    // 체크된 항목이 있는지 확인
+    var isChecked = $('input[type=checkbox][name="form-disk-image-checkbox-delete"]:checked').length > 0;
+
+    // 체크되면 버튼 활성화, 아니면 비활성화
+    $('#button-execution-modal-disk-image-delete').prop('disabled', !isChecked);
+});
+$('#button-execution-modal-disk-image-delete').on('click', function(){
+    $('#div-modal-disk-image-delete').hide();
+    $('#div-modal-spinner-header-txt').text('디스크 이미지 삭제 중');
+    $('#div-modal-spinner').show();
+
+    var image_name = $('input[type=checkbox][name="form-disk-image-checkbox-delete"]:checked')
+                    .map(function () {
+                    return $(this).data('disk_id'); // 체크된 값 가져오기
+                    })
+                    .get()
+                    .join(',');
+
+    cockpit.spawn(['cat', pluginpath + '/tools/properties/cluster.json']).then(function(data){
+        var retVal = JSON.parse(data);
+        var hosts = retVal.clusterConfig.hosts;
+        var all_host_name = "";
+        var host_names = [];
+        for (let i = 0; i < hosts.length ; i++) {
+            var hostName = hosts[i].ablecubePn;
+            all_host_name += (all_host_name ? " " : "") + hostName;
+            if (hostName) {
+                host_names.push(hostName); // 유효한 이름만 배열에 추가
+            }
+        }
+        cmd = ["python3", pluginpath + "/python/rbd/rbd_manage.py", "--delete-rbd-image", "--image-name", image_name, "--list-ip", all_host_name];
+        console.log(cmd);
+        cockpit.spawn(cmd).then(function(data){
+            var retVal = JSON.parse(data);
+            if (retVal.code == "200"){
+                $('#div-modal-spinner').hide();
+                $("#modal-status-alert-title").html("디스크 이미지 삭제");
+                $("#modal-status-alert-body").html("디스크 이미지 삭제가 완료되었습니다.");
+                $('#div-modal-status-alert').detach().appendTo('body').show();
+            }else{
+                $('#div-modal-spinner').hide();
+                $("#modal-status-alert-title").html("디스크 이미지 삭제");
+                $("#modal-status-alert-body").html("디스크 이미지 삭제 중 오류가 발생했습니다.");
+                $('#div-modal-status-alert').detach().appendTo('body').show();
+            }
+        }).catch(function(){
+            $('#div-modal-spinner').hide();
+            $("#modal-status-alert-title").html("디스크 이미지 삭제");
+            $("#modal-status-alert-body").html("디스크 이미지 삭제 중 오류가 발생했습니다.");
+            $('#div-modal-status-alert').detach().appendTo('body').show();
+        })
+    })
+
+
+});

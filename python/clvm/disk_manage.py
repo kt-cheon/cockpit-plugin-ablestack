@@ -19,11 +19,12 @@ def openClusterJson():
             ret = json.load(json_file)
     except Exception as e:
         ret = createReturn(code=500, val='cluster.json read error')
-        print ('EXCEPTION : ',e)
+
 
     return ret
 
 json_data = openClusterJson()
+os_type = json_data["clusterConfig"]["type"]
 def parse_size(size_str):
     # 단위 변환 로직 (t → TB, g → GB, m → MB)
     import re
@@ -79,7 +80,7 @@ def connect_to_host(ip):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     private_key_path = os.getenv('SSH_PRIVATE_KEY_PATH', '/root/.ssh/id_rsa')
-    ssh.connect(ip, username='root', key_filename=private_key_path)
+    ssh.connect(ip, username='root', key_filename=private_key_path, timeout=10, banner_timeout=30, auth_timeout=30)
     return ssh
 
 
@@ -329,38 +330,39 @@ def delete_gfs(disks, gfs_name, lv_name, vg_name):
         for partition in disks:
             multipath_check = os.popen("multipath -l -v 1").read().strip()
             if multipath_check != "" :
-                disk = partition.replace("dm-uuid-part1-mpath-","dm-uuid-mpath-")
-                run_command(f"pvremove {partition}")
-                run_command(f"echo -e 'd\nw\n' | fdisk {disk} >/dev/null 2>&1")
+                if os_type == "ablestack-hci-filesystem":
+                    partition_new = partition + "p1"
+                    run_command(f"pvremove {partition_new}")
+                    run_command(f"parted -s {partition} rm 1")
+                else:
+                    disk = partition.replace("dm-uuid-part1-mpath-","dm-uuid-mpath-")
+                    run_command(f"pvremove {partition}")
+                    run_command(f"echo -e 'd\nw\n' | fdisk {disk} >/dev/null 2>&1")
 
                 for host in json_data["clusterConfig"]["hosts"]:
                     ssh_client = connect_to_host(host["ablecube"])
-                    # escaped_disk = disk.replace('/', '\\/')
-                    # escaped_partition = partition.replace('/', '\\/')
-                    # sed_cmd = f"sed -i '/partprobe {escaped_disk}/{{N; /lvmdevices --adddev -y {escaped_partition}/d;}}' /etc/rc.local /etc/rc.d/rc.local"
-
-                    # lvm.conf 초기화
-                    run_command(f"partprobe {disk}",ssh_client,ignore_errors=True)
-                    # run_command(sed_cmd, ssh_client, ignore_errors=True)
+                    if os_type == "ablestack-hci-filesystem":
+                        run_command(f"partprobe {partition}", ssh_client, ignore_errors=True)
+                    else:
+                        run_command(f"partprobe {disk}",ssh_client,ignore_errors=True)
 
                     ssh_client.close()
             else:
-                partition_path = partition + "1"
+                if os_type == "ablestack-hci-filesystem":
+                    partition_path = partition + "p1"
+                else:
+                    partition_path = partition + "1"
                 run_command(f"pvremove {partition_path}")
                 run_command(f"parted -s {partition} rm 1")
 
                 for host in json_data["clusterConfig"]["hosts"]:
                     ssh_client = connect_to_host(host["ablecube"])
-                    single_disk_arr = run_command("lsblk -r -n -o NAME,TYPE -d | grep -v rom | awk '{print $1}'", ssh_client).split()
-                    for single_disk in single_disk_arr:
-                        # single_partition = f"/dev/{single_disk}1"
-                        # escaped_disk = single_disk.replace('/', '\\/')
-                        # escaped_partition = single_partition.replace('/', '\\/')
-                        # sed_cmd = f"sed -i '/partprobe /dev/{escaped_disk}/{{N; /lvmdevices --adddev -y /dev/{escaped_partition}/d;}}' /etc/rc.local /etc/rc.d/rc.local"
-
-                        # lvm.conf 초기화
-                        run_command(f"partprobe /dev/{single_disk}",ssh_client,ignore_errors=True)
-                        # run_command(sed_cmd, ssh_client, ignore_errors=True)
+                    if os_type == "ablestack-hci-filesystem":
+                        run_command(f"partprobe {partition}", ssh_client, ignore_errors=True)
+                    else:
+                        single_disk_arr = run_command("lsblk -r -n -o NAME,TYPE -d | grep -v rom | awk '{print $1}'", ssh_client).split()
+                        for single_disk in single_disk_arr:
+                            run_command(f"partprobe /dev/{single_disk}",ssh_client,ignore_errors=True)
 
                     ssh_client.close()
 
@@ -470,15 +472,15 @@ def rescan_and_extend_gfs_disk(action, vg_name, lv_name, mount_point, mpath_disk
             mpath_path = []
             mpath_path_partition = []
             lv_path = []
+
             if multipath_check != "":
                 for bd in disk_list['val']['blockdevices']:
                     if 'children' in bd and bd['children']:
                         first_level = bd['children'][0]
                         if 'children' in first_level and first_level['children']:
                             second_level = first_level['children'][0]
-                            if 'children' in second_level and second_level['children']:
-                                third_level = second_level['children'][0]
-                                if third_level.get('name') == vg_name+"-"+lv_name:
+                            if os_type == "ablestack-hci-filesystem":
+                                if second_level.get('name') == vg_name+"-"+lv_name:
                                     if bd['name'] not in gfs_disks:
                                         gfs_disks.append(bd['name'])
 
@@ -486,14 +488,30 @@ def rescan_and_extend_gfs_disk(action, vg_name, lv_name, mount_point, mpath_disk
                                         mpath_name.append(first_level['name'])
 
                                     if first_level['path'] not in mpath_path:
-                                        mpath_path.append(first_level['path'])
+                                        mpath_path.append(bd['path'])
+                                        mpath_path_partition.append(first_level['path'])
 
-                                    partition_path = first_level['path'] + "1"
-                                    if partition_path not in mpath_path_partition:
-                                        mpath_path_partition.append(partition_path)
+                                    if second_level['path'] not in lv_path:
+                                        lv_path.append(second_level['path'])
+                            else:
+                                if 'children' in second_level and second_level['children']:
+                                    third_level = second_level['children'][0]
+                                    if third_level.get('name') == vg_name+"-"+lv_name:
+                                        if bd['name'] not in gfs_disks:
+                                            gfs_disks.append(bd['name'])
 
-                                    if third_level['path'] not in lv_path:
-                                        lv_path.append(third_level['path'])
+                                        if first_level['name'] not in mpath_name:
+                                            mpath_name.append(first_level['name'])
+
+                                        if first_level['path'] not in mpath_path:
+                                            mpath_path.append(first_level['path'])
+
+                                        partition_path = first_level['path'] + "1"
+                                        if partition_path not in mpath_path_partition:
+                                            mpath_path_partition.append(partition_path)
+
+                                        if third_level['path'] not in lv_path:
+                                            lv_path.append(third_level['path'])
             else:
                 for bd in disk_list['val']['blockdevices']:
                     if 'children' in bd and bd['children']:
@@ -565,18 +583,30 @@ def rescan_and_extend_gfs_disk(action, vg_name, lv_name, mount_point, mpath_disk
 
             for mpath in mpath_disks:
                 if multipath_check != "":
-                    disk_partition = mpath.replace("dm-uuid-mpath-","dm-uuid-part1-mpath-")
+                    if os_type == "ablestack-hci-filesystem":
+                        disk_partition = mpath + "-part1"
+                    else:
+                        disk_partition = mpath.replace("dm-uuid-mpath-","dm-uuid-part1-mpath-")
                 else:
-                    disk_partition = mpath + "1"
+                    if os_type == "ablestack-hci-filesystem":
+                        disk_partition = mpath + "-part1"
+                    else:
+                        disk_partition = mpath + "1"
                 mpath_partition.append(disk_partition)
                 run_command(f"parted -s {mpath} mklabel gpt mkpart {gfs_name} 0% 100% set 1 lvm on")
                 run_command(f"pvcreate {disk_partition}")
 
             for mpath in mpath_disks:
                 if multipath_check != "":
-                    disk_partition = mpath.replace("dm-uuid-mpath-","dm-uuid-part1-mpath-")
+                    if os_type == "ablestack-hci-filesystem":
+                        disk_partition = mpath + "-part1"
+                    else:
+                        disk_partition = mpath.replace("dm-uuid-mpath-","dm-uuid-part1-mpath-")
                 else:
-                    disk_partition = mpath + "1"
+                    if os_type == "ablestack-hci-filesystem":
+                        disk_partition = mpath + "-part1"
+                    else:
+                        disk_partition = mpath + "1"
 
                 for i in range(len(json_data["clusterConfig"]["hosts"])):
                     host = json_data["clusterConfig"]["hosts"][i]

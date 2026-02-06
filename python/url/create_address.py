@@ -36,7 +36,7 @@ def openClusterJson():
             ret = json.load(json_file)
     except Exception as e:
         ret = createReturn(code=500, val='cluster.json read error')
-        print ('EXCEPTION : ',e)
+
 
     return ret
 
@@ -75,7 +75,7 @@ def wallCenter(action, H=False):
         try:
             # 클라우드센터
             value = "https://"+ip+":8081/login"
-            request = requests.get(value, verify=False, timeout=3) 
+            request = requests.get(value, verify=False, timeout=3)
 
         except:
              # http 접속되지않는 경우
@@ -97,7 +97,7 @@ def storageCenter(action, H=False):
 
     if action == 'storageCenter':
         try:
-            if os_type == "ablestack-hci" :
+            if os_type == "ablestack-hci" or os_type == "ablestack-hci-filesystem":
                 # 스토리지센터
                 mgr = check_output(['ceph', 'mgr', 'stat'], universal_newlines=True)
                 mgr_json = json.loads(mgr)
