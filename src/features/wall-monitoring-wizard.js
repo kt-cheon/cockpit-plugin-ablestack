@@ -411,7 +411,7 @@ function resetWallMonitoringWizard() {
                 var netdive_config_result = JSON.parse(data);
                 if(netdive_config_result.code=="200") { //정상
                     //=========== 1-3. 모니터링 서비스 전체 종료 ===========
-                    var wall_service_stop_cmd = ['python3', pythonPath + 'start_services.py', 'stop', '--service', 'blackbox-exporter', 'node-exporter', 'grafana-server', 'process-exporter', 'prometheus', 'netdive-analyzer'];
+                    var wall_service_stop_cmd = ['python3', pythonPath + 'start_services.py', 'stop', '--service', 'blackbox-exporter', 'node-exporter', 'grafana-server', 'process-exporter', 'prometheus'];
                     if (console_log) { console.log(wall_service_stop_cmd); }
                     cockpit.spawn(wall_service_stop_cmd, { host: ccvm_ip })
                     .then(function (data) {
