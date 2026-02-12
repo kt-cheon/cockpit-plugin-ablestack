@@ -483,7 +483,7 @@ $('#button-next-step-modal-wizard-cluster-config-prepare').on('click', function 
                         .then(function(data){
                             var retVal = JSON.parse(data);
                             if(retVal.code == "200"){
-                                var pcs_config_setting_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--extend-pcs-cluster', '--password', 'password', '--stonith', ipmi_config, '--mount-point', gfs_mount_point, '--list-ip', all_host_name];
+                                var pcs_config_setting_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--extend-pcs-cluster', '--password', 'password', '--stonith', ipmi_config, '--mount-point', gfs_mount_point, '--iscsi-check', iscsi_check, '--list-ip', all_host_name];
                                 console.log(pcs_config_setting_cmd);
                                 cockpit.spawn(pcs_config_setting_cmd)
                                 .then(function(data){
@@ -1024,7 +1024,7 @@ $('#button-accordion-hosts-file').on('click change', function () {
     let hosts_file_type = $('input[name=radio-hosts-file]:checked').val();
     var os_type = $('#selected-cluster-type').val();
 
-    putHostsValueIntoTextarea(host_file_type, option, os_type, iscsi_check);
+    putHostsValueIntoTextarea(hosts_file_type, option, os_type, iscsi_check);
 });
 // time server 종류에 따라 내용 보여주기
 $('#button-accordion-timeserver').on('click change', function () {

@@ -418,6 +418,55 @@ function setGfsProgressStep(span_id, status){
     }
 }
 /**
+ * Meathod Name : setHciSharedFileProgressStep
+ * Date Created : 2026.01.16
+ * Writer  : 정민철
+ * Description : span id와 status 입력받아 해당하는 span의 진행상태를 입력받은 status 변경
+ * Parameter : String, String
+ * Return  : 없음
+ * History  : 2026.01.16 최초 작성
+ */
+function setHciSharedFileProgressStep(span_id, status){
+    //proceeding or 1: 진행중, completed or 2: 완료됨, aborted or 3: 중단됨 or 4: formatting, 포맷중
+    if(status=="proceeding" || status=="completed" || status=="aborted" || status=="formatting"|| status==1 || status==2 || status==3 || status==4){
+        var span = $('#'+span_id);
+        var icon = $('#'+span_id).children('span').children('span').children("i");
+        var progress_text = $('#'+span_id).children('span').children('p');
+
+        // 초기화
+        span.removeClass('pf-m-blue pf-m-green pf-m-orange pf-m-red pf-m-purple');
+        icon.removeClass('fa-info-circle fa-check-circle fa-play fa-exclamation-circle fa-hourglass-half');
+
+        if(status == "proceeding" || status==1){
+            if(span.attr('id') == "span-hci-shared-file-progress-step1"){
+                $('#hci-shared-file-progress-step-text').text('HCI 공유 파일을 구성 중입니다. 전체 3단계 중 1단계 진행 중입니다.');
+            } else if(span.attr('id') == "span-hci-shared-file-progress-step2"){
+                $('#hci-shared-file-progress-step-text').text('HCI 공유 파일을 구성 중입니다. 전체 3단계 중 2단계 진행 중입니다.');
+            } else if(span.attr('id') == "span-hci-shared-file-progress-step3"){
+                $('#hci-shared-file-progress-step-text').text('HCI 공유 파일을 구성 중입니다. 전체 3단계 중 3단계 진행 중입니다.');
+            }
+
+            span.addClass('pf-m-orange');
+            icon.addClass('fa-play');
+            progress_text.text('진행중');
+        } else if(status=="completed" || status==2){
+            span.addClass('pf-m-green');
+            icon.addClass('fa-check-circle');
+            progress_text.text('완료됨');
+        } else if(status=="aborted" || status==3){
+            span.addClass('pf-m-red');
+            icon.addClass('fa-exclamation-circle');
+            progress_text.text('중단됨');
+        } else if(status=="formatting" || status==4){
+            span.addClass('pf-m-purple');
+            icon.addClass('fa-hourglass-half');
+            progress_text.text('포맷중');
+        }
+    }else{
+        alert("진행 상태를 잘못 입력했습니다.");
+    }
+}
+/**
  * Meathod Name : setLocalProgressStep
  * Date Created : 2025.08.07
  * Writer  : 정민철
@@ -1306,6 +1355,34 @@ function ClusterConfigJsonStringGFS(clusterConfig,iscsi_check) {
                 ablecube: host.ablecube
             };
         }
+        resultArrList.push(data);
+    });
+
+    return JSON.stringify(resultArrList);  // 보기 좋게 포맷팅
+}
+/**
+ * Meathod Name : ClusterConfigJsonStringHciSharedFile()
+ * Date Created : 2026.01.15
+ * Writer  : 정민철
+ * Description : json 데이터를 json string으로 변환하는 함수
+ * Parameter : clusterConfig
+ * Return  : json string
+ * History  : 2026.01.15 최초 작성
+ **/
+function ClusterConfigJsonStringHciSharedFile(clusterConfig) {
+    var resultArrList = [];
+
+    // clusterConfig 객체 안의 hosts 배열 순회
+    clusterConfig.clusterConfig.hosts.forEach(function(host) {
+        var data = {
+            index: host.index,
+            hostname: host.hostname,
+            ablecube: host.ablecube,
+            scvmMngt: host.scvmMngt,
+            ablecubePn: host.ablecubePn,
+            scvm: host.scvm,
+            scvmCn: host.scvmCn
+        };
         resultArrList.push(data);
     });
 

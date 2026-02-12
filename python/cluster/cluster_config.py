@@ -67,7 +67,6 @@ def openClusterJson():
             ret = json.load(json_file)
     except Exception as e:
         ret = createReturn(code=500, val='cluster.json read error')
-        print ('EXCEPTION : ',e)
 
     return ret
 
@@ -552,8 +551,7 @@ if __name__ == '__main__':
 
     # 실제 로직 부분 호출 및 결과 출력
     if args.action == 'insert':
-        if os_type == "ablestack-vm" or os_type == "ablestack-standalone":
-            reset_cluster_config()
+        reset_cluster_config()
         ret = insert(args)
         print(ret)
     elif args.action == 'insertScvmHost':

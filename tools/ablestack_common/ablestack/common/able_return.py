@@ -34,7 +34,7 @@ def createReturn(retname: str = "",
         "code": code,
         "val": val,
         "name": retname,
-        "type":type_str
+        "type": type_str
     }
     ret = json.dumps(retdic)
     return ret

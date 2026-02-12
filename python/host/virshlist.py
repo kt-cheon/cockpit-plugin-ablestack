@@ -29,7 +29,7 @@ def openClusterJson():
             ret = json.load(json_file)
     except Exception as e:
         ret = createReturn(code=500, val='cluster.json read error')
-        print ('EXCEPTION : ',e)
+
 
     return ret
 
@@ -108,7 +108,10 @@ def collect_vm_info(vm):
             # Parse gateway
             vm['GW'] = ret[0]
             # Parse DNS
-            vm['DNS'] = ret[1]
+            if ret[1] != "":
+                vm['DNS'] = ret[1]
+            else:
+                vm['DNS'] = "N/A"
             # Parse service status
             vm['MOLD_SERVICE_STATUE'] = ret[2]
             vm['MOLD_DB_STATUE'] = ret[3]

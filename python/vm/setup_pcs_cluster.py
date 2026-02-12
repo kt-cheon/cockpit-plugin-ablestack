@@ -17,6 +17,7 @@ import time
 from ablestack import *
 from sh import python3
 
+cluster_json_file_path = pluginpath + "/tools/properties/cluster.json"
 def createArgumentParser():
     '''
     입력된 argument를 파싱하여 dictionary 처럼 사용하게 만들어 주는 parser를 생성하는 함수
@@ -44,6 +45,19 @@ def createArgumentParser():
     parser.add_argument('-V', '--Version', action='version', version='%(prog)s 1.0')
 
     return parser
+
+def openClusterJson():
+    try:
+        with open(cluster_json_file_path, 'r') as json_file:
+            ret = json.load(json_file)
+    except Exception as e:
+        ret = createReturn(code=500, val='cluster.json read error')
+
+
+    return ret
+
+cluster_json_data = openClusterJson()
+os_type = cluster_json_data["clusterConfig"]["type"]
 
 def setupPcsCluster(args):
 
@@ -73,7 +87,7 @@ def setupPcsCluster(args):
         check_err = os.system("ssh root@"+host+" \"systemctl restart crond.service\"")
         if check_err != 0 :
             return createReturn(code=500, val=host+" : systemctl restart crond.service failed")
-        
+
     #=========== pcs cluster 구성 ===========
     # ceph 이미지 등록
     os.system("qemu-img convert -f qcow2 -O rbd /var/lib/libvirt/images/ablestack-template-back.qcow2 rbd:rbd/ccvm")
@@ -82,14 +96,17 @@ def setupPcsCluster(args):
 
     host_names = args.host_names[0].split()
     # 클러스터 구성
-    result = json.loads(python3(pluginpath + '/python/pcs/main.py', 'config', '--cluster', 'cloudcenter_cluster', '--hosts', host_names[0], host_names[1], host_names[2] ))
-    if result['code'] not in [200]:
-        success_bool = False
+    if os_type == "ablestack-hci":
+        result = json.loads(python3(pluginpath + '/python/pcs/main.py', 'config', '--cluster', 'cloudcenter_cluster', '--hosts', host_names[0], host_names[1], host_names[2] ))
+        if result['code'] not in [200]:
+            success_bool = False
 
     # 리소스 생성
     result = json.loads(python3(pluginpath+'/python/pcs/main.py', 'create', '--resource', 'cloudcenter_res', '--xml', pluginpath+'/tools/vmconfig/ccvm/ccvm.xml' ))
     if result['code'] not in [200]:
         success_bool = False
+    else :
+        os.system("pcs constraint order start glue-gfs-clone then cloudcenter_res")
 
     #ccvm이 정상적으로 생성 되었는지 확인
     domid_check = 0

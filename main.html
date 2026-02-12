@@ -27,6 +27,8 @@
                     <button style="display:none" class="pf-c-button pf-m-link pf-m-inline" type="button"
                         id="button-link-gfs-storage-configure">GFS 스토리지 구성</button>
                     <button style="display:none" class="pf-c-button pf-m-link pf-m-inline" type="button"
+                        id="button-link-hci-shared-file-configure">HCI 공유 파일 구성</button>
+                    <button style="display:none" class="pf-c-button pf-m-link pf-m-inline" type="button"
                         id="button-link-local-storage-configure">로컬 스토리지 구성</button>
                     <button style="display:none" class="pf-c-button pf-m-link pf-m-inline" type="button"
                         id="button-open-modal-wizard-pfmp-vm">파워플렉스 관리 플랫폼 VM 배포</button>
@@ -59,7 +61,7 @@
                                             style="font-size: var(--pf-global--icon--FontSize--lg);padding-right: 15px"
                                             aria-hidden="true"></i>
                                     </div>
-                                    <div class="pf-c-card__title">GFS 리소스 상태
+                                    <div class="pf-c-card__title" id="div-card-title-gfs-cluster-status">GFS 리소스 상태
                                     </div>
                                     <div class="pf-c-card__actions">
                                         <div class="pf-c-dropdown">
@@ -179,9 +181,9 @@
                                 </div>
                                 <div class="pf-c-divider" role="separator"></div>
                                 <div id="gfs-low-info" class="pf-c-card__footer"
-                                    style="color: var(--pf-global--danger-color--100);">GFS 리소스가 구성되지 않았습니다.</div>
+                                    style="color: var(--pf-global--danger-color--100);">GFS 통합이 구성되지 않았습니다.</div>
                             </div>
-                            <!-- 클라우드센터 클러스터 상태 카드 영역 끝 -->
+                            <!-- GFS 리소스 상태 카드 영역 끝 -->
                         </div>
                         <div class="pf-l-grid__item pf-m-6-col" id="div-card-storage-cluster-status">
                             <!-- 스토리지 센터 클러스터 상태 카드 영역 시작-->
@@ -344,6 +346,121 @@
                                     id="scc-status-check">스토리지센터 클러스터가 구성되지 않았습니다.</div>
                             </div>
                             <!-- 스토리지 클러스터 상태 카드 영역 끝 -->
+                        </div>
+                        <div class="pf-l-grid__item pf-m-6-col" id="div-card-gfs-integration-status" style="display: none;">
+                            <!-- GFS 통합 상태 카드 영역 시작-->
+                            <div class="pf-c-card pf-m-hoverable pf-m-compact" id="card-gfs-integration-status">
+                                <div class="pf-c-card__header">
+                                    <div class="pf-c-card__header-main">
+                                        <i class="pf-icon pf-icon-bundle"
+                                            style="font-size: var(--pf-global--icon--FontSize--lg);padding-right: 15px"
+                                            aria-hidden="true"></i>
+                                    </div>
+                                    <div class="pf-c-card__title" id="div-card-title-gfs-integration-status">GFS 통합 상태
+                                    </div>
+                                    <div class="pf-c-card__actions">
+                                        <div class="pf-c-dropdown">
+                                            <button id="card-action-gfs-integration-status"
+                                                class="pf-c-dropdown__toggle pf-m-plain" aria-expanded="false"
+                                                type="button" aria-label="Actions">
+                                                <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                                            </button>
+                                            <ul class="pf-c-dropdown__menu pf-m-align-right"
+                                                aria-labelledby="card-action-gfs-integration-status"
+                                                id="dropdown-menu-gfs-integration-status">
+                                                <li id="gfs-integration-maintenance-update" style="display: none;"></li>
+                                                <li class="pf-c-divider" role="separator"></li>
+                                                <li>
+                                                    <button class="pf-c-dropdown__menu-item pf-m-disabled" type="button"
+                                                        id="menu-item-set-gfs-integration-disk-add">GFS 디스크 추가</button>
+                                                </li>
+                                                <li>
+                                                    <button class="pf-c-dropdown__menu-item pf-m-disabled" type="button"
+                                                        id="menu-item-set-gfs-integration-disk-delete">GFS 디스크 삭제</button>
+                                                </li>
+                                                <li>
+                                                    <button class="pf-c-dropdown__menu-item pf-m-disabled" type="button"
+                                                        id="menu-item-set-gfs-integration-disk-extend">GFS 디스크 확장</button>
+                                                </li>
+                                                <li class="pf-c-divider" role="separator"></li>
+                                                <li>
+                                                    <button class="pf-c-dropdown__menu-item pf-m-disabled" type="button"
+                                                        id="menu-item-set-disk-image-add">디스크 이미지 추가</button>
+                                                </li>
+                                                <li>
+                                                    <button class="pf-c-dropdown__menu-item pf-m-disabled" type="button"
+                                                        id="menu-item-set-disk-image-delete">디스크 이미지 삭제</button>
+                                                </li>
+                                                <li class="pf-c-divider" role="separator"></li>
+                                                <li>
+                                                    <button class="pf-c-dropdown__menu-item pf-m-disabled" type="button"
+                                                        id="menu-item-set-disk-integration-detail-info">디스크 상세 정보</button>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="pf-c-divider" role="separator"></div>
+                                <div class="pf-c-card__body">
+                                    <section class="pf-c-page__main-breadcrumb">
+                                        <dl class="pf-c-description-list pf-m-horizontal"
+                                            style="--pf-c-description-list--RowGap: 12.5px;">
+                                            <div class="pf-c-description-list__group" style="align-items: center;">
+                                                <dt class="pf-c-description-list__term">
+                                                    <span class="pf-c-description-list__text">펜스 장치 상태</span>
+                                                </dt>
+                                                <dd class="pf-c-description-list__description">
+                                                    <div class="pf-c-description-list__text" style="overflow: auto;display: flex;flex-direction: column;">
+                                                        <span id="gfs-integration-fence-back-color" class="pf-c-label pf-m-red" style="margin-right: 10px;align-self: flex-start;">
+                                                            <span class="pf-c-label__content">
+                                                                <span class="pf-c-label__icon">
+                                                                    <i id="gfs-integration-fence-icon"
+                                                                        class="fas fa-fw fa-exclamation-triangle"
+                                                                        aria-hidden="true"></i>
+                                                                </span>
+                                                                <div id="gfs-integration-fence-status">N/A</div>
+                                                            </span>
+                                                        </span>
+                                                        <div id="gfs-integration-fence-text" style="align-self: center;">N/A</div>
+                                                    </div>
+                                                </dd>
+                                            </div>
+                                            <div class="pf-c-description-list__group" style="align-items: center;">
+                                                <dt class="pf-c-description-list__term">
+                                                    <span class="pf-c-description-list__text">잠금 장치 상태</span>
+                                                </dt>
+                                                <dd class="pf-c-description-list__description">
+                                                    <div class="pf-c-description-list__text" style="overflow: auto;display: flex;flex-direction: column;">
+                                                        <span id="gfs-integration-lock-back-color" class="pf-c-label pf-m-red" style="margin-right: 10px;align-self: flex-start;">
+                                                            <span class="pf-c-label__content">
+                                                                <span class="pf-c-label__icon">
+                                                                    <i id="gfs-integration-lock-icon"
+                                                                        class="fas fa-fw fa-exclamation-triangle"
+                                                                        aria-hidden="true"></i>
+                                                                </span>
+                                                                <div id="gfs-integration-lock-status">N/A</div>
+                                                            </span>
+                                                        </span>
+                                                        <div id="gfs-integration-lock-text" style="align-self: center;">N/A</div>
+                                                    </div>
+                                                </dd>
+                                            </div>
+                                            <div class="pf-c-description-list__group">
+                                                <dt class="pf-c-description-list__term">
+                                                    <span class="pf-c-description-list__text">마운트 경로</span>
+                                                </dt>
+                                                <dd class="pf-c-description-list__description">
+                                                    <div class="pf-c-description-list__text" id="page-gfs-integration-disk-mount-info">N/A</div>
+                                                </dd>
+                                            </div>
+                                        </dl>
+                                    </section>
+                                </div>
+                                <div class="pf-c-divider" role="separator"></div>
+                                <div id="gfs-integration-low-info" class="pf-c-card__footer"
+                                    style="color: var(--pf-global--danger-color--100);">GFS 통합이 구성되지 않았습니다.</div>
+                            </div>
+                            <!-- 클라우드센터 클러스터 상태 카드 영역 끝 -->
                         </div>
                         <div class="pf-l-grid__item pf-m-6-col" id="div-card-cloud-cluster-status">
                             <!-- 클라우드센터 클러스터 상태 카드 영역 시작-->
@@ -889,6 +1006,9 @@
 
 <!-- GFS 스토리지 구성 마법사 : ./src/features/gfs-storage-configure-wizard.html을 내용으로 load -->
 <div class="pf-c-backdrop" id="div-modal-wizard-gfs-storage-configure"></div>
+
+<!-- HCI 공유 파일 구성 마법사 : ./src/features/hci-shared-file-configure-wizard.html을 내용으로 load -->
+<div class="pf-c-backdrop" id="div-modal-wizard-hci-shared-file-configure"></div>
 
 <!-- 로컬 스토리지 구성 마법사 : ./src/features/gfs-storage-configure-wizard.html을 내용으로 load -->
 <div class="pf-c-backdrop" id="div-modal-wizard-local-storage-configure"></div>
@@ -1726,46 +1846,57 @@
 <!-- GFS 디스크 추가 : Modal 영역 시작 -->
 <div id="div-modal-gfs-disk-add" class="pf-c-backdrop" style="display:none">
     <div class="pf-l-bullseye">
-        <div class="pf-c-modal-box pf-m-lg" role="dialog" aria-modal="true" aria-label="GFS Disk Add">
-            <button id="button-close-modal-gfs-disk-add" aria-disabled="false" aria-label="Close"
-                class="pf-c-button pf-m-plain" type="button">
-                <i class="fas fa-times" aria-hidden="true"></i>
-            </button>
-            <header class="pf-c-modal-box__header">
-                <h1 class="pf-c-modal-box__title">
-                    <span class="pf-c-modal-box__title-text">GFS 디스크 추가</span>
-                </h1>
-                <div style="display: flex; align-items: center; margin-top: 20px; font-size: large; color:maroon;">
-                    <i class="fas fa-exclamation-triangle " aria-hidden="true" style="margin-right: 6px;font-size:25px; color: #d9822b;"></i>
-                    <span>선택한 항목과 관계없이 한 번에 하나의 디스크만 생성됩니다. 원하는 디스크를 신중하게 선택하세요.</span>
+      <div class="pf-c-modal-box pf-m-lg" role="dialog" aria-modal="true" aria-label="GFS Disk Add">
+        <button id="button-close-modal-gfs-disk-add" aria-disabled="false" aria-label="Close" class="pf-c-button pf-m-plain" type="button">
+          <i class="fas fa-times" aria-hidden="true"></i>
+        </button>
+
+        <header class="pf-c-modal-box__header">
+          <h1 class="pf-c-modal-box__title"><span class="pf-c-modal-box__title-text">GFS 디스크 추가</span></h1>
+          <div style="display:flex; align-items:center; margin-top:16px; font-size:large; color:maroon;">
+            <i class="fas fa-exclamation-triangle" aria-hidden="true" style="margin-right:6px; font-size:25px; color:#d9822b;"></i>
+            <span>선택한 항목과 관계없이 한 번에 하나의 디스크만 생성됩니다. 원하는 디스크를 신중하게 선택하세요.</span>
+          </div>
+        </header>
+        <div class="pf-c-modal-box__body">
+          <form novalidate class="pf-c-form pf-m-horizontal" style="margin-left:15px; margin-top:10px;">
+            <section class="pf-c-form__section">
+              <!-- 1) 먼저: 디스크 이미지 생성 버튼 -->
+              <div class="pf-c-form__group" style="display:flex; align-items:center; justify-content:flex-start;" id="div-disk-image-create">
+                <button id="button-create-gfs-disk-image" class="pf-c-button pf-m-secondary pf-m-display-lg" type="button">
+                  디스크 이미지 생성
+                </button>
+                <span style="margin-left:10px; color:#6a6e73;">생성 후 새로고침을 눌러 목록을 갱신한 뒤 디스크를 선택하십시오.</span>
+              </div>
+              <!-- 2) 그 다음: 대상 장치 + 새로고침 + 리스트 -->
+              <div class="pf-c-form__group" style="display:flex; align-items:flex-start; gap:16px;">
+                <div class="pf-c-form__group-label" style="min-width:260px;">
+                  <div style="display:flex; align-items:center; justify-content:space-evenly; gap:12px;">
+                    <label class="pf-c-form__label" style="margin-bottom:0;">
+                      <span class="pf-c-form__label-text">GFS 디스크 구성 대상 장치</span>
+                      <span class="pf-c-form__label-required" aria-hidden="true">&#42;</span>
+                    </label>
+                    <!-- 새로고침은 그대로: 디스크 선택 목록 갱신 -->
+                    <button id="button-refresh-modal-gfs-disk-add" class="pf-c-button pf-m-plain" type="button"
+                            aria-label="새로고침" title="새로고침"
+                            style="padding:8px 17px; border:2px solid #d2d2d2; border-radius:30px; background:#fff; line-height:1;">
+                      <i class="fas fa-sync-alt" aria-hidden="true"></i>
+                    </button>
+                  </div>
                 </div>
-            </header>
-            <div class="pf-c-modal-box__body">
-                <form novalidate class="pf-c-form pf-m-horizontal" style="margin-left:15px;margin-top:10px">
-                    <section class="pf-c-form__section">
-                        <div class="pf-c-form__group" style="display: flex;align-items: center;justify-content: space-around;align-content: center;">
-                            <div class="pf-c-form__group-label">
-                                <label class="pf-c-form__label">
-                                    <span class="pf-c-form__label-text">GFS 디스크 구성 대상 장치</span>
-                                    <span class="pf-c-form__label-required" aria-hidden="true">&#42;</span>
-                                </label>
-                            </div>
-                            <div class="pf-c-form__group-control pf-m-stack" id="gfs-disk-add-list"
-                                style="margin-top:8px;max-height: 400px;overflow-y: auto;">
-                            </div>
-                        </div>
-                    </section>
-                </form>
-            </div>
-            <footer class="pf-c-modal-box__footer">
-                <button id="button-execution-modal-gfs-disk-add" aria-disabled="false"
-                    class="pf-c-button pf-m-primary" type="button" data-ouia-safe="true" disabled>추가</button>
-                <button id="button-cancel-modal-gfs-disk-add" aria-disabled="false" class="pf-c-button pf-m-link"
-                    type="button" data-ouia-safe="true">취소</button>
-            </footer>
+                <div class="pf-c-form__group-control pf-m-stack" id="gfs-disk-add-list" style="margin-top:8px; max-height:400px; overflow-y:auto; flex:1;">
+                </div>
+              </div>
+            </section>
+          </form>
         </div>
+        <footer class="pf-c-modal-box__footer">
+          <button id="button-execution-modal-gfs-disk-add" aria-disabled="false" class="pf-c-button pf-m-primary" type="button" data-ouia-safe="true" disabled>추가</button>
+          <button id="button-cancel-modal-gfs-disk-add" aria-disabled="false" class="pf-c-button pf-m-link" type="button" data-ouia-safe="true">취소</button>
+        </footer>
+      </div>
     </div>
-</div>
+  </div>
 <!-- GFS 디스크 추가 : Modal 영역 끝 -->
 <!-- GFS 디스크 삭제 : Modal 영역 시작 -->
 <div id="div-modal-gfs-disk-delete" class="pf-c-backdrop" style="display:none">
@@ -1858,11 +1989,24 @@
                   </label>
                 </div>
               </div>
+            <!-- 디스크 이미지 생성 (확장 전) -->
+            <div class="pf-c-form__group" style="display:none; align-items:center; justify-content:flex-start;" id="div-disk-image-create-extend">
+              <button id="button-create-gfs-disk-image-extend" class="pf-c-button pf-m-secondary pf-m-display-lg" type="button">
+                디스크 이미지 생성
+              </button>
+              <span style="margin-left:10px; color:#6a6e73;">생성 후 새로고침을 눌러 목록을 갱신한 뒤 디스크를 선택하십시오.</span>
+            </div>
             <!-- LUN 디스크 선택 영역 -->
             <div id="lun-selection-section" class="pf-c-form__group" style="display: none; margin-bottom: 20px;">
               <label class="pf-c-form__label">
                 <span class="pf-c-form__label-text" style="font-weight: 600;">추가할 LUN 디스크 선택</span>
               </label>
+                <!-- 새로고침은 그대로: 디스크 선택 목록 갱신 -->
+                <button id="button-refresh-modal-gfs-disk-extend" class="pf-c-button pf-m-plain" type="button"
+                        aria-label="새로고침" title="새로고침"
+                        style="padding:8px 17px; border:2px solid #d2d2d2; border-radius:30px; background:#fff; line-height:1;">
+                    <i class="fas fa-sync-alt" aria-hidden="true"></i>
+                </button>
               <div class="pf-c-form__group-control pf-m-stack" id="gfs-disk-extend-add-list"
                 style="margin-top: 8px; padding: 8px 12px; background-color: #f0f0f0; border-radius: 6px; max-height: 250px; overflow-y: auto;">
                 <!-- JS로 디스크 삽입 예정 -->
@@ -2288,6 +2432,177 @@
     </div>
 </div>
 <!-- ssh port 변경 : Modal 영역 끝 -->
+<!-- 공유 파일 생성  : Modal 영역 시작 -->
+<div id="div-modal-hci-shared-file-create" class="pf-c-backdrop" style="display:none">
+    <div class="pf-l-bullseye">
+      <div class="pf-c-modal-box pf-m-sm" role="dialog" aria-modal="true" aria-label="HCI Shared File Create">
+        <button id="button-close-modal-hci-shared-file-create" class="pf-c-button pf-m-plain" type="button" aria-label="Close"><i class="fas fa-times" aria-hidden="true"></i></button>
+        <header class="pf-c-modal-box__header">
+          <h1 class="pf-c-modal-box__title"><span class="pf-c-modal-box__title-text">공유 파일 생성</span></h1>
+        </header>
+        <div class="pf-c-modal-box__body">
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div class="pf-c-alert pf-m-warning pf-m-inline" aria-label="Glue required" style="margin:0;">
+              <div class="pf-c-alert__icon"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i></div>
+              <h4 class="pf-c-alert__title"><span class="pf-screen-reader">Warning:</span>Glue 클러스터가 구성되어 있어야 합니다.</h4>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; border:1px solid #d2d2d2; border-radius:8px; background:#f5f5f5;">
+              <div style="display:flex; align-items:baseline; gap:8px;">
+                <span style="color:#6a6e73;">공유 파일 용량</span>
+                <span id="hci-shared-file-size-info" style="font-size:20px; font-weight:700;">N/A</span>
+                <span style="color:#6a6e73;">GB</span>
+              </div>
+              <div id="modal-div-hci-shared-file-create" style="display:flex; align-items:center; gap:10px;">
+                <span style="color:#6a6e73;">용량 확인</span>
+                <label class="pf-c-switch" style="margin:0;">
+                  <input id="modal-input-hci-shared-file-create" class="pf-c-switch__input" type="checkbox" aria-label="공유 파일 용량 체크">
+                  <span class="pf-c-switch__toggle"><span id="modal-switch-hci-shared-file-create" class="pf-c-switch__toggle-icon" aria-hidden="true"></span></span>
+                </label>
+              </div>
+            </div>
+            <div class="pf-c-content" style="margin:0; color:#6a6e73;">공유 파일 생성을 진행하시겠습니까?</div>
+          </div>
+        </div>
+        <footer class="pf-c-modal-box__footer" style="display:flex; gap:10px; margin-top:0;">
+          <button id="button-execution-modal-hci-shared-file-create" class="pf-c-button pf-m-primary" type="button" data-ouia-safe="true" disabled>실행</button>
+          <button id="button-cancel-modal-hci-shared-file-create" class="pf-c-button pf-m-link" type="button" data-ouia-safe="true">취소</button>
+        </footer>
+      </div>
+    </div>
+  </div>
+
+<!-- 공유 파일 생성  : Modal 영역 끝 -->
+<!-- 디스크 이미지 생성 : Modal 영역 시작-->
+<div id="div-modal-disk-image-create" class="pf-c-backdrop" style="display:none">
+    <div class="pf-l-bullseye">
+      <div class="pf-c-modal-box pf-m-md" role="dialog" aria-modal="true" aria-label="GFS Disk Image Create">
+        <button id="button-close-modal-disk-image-create" class="pf-c-button pf-m-plain" type="button" aria-label="Close">
+          <i class="fas fa-times" aria-hidden="true"></i>
+        </button>
+        <header class="pf-c-modal-box__header">
+          <h1 class="pf-c-modal-box__title">
+            <span class="pf-c-modal-box__title-text">디스크 이미지 생성</span>
+          </h1>
+          <div style="margin-top:10px; color:#6a6e73;">공유 파일에 사용할 디스크 이미지를 생성합니다.</div>
+        </header>
+        <div class="pf-c-modal-box__body">
+          <form novalidate class="pf-c-form pf-m-horizontal">
+            <section class="pf-c-form__section">
+              <!-- 용량 입력 -->
+              <div class="pf-c-form__group">
+                <div class="pf-c-form__group-label" style="min-width:220px;">
+                  <label class="pf-c-form__label" for="form-input-disk-image-size">
+                    <span class="pf-c-form__label-text">디스크 이미지 용량</span>
+                    <span class="pf-c-form__label-required" aria-hidden="true">&#42;</span>
+                  </label>
+                </div>
+                <div class="pf-c-form__group-control">
+                  <!-- GB 줄바꿈 방지: input-group -->
+                  <div class="pf-c-input-group" style="max-width:320px;">
+                    <input class="pf-c-form-control"
+                           id="form-input-disk-image-size"
+                           name="form-input-disk-image-size"
+                           type="text"
+                           inputmode="numeric"
+                           pattern="[0-9]*"
+                           aria-label="디스크 이미지 용량(GB)" />
+                    <span class="pf-c-input-group__text">GB</span>
+                  </div>
+                  <div style="margin-top:6px; color:#6a6e73;">
+                    예) 500, 1000, 2000
+                  </div>
+                </div>
+              </div>
+              <!-- 확인 스위치(실수 방지) -->
+              <div class="pf-c-form__group">
+                <div class="pf-c-form__group-label" style="min-width:220px;">
+                  <label class="pf-c-form__label" for="modal-input-disk-image-create-confirm">
+                    <span class="pf-c-form__label-text">용량 확인</span>
+                    <span class="pf-c-form__label-required" aria-hidden="true">&#42;</span>
+                  </label>
+                </div>
+                <div class="pf-c-form__group-control" style="display:flex; align-items:center; justify-content:space-between; max-width:320px;">
+                  <span style="color:#6a6e73;">용량 확인 후 체크하십시오.</span>
+                  <label class="pf-c-switch" style="margin:0;">
+                    <input id="modal-input-disk-image-create-confirm" class="pf-c-switch__input" type="checkbox" aria-label="용량 확인">
+                    <span class="pf-c-switch__toggle">
+                      <span id="modal-switch-disk-image-create-confirm" class="pf-c-switch__toggle-icon" aria-hidden="true"></span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+            </section>
+          </form>
+        </div>
+        <!-- footer: 버튼 + 주의사항(하단에 자연스럽게) -->
+        <footer class="pf-c-modal-box__footer" style="display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; gap:10px; align-items:center;">
+            <button id="button-execution-modal-disk-image-create" class="pf-c-button pf-m-primary" type="button" disabled>
+              생성
+            </button>
+            <button id="button-cancel-modal-disk-image-create" class="pf-c-button pf-m-link" type="button">
+              취소
+            </button>
+          </div>
+
+          <div class="pf-c-alert pf-m-warning pf-m-inline" aria-label="disk image warning" style="margin:0;">
+            <div class="pf-c-alert__icon">
+              <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+            </div>
+            <h4 class="pf-c-alert__title">주의사항</h4>
+            <div class="pf-c-alert__description">
+                <p>RBD 이미지는 이미지 1개당 최대 2TB까지 생성되며, 공유 파일 용량이 2TB를 초과하는 경우 용량에 맞게 여러 개의 RBD 이미지로 분할되어 생성됩니다.</p>
+                <p>2TB를 초과하는 용량을 설정하신 경우에는 분할 생성된 RBD 이미지가 모두 준비되었는지 확인한 후 다음 단계로 진행해 주시기 바랍니다.</p>
+                <p>이미 RBD 이미지가 생성되어 있는 환경에서 다시 구성을 진행하는 경우, 기존에 생성된 RBD 이미지를 선택하거나 필요 시 새로 생성한 뒤 다음 단계로 진행해 주시기 바랍니다.</p>
+                <p>생성 중에는 작업을 중단하지 마십시오. 생성 완료 후 “새로고침”을 눌러 디스크 목록을 갱신한 뒤 디스크를 선택하십시오.</p>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </div>
+<!-- 디스크 이미지 생성 : Modal 영역 끝-->
+<!-- 디스크 이미지 삭제 : Modal 영역 시작 -->
+<div id="div-modal-disk-image-delete" class="pf-c-backdrop" style="display:none">
+    <div class="pf-l-bullseye">
+        <div class="pf-c-modal-box pf-m-md" role="dialog" aria-modal="true" aria-label="Disk Image delete">
+            <button id="button-close-modal-disk-image-delete" aria-disabled="false" aria-label="Close"
+                class="pf-c-button pf-m-plain" type="button">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <header class="pf-c-modal-box__header">
+                <h1 class="pf-c-modal-box__title">
+                    <span class="pf-c-modal-box__title-text">디스크 이미지 삭제</span>
+                </h1>
+                <div style="display: flex; align-items: center; margin-top: 20px;">
+                    <i class="fas fa-exclamation-triangle " aria-hidden="true"
+                        style="margin-right: 15px;font-size:25px; color: #d9822b;"></i>
+                    <span style="color:red;">선택한 디스크 이미지의 모든 데이터가 영구적으로 삭제됩니다!<br/>
+                        삭제된 데이터는 복구가 불가능하니, 반드시 신중하게 확인 후 진행하시기 바랍니다.</span>
+                </div>
+            </header>
+            <div class="pf-c-modal-box__body">
+                <form novalidate class="pf-c-form pf-m-horizontal">
+                    <section class="pf-c-form__section">
+                        <div class="pf-c-form__group" style="display: flex;">
+                            <div class="pf-c-form__group-control pf-m-stack" id="disk-image-delete-list"
+                                style="margin-top:8px;max-height: 400px;overflow-y: auto;">
+                            </div>
+                        </div>
+                    </section>
+                </form>
+            </div>
+            <footer class="pf-c-modal-box__footer">
+                <button id="button-execution-modal-disk-image-delete" aria-disabled="false"
+                    class="pf-c-button pf-m-primary" type="button" data-ouia-safe="true" disabled>삭제</button>
+                <button id="button-cancel-modal-disk-image-delete" aria-disabled="false"
+                    class="pf-c-button pf-m-link" type="button" data-ouia-safe="true">취소</button>
+            </footer>
+        </div>
+    </div>
+</div>
+<!-- 디스크 이미지 삭제 : Modal 영역 끝 -->
 </body>
 
 </html>

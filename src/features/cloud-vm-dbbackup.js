@@ -22,7 +22,7 @@ $('#button-execution-modal-cloud-vm-db-dump').on('click', function () {
 
 // 클라우드센터 VM DB 백업파일 다운로드 링크 클릭 시
 $('#span-modal-wizard-cluster-config-finish-db-dump-file-download').on('click', function () {
-    
+
 })
 
 $('#button-close-modal-cloud-vm-db-dump').on('click', function(){
@@ -48,7 +48,7 @@ $('#button-cancel-modal-cloud-vm-db-dump').on('click', function(){
     $('#div-modal-db-backup-cloud-vm-regular-backup-option').hide();
     $('#div-modal-db-backup-cloud-vm-regular-backup-option-date').hide();
     $('#div-modal-db-backup-cloud-vm-regular-backup-option-week').hide();
-    
+
     $('#input-ccvm-regular-backup-timepicker-no').show();
     $('#input-ccvm-regular-backup-timepicker-hourly').hide();
     $('#input-ccvm-regular-backup-timepicker-daily').hide();
@@ -110,7 +110,7 @@ $('#radio-ccvm-regular-backup').on('click', function () {
     $('#dbdump-prepare-status').hide();
 
     checkDBBackupCronjob()
-    
+
 });
 $('#radio-ccvm-manage-backup').on('click', function () {
     $('#div-db-backup-cloud-vm-manage').show();
@@ -156,11 +156,11 @@ $('#toggle-ccvm-backup-check').click(function(){
     });
 });
 
-// db backup 파일 보존 기간 변경하는 '+', '-' 기능 
+// db backup 파일 보존 기간 변경하는 '+', '-' 기능
 $('#form-input-db-backup-cloud-vm-number-plus').on('click', function () {
     let num = $("#form-input-db-backup-cloud-vm-number").val();
     $("#form-input-db-backup-cloud-vm-number").val(num * 1 + 1);
-    
+
 });
 $('#form-input-db-backup-cloud-vm-number-minus').on('click', function () {
     let num = $("#form-input-db-backup-cloud-vm-number").val();
@@ -168,9 +168,9 @@ $('#form-input-db-backup-cloud-vm-number-minus').on('click', function () {
         $('#form-input-db-backup-cloud-vm-number').val(num * 1 - 1)
     }
 });
-$('input[type="number"]').on('input', function() {
-    $(this).val($(this).val().replace(/[^0-9]/g, '').slice(0, 4));
-});
+// $('input[type="number"]').on('input', function() {
+//     $(this).val($(this).val().replace(/[^0-9]/g, '').slice(0, 4));
+// });
 
 $('#select-db-backup-cloud-vm-drop-repeat').change(function() {
     if($(this).val() == "no"){
@@ -306,7 +306,7 @@ async function ccvmDbBackup() {
     let regular_input_ccvm_backup_time_one = "";
     let regular_input_ccvm_backup_time_two = "";
     let form_input_db_backup_cloud_vm_number = $('#form-input-db-backup-cloud-vm-number').val();
-    
+
     if (regular_option_ccvm_backup == "no") {
         regular_input_ccvm_backup_time_one = $('#input-ccvm-regular-backup-timepicker-no').val();
     }else if (regular_option_ccvm_backup == "hourly") {

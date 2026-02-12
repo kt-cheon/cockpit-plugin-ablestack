@@ -36,7 +36,7 @@ def pcsDetail():
         ret = sh.python3(pluginpath + "/python/pcs/main.py","status", "--resource", "cloudcenter_res")
     except Exception as e:
         ret = createReturn(code=500, val='ERROR')
-        print ('EXCEPTION : ',e)
+
 
     return ret
 
@@ -49,7 +49,6 @@ def pcsStart():
                 break
     except Exception as e:
         ret = createReturn(code=500, val='ERROR')
-        print ('EXCEPTION : ',e)
 
     return ret
 
@@ -64,7 +63,6 @@ def pcsStop():
                 break
     except Exception as e:
         ret = createReturn(code=500, val='ERROR')
-        print ('EXCEPTION : ',e)
 
     return ret
 
@@ -75,7 +73,7 @@ def pcsCleanup():
         ret = sh.python3(pluginpath + "/python/pcs/main.py","cleanup", "--resource", "cloudcenter_res")
     except Exception as e:
         ret = createReturn(code=500, val='ERROR')
-        print ('EXCEPTION : ',e)
+
 
     return ret
 
@@ -91,7 +89,6 @@ def pcsMigration():
         sh.python3(pluginpath + "/python/pcs/main.py","cleanup", "--resource", "cloudcenter_res")
     except Exception as e:
         ret = createReturn(code=500, val='ERROR')
-        print ('EXCEPTION : ',e)
 
     return ret
 
@@ -103,7 +100,6 @@ def pcsDestroy(purge):
 
     except Exception as e:
         ret = createReturn(code=500, val='ERROR')
-        print ('EXCEPTION : ',e)
 
     return ret
 
