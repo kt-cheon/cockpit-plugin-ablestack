@@ -64,6 +64,9 @@ cephadm --image "$image" bootstrap \
         ceph config set mgr mgr/cephadm/container_image_promtail localhost:15000/grafana/promtail:Diplo
         ceph config set mgr mgr/cephadm/container_image_nvmeof-cli localhost:15000/glue/nvmeof-cli:Diplo
         ceph config set mgr mgr/cephadm/container_image_nvmeof localhost:15000/glue/nvmeof:Diplo
+        ceph config set mgr mgr/cephadm/container_image_keepalived localhost:15000/glue/keepalived:2.2.4
+        ceph config set mgr mgr/cephadm/container_image_haproxy localhost:15000/glue/haproxy:2.3
+
 
 #crontab<<EOF
 #* * * * * /usr/local/bin/ipcorrector
