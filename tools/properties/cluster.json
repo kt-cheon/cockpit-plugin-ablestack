@@ -1,9 +1,9 @@
 {
     "clusterConfig": {
-        "type": "",
+        "type": "ablestack-vm",
         "backup_path": "/mnt/glue-gfs/backup/ccvm",
         "ccvm": {
-            "ip": ""
+            "ip": "10.10.13.10"
         },
         "gwvm": {
             "ip": "",
@@ -13,18 +13,33 @@
             "ingress_ip": ""
         },
         "mngtNic": {
-            "cidr": "",
-            "gw": "",
-            "dns": ""
+            "cidr": "16",
+            "gw": "10.10.0.1",
+            "dns": "8.8.8.8"
         },
         "pcsCluster": {
-            "hostname1": "",
-            "hostname2": "",
-            "hostname3": ""
+            "hostname1": "10.10.13.1",
+            "hostname2": "10.10.13.2",
+            "hostname3": "10.10.13.3"
         },
         "hosts": [
+            {
+                "index": "1",
+                "hostname": "ablecube1",
+                "ablecube": "10.10.13.1"
+            },
+            {
+                "index": "2",
+                "hostname": "ablecube2",
+                "ablecube": "10.10.13.2"
+            },
+            {
+                "index": "3",
+                "hostname": "ablecube3",
+                "ablecube": "10.10.13.3"
+            }
         ],
         "extenal_timeserver": "",
-        "iscsi_storage":"false"
+        "iscsi_storage": "false"
     }
 }
