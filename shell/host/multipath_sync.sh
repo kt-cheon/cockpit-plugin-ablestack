@@ -21,7 +21,7 @@ then
 
         sleep 1
         # 처음 셋팅된 mpath 삭제
-        /usr/bin/ssh -o StrictHostKeyChecking=no $host systemctl stop multipathd
+        /usr/bin/ssh -o StrictHostKeyChecking=no $host systemctl stop multipathd.socket
         /usr/bin/ssh -o StrictHostKeyChecking=no $host multipath -F
 
         sleep 1
