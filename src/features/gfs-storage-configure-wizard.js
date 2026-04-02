@@ -407,6 +407,9 @@ $('#button-execution-modal-gfs-storage-wizard-confirm').on('click', function () 
 });
 
 // 마법사 "취소 버튼 모달창" show, hide
+$('#button-cancel-config-modal-gfs-storage-wizard-config').on('click', function () {
+  $('#div-modal-cancel-gfs-storage-wizard-cancel').show();
+});
 $('#button-cancel-modal-gfs-storage-wizard-confirm').on('click', function () {
   $('#div-modal-cancel-gfs-storage-wizard-cancel').show();
 });
@@ -414,7 +417,7 @@ $('#button-close-modal-gfs-storage-wizard-cancel').on('click', function () {
   $('#div-modal-cancel-gfs-storage-wizard-cancel').hide();
 });
 $('#button-cancel-modal-gfs-storage-wizard-cancel').on('click', function () {
-  $('#div-modal-cancel-gfs-storage-wizard-cancel').hide();
+  $('#').hide();
 });
 // 마법사 "취소 버튼 모달창" 실행 버튼을 눌러 취소를 실행
 $('#button-execution-modal-storage-wizard-cancel').on('click', function () {
