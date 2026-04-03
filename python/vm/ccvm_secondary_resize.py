@@ -104,7 +104,7 @@ def ccvm_secondary_resize(args):
                 run(["qemu-img", "resize", ccvm_file, f"+{args.add_size}G"])
 
         elif os_type == "ablestack-standalone":
-            ccvm_file = "/var/lib/libvirt/images/ccvm.qcow2"
+            ccvm_file = "/mnt/glue/ccvm.qcow2"
             run(["virsh", "shutdown", "ccvm"], check=False)
             if not wait_until(lambda: virsh_state("ccvm") == "shut off", timeout_sec=TIMEOUT_SEC):
                 return createReturn(code=500, val="CCVM shutdown timeout. Please check.")
