@@ -142,6 +142,8 @@ function showSpinner(headerText, bodyHtml) {
 }
 
 function hideSpinner() {
+  $("#div-modal-spinner-header-txt").text("");
+  $("#div-modal-spinner-body-txt").html("");
   $("#div-modal-spinner").hide();
 }
 
