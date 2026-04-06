@@ -75,6 +75,57 @@ function showStatusAlert(title, bodyHtml) {
   $("#div-modal-status-alert").show();
 }
 
+function openRestoreConfirm() {
+  const displayName = selectedRestoreName || selectedRestorePath || "-";
+  $("#ccvm-restore-confirm-file-name").text(displayName);
+  $("#ccvm-vm-restore-div-modal-confirm").show();
+}
+
+function closeRestoreConfirm() {
+  $("#ccvm-vm-restore-div-modal-confirm").hide();
+}
+
+function executeRestore() {
+  closeRestoreConfirm();
+  $("#div-modal-ccvm-restore").hide();
+  $("#ccvm-vm-restore-div-modal-cloud-vm-restore").hide();
+
+  showSpinner("클라우드센터 복구를 진행 중입니다.", `대상 파일: ${escapeHtml(selectedRestorePath)}`);
+
+  const cmd = ["/usr/bin/python3", "-B", ccvmRestoreScript, "restore", "--target-file", selectedRestorePath];
+  console.log(cmd);
+  cockpit
+    .spawn(cmd)
+    .then(function (data) {
+      let retVal;
+      try {
+        retVal = JSON.parse(data);
+      } catch (e) {
+        hideSpinner();
+        showStatusAlert("클라우드센터 복구 실패", "복구 응답을 해석하지 못했습니다.");
+        $("#div-modal-ccvm-restore").show();
+        $("#ccvm-vm-restore-div-modal-cloud-vm-restore").show();
+        return;
+      }
+
+      hideSpinner();
+      if (retVal.code !== 200) {
+        showStatusAlert("클라우드센터 복구 실패", retVal.val || "복구를 실패했습니다.");
+        $("#div-modal-ccvm-restore").show();
+        $("#ccvm-vm-restore-div-modal-cloud-vm-restore").show();
+        return;
+      }
+
+      showStatusAlert("클라우드센터 복구 완료", "복구를 완료했습니다. 잠시만 기다렸다가 클라우드센터에 접속해 주세요.");
+    })
+    .catch(function () {
+      hideSpinner();
+      showStatusAlert("클라우드센터 복구 실패", "복구를 실패했습니다.");
+      $("#div-modal-ccvm-restore").show();
+      $("#ccvm-vm-restore-div-modal-cloud-vm-restore").show();
+    });
+}
+
 function renderRestoreList(items) {
   const $tbody = $("#ccvm-vm-restore-table-body");
   $tbody.empty();
@@ -201,48 +252,25 @@ $(document).on("click", "#ccvm-vm-restore-button-execution", function () {
     return;
   }
 
-  const confirmText = `선택한 백업 파일로 복구를 진행합니다.\n${selectedRestoreName}\n계속 진행하시겠습니까?`;
-  if (!window.confirm(confirmText)) {
+  openRestoreConfirm();
+});
+
+$(document).on(
+  "click",
+  "#ccvm-vm-restore-button-confirm-cancel, #ccvm-vm-restore-button-close-confirm",
+  function () {
+    closeRestoreConfirm();
+  }
+);
+
+$(document).on("click", "#ccvm-vm-restore-button-confirm-execution", function () {
+  if (!selectedRestorePath) {
+    closeRestoreConfirm();
+    showStatusAlert("클라우드센터 복구 실패", "복구할 백업 파일을 선택해 주세요.");
     return;
   }
 
-  $("#div-modal-ccvm-restore").hide();
-  $("#ccvm-vm-restore-div-modal-cloud-vm-restore").hide();
-
-  showSpinner("클라우드센터 복구를 진행 중입니다.", `대상 파일: ${escapeHtml(selectedRestorePath)}`);
-
-  const cmd = ["/usr/bin/python3", "-B", ccvmRestoreScript, "restore", "--target-file", selectedRestorePath];
-  console.log(cmd);
-  cockpit
-    .spawn(cmd)
-    .then(function (data) {
-      let retVal;
-      try {
-        retVal = JSON.parse(data);
-      } catch (e) {
-        hideSpinner();
-        showStatusAlert("클라우드센터 복구 실패", "복구 응답을 해석하지 못했습니다.");
-        $("#div-modal-ccvm-restore").show();
-        $("#ccvm-vm-restore-div-modal-cloud-vm-restore").show();
-        return;
-      }
-
-      hideSpinner();
-      if (retVal.code !== 200) {
-        showStatusAlert("클라우드센터 복구 실패", retVal.val || "복구를 실패했습니다.");
-        $("#div-modal-ccvm-restore").show();
-        $("#ccvm-vm-restore-div-modal-cloud-vm-restore").show();
-        return;
-      }
-
-      showStatusAlert("클라우드센터 복구 완료", "복구를 완료했습니다. ccvm을 시작해 주세요.");
-    })
-    .catch(function () {
-      hideSpinner();
-      showStatusAlert("클라우드센터 복구 실패", "복구를 실패했습니다.");
-      $("#div-modal-ccvm-restore").show();
-      $("#ccvm-vm-restore-div-modal-cloud-vm-restore").show();
-    });
+  executeRestore();
 });
 
 $(document).on("click", "#button-cloud-vm-restore", function () {
