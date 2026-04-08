@@ -1,6 +1,8 @@
 /** CCVM VM backup modal actions */
 
-const ccvmBackupDir = "/mnt/glue-gfs/backup/ccvm";
+const ccvmBackupDir = sessionStorage.getItem("os_type") === "ablestack-standalone"
+  ? "/mnt/glue/backup/ccvm"
+  : "/mnt/glue-gfs/backup/ccvm";
 const ccvmBackupScript = pluginpath + "/python/backup/ccvm_backup.py";
 const ccvmBackupStatusPollIntervalMs = 3000;
 const ccvmBackupStatusMaxPolls = 200;
