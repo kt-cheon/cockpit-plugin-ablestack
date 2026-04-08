@@ -10,8 +10,8 @@
         "wall": "false"
     },
     "license": {
-        "status": "true",
-        "type": "ABLESTACK"
+        "status": "false",
+        "type": ""
     },
     "security_patch": {
         "status": "false"
