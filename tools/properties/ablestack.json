@@ -1,13 +1,13 @@
 {
     "bootstrap": {
         "scvm": "false",
-        "ccvm": "true",
+        "ccvm": "false",
         "pfmp": "false",
         "gfs_configure": "false",
         "local_configure": "false"
     },
     "monitoring": {
-        "wall": "true"
+        "wall": "false"
     },
     "license": {
         "status": "true",

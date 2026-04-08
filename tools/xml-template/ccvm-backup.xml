@@ -1,7 +1,7 @@
 <domainbackup>
   <disks>
     <disk name="vda" type="file">
-      <target file="/mnt/glue-gfs/backup/ccvm/ccvm.qcow2-20260402_140654"/>
+      <target file="/mnt/glue-gfs/backup/ccvm/"/>
     </disk>
   </disks>
 </domainbackup>
