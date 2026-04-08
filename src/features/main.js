@@ -1335,7 +1335,7 @@ function checkStorageVmStatus() {
           setStatusTone($('#scvm-deploy-status-check'), "ok");
           $("#menu-item-set-storage-center-vm-start").addClass('pf-m-disabled');
           $("#menu-item-set-storage-center-vm-resource-update").addClass('pf-m-disabled');
-          $("#menu-item-linkto-storage-center-vm").removeClass('pf-m-disabled');
+          // $("#menu-item-linkto-storage-center-vm").removeClass('pf-m-disabled');
           if (sessionStorage.getItem("sc_status") == "HEALTH_ERR") { //가상머신 상태 running && sc상태 Error 일때
             $("#menu-item-set-storage-center-vm-delete").removeClass('pf-m-disabled');
           } else { //가상머신 상태 running && sc상태 ok, warn 일때
