@@ -2685,7 +2685,7 @@ function setDiskAction(type, action, extend) {
           if (mode == "single") {
             var disk_id = gfs_disk.devices;
           } else {
-            var disk_id = gfs_disk.disk_id.join(',');
+            var disk_id = Array.isArray(gfs_disk.disk_id) ? gfs_disk.disk_id.join(',') : (gfs_disk.disk_id || '');
           }
 
           // 각 데이터 길이에 따라 너비 조정
@@ -2755,7 +2755,7 @@ function setDiskAction(type, action, extend) {
           if (mode == "single") {
             var disk_id = gfs_disk.devices;
           } else {
-            var disk_id = gfs_disk.disk_id.join(',');
+            var disk_id = Array.isArray(gfs_disk.disk_id) ? gfs_disk.disk_id.join(',') : (gfs_disk.disk_id || '');
           }
           var [vg_name, lv_name] = gfs_disk.lvm.split("/").pop().split(/-(.+)/);
           var gfs_name = gfs_disk.mountpoint.split("/").pop();
@@ -3094,30 +3094,37 @@ function setDiskAction(type, action, extend) {
       if (blockdevices.length > 0) {
         for (var i = 0; i < blockdevices.length; i++) {
           var disk_id = blockdevices[i].rbd_path;
+          var partition_text = '';
+          var check_disable = '';
 
           // 각 데이터 길이에 따라 너비 조정
-          var sizeWidth = Math.max(blockdevices[i].size.length * 10, 160);   // 최소 200px
-          var pathWidth = Math.max(blockdevices[i].path.length * 10, 200);      // 최소 300px
-          var rbaPathWidth = Math.max(blockdevices[i].rbd_path.length * 10, 200); // 최소 300px
+          var sizeWidth = Math.max(blockdevices[i].size.length * 10, 50);   // 최소 50px
+          var maxSizeWidth = Math.max(blockdevices[i].size.length * 10, 100);   // 최대 100
+          var pathWidth = Math.max(blockdevices[i].path.length * 10, 200);      // 최소 200px
+          var rbaPathWidth = Math.max(blockdevices[i].rbd_path.length * 10, 200); // 최소 200px
+
+          if (blockdevices[i].children != undefined) {
+            partition_text = '( Partition exists count : ' + blockdevices[i].children.length + ' )';
+            check_disable = 'disabled';
+          }
 
           output += `
             <div style="margin-bottom: 8px; display: flex; align-items: center; font-family: monospace;">
               <input type="checkbox" class="disk-image-delete-checkbox" id="disk-image-checkbox-delete-${i}"
                 name="form-disk-image-checkbox-delete" data-size="${blockdevices[i].size}"
-                data-disk_id="${disk_id}" style="margin-left:5px; transform: scale(1.3); margin-right:10px;">
+                data-disk_id="${disk_id}" style="margin-left:5px; transform: scale(1.3); margin-right:10px;" ${check_disable}>
               <label for="disk-image-checkbox-delete-${i}"
-                style="display: inline-block; min-width:${sizeWidth}px; flex-grow: 2; overflow: hidden; text-overflow: ellipsis;">
+                style="display: inline-block; min-width:${sizeWidth}px; max-width:${maxSizeWidth}px; flex-grow: 2; overflow: hidden; text-overflow: ellipsis;">
                 ${blockdevices[i].path}
               </label>
               <label for="disk-image-checkbox-delete-${i}"
-                style="display: inline-block; min-width:${sizeWidth}px; flex-grow: 1; overflow: hidden; text-overflow: ellipsis;">
+                style="display: inline-block; min-width:${sizeWidth}px; max-width:${maxSizeWidth}px; flex-grow: 1; overflow: hidden; text-overflow: ellipsis;">
                 ${blockdevices[i].size}
               </label>
               <label for="disk-image-checkbox-delete-${i}"
                 style="display: inline-block; min-width:${rbaPathWidth}px; flex-grow: 2; overflow: hidden; text-overflow: ellipsis;">
-                ${blockdevices[i].rbd_path}
+                ${blockdevices[i].rbd_path} ${partition_text}
               </label>
-
             </div>
           `;
         }
@@ -5683,6 +5690,9 @@ $(' #button-refresh-modal-gfs-disk-extend').on('click', function () {
 });
 // 디스크 이미지 생성 버튼에 대한 액션 정의
 $('#div-disk-image-create, #div-disk-image-create-extend').on('click', function () {
+  $('#form-input-disk-image-size').val('');
+  $('input[type=checkbox][id="modal-input-disk-image-create-confirm"]').prop("checked", false);
+  $('#button-execution-modal-disk-image-create').attr('disabled', true);
   $('#div-modal-disk-image-create').show();
 });
 $('#button-cancel-modal-disk-image-create, #button-close-modal-disk-image-create').on('click', function () {
@@ -5737,6 +5747,9 @@ $('#button-execution-modal-disk-image-create').on('click', function () {
 });
 
 $('#menu-item-set-disk-image-add').on('click', function () {
+  $('#form-input-disk-image-size').val('');
+  $('input[type=checkbox][id="modal-input-disk-image-create-confirm"]').prop("checked", false);
+  $('#button-execution-modal-disk-image-create').attr('disabled', true);
   $('#div-modal-disk-image-create').show();
 });
 $('#menu-item-set-disk-image-delete').on('click', function () {
@@ -5809,6 +5822,4 @@ $('#button-execution-modal-disk-image-delete').on('click', function () {
       $('#div-modal-status-alert').detach().appendTo('body').show();
     })
   })
-
-
 });
