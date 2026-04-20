@@ -55,7 +55,7 @@
                     <div class="pf-v6-l-grid pf-m-gutter">
                         <div class="pf-v6-l-grid__item pf-m-6-col" id="div-card-gfs-cluster-status" style="display: none;">
                             <!-- GFS 리소스 상태 카드 영역 시작-->
-                            <div class="pf-v6-c-card pf-m-hoverable pf-m-compact" id="card-gfs-cluster-status">
+                            <div class="pf-v6-c-card pf-m-hoverable pf-m-compact" id="card-gfs-cluster-status" style="overflow: visible;">
                                 <div class="pf-v6-c-card__header">
                                     <div class="pf-v6-c-card__header-main">
                                         <i class="pf-v6-pficon pf-v6-pficon-network"
@@ -187,7 +187,7 @@
                         </div>
                         <div class="pf-v6-l-grid__item pf-m-6-col" id="div-card-storage-cluster-status">
                             <!-- 스토리지 센터 클러스터 상태 카드 영역 시작-->
-                            <div class="pf-v6-c-card pf-m-hoverable pf-m-compact" id="card-storage-cluster-status">
+                            <div class="pf-v6-c-card pf-m-hoverable pf-m-compact" id="card-storage-cluster-status" style="overflow: visible;">
                                 <div class="pf-v6-c-card__header">
                                     <div class="pf-v6-c-card__header-main">
                                         <i class="pf-v6-pficon pf-v6-pficon-registry"
@@ -349,7 +349,7 @@
                         </div>
                         <div class="pf-v6-l-grid__item pf-m-6-col" id="div-card-gfs-integration-status" style="display: none;">
                             <!-- GFS 통합 상태 카드 영역 시작-->
-                            <div class="pf-v6-c-card pf-m-hoverable pf-m-compact" id="card-gfs-integration-status">
+                            <div class="pf-v6-c-card pf-m-hoverable pf-m-compact" id="card-gfs-integration-status" style="overflow: visible;">
                                 <div class="pf-v6-c-card__header">
                                     <div class="pf-v6-c-card__header-main">
                                         <i class="pf-v6-pficon pf-v6-pficon-bundle"
@@ -463,7 +463,7 @@
                         </div>
                         <div class="pf-v6-l-grid__item pf-m-6-col" id="div-card-cloud-cluster-status">
                             <!-- 클라우드센터 클러스터 상태 카드 영역 시작-->
-                            <div class="pf-v6-c-card pf-m-hoverable pf-m-compact" id="card-cloud-cluster-status">
+                            <div class="pf-v6-c-card pf-m-hoverable pf-m-compact" id="card-cloud-cluster-status" style="overflow: visible;">
                                 <div class="pf-v6-c-card__header">
                                     <div class="pf-v6-c-card__header-main">
                                         <i class="pf-v6-pficon pf-v6-pficon-network"
@@ -602,7 +602,7 @@
                         </div>
                         <div class="pf-v6-l-grid__item pf-m-6-col" id="div-card-storage-vm-status">
                             <!-- 스토리지센터VM 상태 카드 영역 시작-->
-                            <div class="pf-v6-c-card pf-m-hoverable pf-m-compact" id="card-storage-vm-status">
+                            <div class="pf-v6-c-card pf-m-hoverable pf-m-compact" id="card-storage-vm-status" style="overflow: visible;">
                                 <div class="pf-v6-c-card__header">
                                     <div class="pf-v6-c-card__header-main">
                                         <i class="pf-v6-pficon pf-v6-pficon-virtual-machine"
@@ -641,8 +641,7 @@
                                                 </li>
                                                 <li class="pf-v6-c-divider" role="separator"></li>
                                                 <li>
-                                                    <a class="pf-v6-c-menu__item pf-m-disabled" href="#"
-                                                        aria-disabled="true" tabindex="-1"
+                                                    <a class="pf-v6-c-menu__item" href="#" tabindex="-1"
                                                         id="menu-item-linkto-storage-center-vm">스토리지센터VM 연결</a>
                                                 </li>
                                             </ul>
@@ -800,7 +799,7 @@
                         </div>
                         <div class="pf-v6-l-grid__item pf-m-6-col" id="div-card-gfs-disk-status" style="display:none">
                             <!-- GFS 디스크 상태 카드 영역 시작-->
-                            <div class="pf-v6-c-card pf-m-hoverable pf-m-compact" id="card-gfs-disk-status">
+                            <div class="pf-v6-c-card pf-m-hoverable pf-m-compact" id="card-gfs-disk-status" style="overflow: visible;">
                                 <div class="pf-v6-c-card__header">
                                     <div class="pf-v6-c-card__header-main">
                                         <i class="pf-v6-pficon pf-v6-pficon-virtual-machine"
@@ -886,7 +885,7 @@
                         </div>
                         <!-- 로컬 디스크 상태 카드 영역 시작-->
                         <div class="pf-v6-l-grid__item pf-m-12-col" id="div-card-local-disk-status" style="display:none">
-                            <div class="pf-v6-c-card pf-m-hoverable pf-m-compact" id="card-local-disk-status">
+                            <div class="pf-v6-c-card pf-m-hoverable pf-m-compact" id="card-local-disk-status" style="overflow: visible;">
                                 <div class="pf-v6-c-card__header">
                                     <div class="pf-v6-c-card__header-main">
                                         <i class="pf-v6-pficon pf-v6-pficon-virtual-machine"
@@ -1009,7 +1008,7 @@
 <!-- HCI 공유 파일 구성 마법사 : ./src/features/hci-shared-file-configure-wizard.html을 내용으로 load -->
 <div class="pf-v6-c-backdrop" id="div-modal-wizard-hci-shared-file-configure"></div>
 
-<!-- 로컬 스토리지 구성 마법사 : ./src/features/gfs-storage-configure-wizard.html을 내용으로 load -->
+<!-- 로컬 스토리지 구성 마법사 : ./src/features/local-storage-configure-wizard.html을 내용으로 load -->
 <div class="pf-v6-c-backdrop" id="div-modal-wizard-local-storage-configure"></div>
 
 <!-- 클라우드센터VM 배포 마법사 : ./src/features/cloud-vm-wizard.html을 내용으로 load -->
@@ -1474,9 +1473,9 @@
                         </div>
                     </section>
                 </form>
-                <label class="pf-v6-c-check pf-v6-c-menu__item" style="margin-top: 10px;" id="label-checkbox-mold-secondary-size-expansion">
+                <label class="pf-v6-c-check" style="margin-top: 10px;" id="label-checkbox-mold-secondary-size-expansion">
                     <input class="pf-v6-c-check__input" type="checkbox" id="input-checkbox-mold-secondary-size-expansion" value="resize"/>
-                    <span class="pf-v6-c-check__label" style="color: #c9190b;"><i class="fas fa-fw fa-exclamation-circle" aria-hidden="true"></i>용량 추가 작업시 클라우드센터 가상머신 스냅샷이 모두 삭제되고,<br/>&nbsp;&emsp;클라우드센터 가상머신을 재시작합니다. 그래도 진행하시겠습니까?</span>
+                    <span class="pf-v6-c-check__label" style="color: #c9190b;"><i class="fas fa-fw fa-exclamation-circle" aria-hidden="true"></i>작업 전 Mold DB 백업하여 데이터 보호를 권장합니다.<br/>&nbsp;&emsp;용량 추가 작업시 클라우드센터 가상머신 스냅샷이 모두 삭제되고,<br/>&nbsp;&emsp;클라우드센터 가상머신을 재시작합니다. 그래도 진행하시겠습니까?</span>
                 </label>
             </div>
             <footer class="pf-v6-c-modal-box__footer">
@@ -2532,7 +2531,7 @@
                            inputmode="numeric"
                            pattern="[0-9]*"
                            aria-label="디스크 이미지 용량(GB)" />
-                    <span class="pf-v6-c-input-group__text">GB</span>
+                    <span class="pf-v6-c-input-group__text" style="width: 30px;">GB</span>
                   </div>
                   <div style="margin-top:6px; color:#6a6e73;">
                     예) 500, 1000, 2000
