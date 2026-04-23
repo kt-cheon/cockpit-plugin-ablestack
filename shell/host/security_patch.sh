@@ -265,7 +265,7 @@ sed -i 's/^#*\s*ucredit\s*=.*/ucredit = -1/' $PWQUALITY_CONF
 sed -i 's/^#*\s*dcredit\s*=.*/dcredit = -1/' $PWQUALITY_CONF
 sed -i 's/^#*\s*ocredit\s*=.*/ocredit = -1/' $PWQUALITY_CONF
 sed -i 's/^#*\s*minlen\s*=.*/minlen = 9/' $PWQUALITY_CONF
-sed -i 's/^#*\s*difok\s*=.*/difok = N/' $PWQUALITY_CONF
+sed -i 's/^#*\s*difok\s*=.*/difok = 4/' $PWQUALITY_CONF
 
 # 설정이 없는 경우 파일 끝에 추가
 grep -q '^\s*lcredit\s*=' $PWQUALITY_CONF || echo 'lcredit = -1' >> $PWQUALITY_CONF
@@ -273,7 +273,7 @@ grep -q '^\s*ucredit\s*=' $PWQUALITY_CONF || echo 'ucredit = -1' >> $PWQUALITY_C
 grep -q '^\s*dcredit\s*=' $PWQUALITY_CONF || echo 'dcredit = -1' >> $PWQUALITY_CONF
 grep -q '^\s*ocredit\s*=' $PWQUALITY_CONF || echo 'ocredit = -1' >> $PWQUALITY_CONF
 grep -q '^\s*minlen\s*=' $PWQUALITY_CONF || echo 'minlen = 9' >> $PWQUALITY_CONF
-grep -q '^\s*difok\s*=' $PWQUALITY_CONF || echo 'difok = N' >> $PWQUALITY_CONF
+grep -q '^\s*difok\s*=' $PWQUALITY_CONF || echo 'difok = 4' >> $PWQUALITY_CONF
 
 systemctl restart systemd-logind
 
