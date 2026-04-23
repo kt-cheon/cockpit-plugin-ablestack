@@ -9,6 +9,7 @@ CEPH_SSH_CHECK="false"      # -C true|false
 SSHD_CONFIG="/etc/ssh/sshd_config"
 PERMITROOTLOGIN_CONF="/etc/ssh/sshd_config.d/01-permitrootlogin.conf"
 CONFIG_PATH="/usr/share/ablestack/ceph_ssh_config"
+SSH_SCAN_SCRIPT="/usr/share/cockpit/ablestack/shell/host/ssh-scan.sh"
 TARGET_HOST="scvm"
 SSH_USER="root"
 PORT_CHANGE_ONLY="false"        # --port-change 사용 시 true 로 설정
@@ -63,6 +64,23 @@ ensure_permit_root_login() {
     sed -i 's/^[[:space:]#]*PermitRootLogin[[:space:]].*/PermitRootLogin prohibit-password/' "$target"
   else
     echo 'PermitRootLogin prohibit-password' >> "$target"
+  fi
+}
+
+update_ssh_scan_port() {
+  local target="$1"
+  local port="$2"
+
+  if [[ ! -f "$target" ]]; then
+    echo "[WARN] ssh-scan 스크립트를 찾을 수 없습니다: $target"
+    return 0
+  fi
+
+  if grep -qE '^[[:space:]]*/usr/bin/ssh-keyscan[[:space:]]+-4[[:space:]]+-T[[:space:]]+1' "$target"; then
+    sed -i -E "s#(^[[:space:]]*/usr/bin/ssh-keyscan[[:space:]]+-4[[:space:]]+-T[[:space:]]+1)([[:space:]]+-p[[:space:]]+[0-9]+)?#\\1 -p ${port}#" "$target"
+    echo "[INFO] ssh_scan.sh 변경 완료"
+  else
+    echo "[WARN] ssh-scan 포트 변경 대상 줄을 찾을 수 없습니다: $target"
   fi
 }
 
@@ -183,6 +201,7 @@ EOF
   if sshd -t 2>/dev/null; then
     systemctl restart sshd
     echo "[INFO] sshd 재시작 완료(포트=${SSH_PORT})"
+    update_ssh_scan_port "$SSH_SCAN_SCRIPT" "$SSH_PORT"
   else
     echo "[ERROR] sshd 설정 문법 오류로 재시작 중단"
     exit 1
