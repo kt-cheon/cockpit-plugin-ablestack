@@ -20,7 +20,6 @@ except Exception:
 
 OS_RELEASE_PATH = Path("/etc/os-release")
 TARGET_KS_PATH = Path("ks/ablestack-ks.cfg")
-TARGET_MEDIA_REPO_PATH = Path("media.repo")
 TARGET_UPDATE_SCRIPT = Path("update.sh")
 
 
@@ -76,41 +75,25 @@ def validate_mount_path(mount_path):
 def read_update_info(mount_path):
     mount = validate_mount_path(mount_path)
     ks_path = mount / TARGET_KS_PATH
-    media_repo_path = mount / TARGET_MEDIA_REPO_PATH
     update_script_path = mount / TARGET_UPDATE_SCRIPT
 
     if not ks_path.exists():
         raise FileNotFoundError(f"{TARGET_KS_PATH} 파일을 찾을 수 없습니다.")
-    if not media_repo_path.exists():
-        raise FileNotFoundError(f"{TARGET_MEDIA_REPO_PATH} 파일을 찾을 수 없습니다.")
     if not update_script_path.exists():
         raise FileNotFoundError(f"{TARGET_UPDATE_SCRIPT} 파일을 찾을 수 없습니다.")
 
     current_info = parse_key_values(OS_RELEASE_PATH)
     target_ks_info = parse_key_values(ks_path)
-    target_media_info = parse_key_values(media_repo_path)
 
     target_ablestack_version = target_ks_info.get("ABLESTACK_VERSION", "")
-    target_kernel_version = target_media_info.get("name", "")
 
     if target_ablestack_version == "":
         raise ValueError(f"{TARGET_KS_PATH} 파일에서 ABLESTACK_VERSION 값을 찾을 수 없습니다.")
-    if target_kernel_version == "":
-        raise ValueError(f"{TARGET_MEDIA_REPO_PATH} 파일에서 name 값을 찾을 수 없습니다.")
-
-    current_kernel_version = " ".join(
-        value for value in [
-            current_info.get("REDHAT_SUPPORT_PRODUCT", ""),
-            current_info.get("REDHAT_SUPPORT_PRODUCT_VERSION", "")
-        ] if value
-    ) or "N/A"
 
     return {
         "mount_path": str(mount),
         "current_ablestack_version": current_info.get("PRETTY_NAME", "N/A"),
-        "current_kernel_version": current_kernel_version,
         "target_ablestack_version": target_ablestack_version,
-        "target_kernel_version": target_kernel_version,
         "update_script": str(update_script_path),
     }
 

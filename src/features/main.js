@@ -5070,9 +5070,7 @@ function resetSystemUpdateModal() {
 function clearSystemUpdateLoadedInfo() {
   systemUpdateInfo = null;
   $('#system-update-current-ablestack-version').text('N/A');
-  $('#system-update-current-kernel-version').text('N/A');
   $('#system-update-target-ablestack-version').text('N/A');
-  $('#system-update-target-kernel-version').text('N/A');
   $('#button-open-modal-system-update-confirm').prop('disabled', true).attr('aria-disabled', 'true');
 }
 
@@ -5090,9 +5088,7 @@ function updateSystemUpdateInfo(info) {
   systemUpdateInfo = info;
   $('#input-system-update-mount-path').val(info.mount_path);
   $('#system-update-current-ablestack-version').text(info.current_ablestack_version || 'N/A');
-  $('#system-update-current-kernel-version').text(info.current_kernel_version || 'N/A');
   $('#system-update-target-ablestack-version').text(info.target_ablestack_version || 'N/A');
-  $('#system-update-target-kernel-version').text(info.target_kernel_version || 'N/A');
   $('#button-open-modal-system-update-confirm').prop('disabled', false).attr('aria-disabled', 'false');
 }
 
@@ -5164,42 +5160,26 @@ function parseSystemUpdateKeyValues(data) {
 function loadSystemUpdateInfoFallback(mountPath) {
   const normalizedMountPath = normalizeSystemUpdatePath(mountPath);
   const ksPath = joinSystemUpdatePath(normalizedMountPath, "ks/ablestack-ks.cfg");
-  const mediaRepoPath = joinSystemUpdatePath(normalizedMountPath, "media.repo");
   const updateScriptPath = joinSystemUpdatePath(normalizedMountPath, "update.sh");
 
   return Promise.all([
     cockpit.spawn(["test", "-d", normalizedMountPath], { superuser: true }),
     cockpit.spawn(["test", "-f", updateScriptPath], { superuser: true }),
     cockpit.spawn(["cat", "/etc/os-release"], { superuser: true }),
-    cockpit.spawn(["cat", ksPath], { superuser: true }),
-    cockpit.spawn(["cat", mediaRepoPath], { superuser: true })
+    cockpit.spawn(["cat", ksPath], { superuser: true })
   ]).then(function (data) {
     const currentInfo = parseSystemUpdateKeyValues(data[2]);
     const targetKsInfo = parseSystemUpdateKeyValues(data[3]);
-    const targetMediaInfo = parseSystemUpdateKeyValues(data[4]);
     const targetAblestackVersion = targetKsInfo.ABLESTACK_VERSION || "";
-    const targetKernelVersion = targetMediaInfo.name || "";
 
     if (targetAblestackVersion == "") {
       throw new Error("ks/ablestack-ks.cfg 파일에서 ABLESTACK_VERSION 값을 찾을 수 없습니다.");
     }
-    if (targetKernelVersion == "") {
-      throw new Error("media.repo 파일에서 name 값을 찾을 수 없습니다.");
-    }
-
-    const currentKernelVersion = [
-      currentInfo.REDHAT_SUPPORT_PRODUCT || "",
-      currentInfo.REDHAT_SUPPORT_PRODUCT_VERSION || ""
-    ].filter(function (value) {
-      return value != "";
-    }).join(" ") || "N/A";
 
     return {
       mount_path: normalizedMountPath,
       current_ablestack_version: currentInfo.PRETTY_NAME || "N/A",
-      current_kernel_version: currentKernelVersion,
       target_ablestack_version: targetAblestackVersion,
-      target_kernel_version: targetKernelVersion,
       update_script: updateScriptPath
     };
   });
