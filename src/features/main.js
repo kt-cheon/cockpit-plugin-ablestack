@@ -53,6 +53,7 @@ $(document).ready(function () {
   $('#button-open-modal-wizard-monitoring-center').hide();
   $('#button-link-monitoring-center').hide();
   $('#button-config-file-download').hide();
+  refreshSystemUpdateButton();
 
   $('#div-modal-wizard-storage-vm').load("./src/features/storage-vm-wizard.html");
   $('#div-modal-wizard-storage-vm').hide();
@@ -1942,6 +1943,7 @@ function checkDeployStatus() {
       $('#button-open-modal-wizard-storage-cluster').show();
       showRibbon('warning', '스토리지센터 및 클라우드센터 VM이 배포되지 않았습니다. 클러스터 구성준비를 진행하십시오.');
     }
+    refreshSystemUpdateButton();
   }, 200);
 }
 
@@ -4969,6 +4971,405 @@ $(document).on('click', '#button-cloud-vm-snap-rollback', function () {
   $('#div-modal-cloud-vm-snap-rollback').show();
 });
 /** 스냅샷 복구 제어 관련 action end */
+
+/** ABLESTACK Version 업데이트 제어 관련 action start */
+let systemUpdateInfo = null;
+
+function isAblestackTrue(value) {
+  return value === true || value === "true";
+}
+
+function getSystemUpdateRule(osType) {
+  const rules = {
+    "ablestack-hci": [
+      ["bootstrap", "scvm"],
+      ["bootstrap", "ccvm"],
+      ["monitoring", "wall"]
+    ],
+    "ablestack-hci-filesystem": [
+      ["bootstrap", "scvm"],
+      ["bootstrap", "ccvm"],
+      ["monitoring", "wall"]
+    ],
+    "ablestack-vm": [
+      ["bootstrap", "ccvm"],
+      ["bootstrap", "gfs_configure"],
+      ["monitoring", "wall"]
+    ],
+    "ablestack-standalone": [
+      ["bootstrap", "ccvm"],
+      ["bootstrap", "local_configure"],
+      ["monitoring", "wall"]
+    ]
+  };
+  return rules[osType] || null;
+}
+
+function getSystemUpdateRuleText(osType) {
+  if (osType == "ablestack-hci" || osType == "ablestack-hci-filesystem") {
+    return "SCVM, CCVM, WALL 구성이 완료되어야 업데이트를 실행할 수 있습니다.";
+  }
+  if (osType == "ablestack-vm") {
+    return "CCVM, WALL, GFS 구성이 완료되어야 업데이트를 실행할 수 있습니다.";
+  }
+  if (osType == "ablestack-standalone") {
+    return "CCVM, WALL, 로컬 스토리지 구성이 완료되어야 업데이트를 실행할 수 있습니다.";
+  }
+  return "현재 OS 타입에서는 ABLESTACK Version 업데이트를 지원하지 않습니다.";
+}
+
+function setSystemUpdateButtonEnabled(enabled, title) {
+  const $button = $('#button-open-modal-system-update');
+  if (!$button.length) {
+    return;
+  }
+  $button.prop('disabled', !enabled);
+  $button.attr('aria-disabled', String(!enabled));
+  $button.attr('title', enabled ? "ABLESTACK Version 업데이트" : title);
+}
+
+function isSystemUpdateEnabled(config, osType) {
+  const rule = getSystemUpdateRule(osType);
+  if (!rule) {
+    return false;
+  }
+  for (let i = 0; i < rule.length; i++) {
+    const depth1 = rule[i][0];
+    const depth2 = rule[i][1];
+    if (!config[depth1] || !isAblestackTrue(config[depth1][depth2])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function refreshSystemUpdateButton() {
+  const osType = sessionStorage.getItem("os_type") || os_type;
+  setSystemUpdateButtonEnabled(false, getSystemUpdateRuleText(osType));
+
+  cockpit.spawn(["cat", pluginpath + "/tools/properties/ablestack.json"])
+    .then(function (data) {
+      const config = JSON.parse(data);
+      const enabled = isSystemUpdateEnabled(config, osType);
+      setSystemUpdateButtonEnabled(enabled, getSystemUpdateRuleText(osType));
+    })
+    .catch(function (err) {
+      createLoggerInfo("ablestack.json update condition read error");
+      console.log("ablestack.json update condition read error : " + err);
+      setSystemUpdateButtonEnabled(false, "ablestack.json 상태를 확인할 수 없습니다.");
+    });
+}
+
+function resetSystemUpdateModal() {
+  systemUpdateInfo = null;
+  $('#input-system-update-mount-path').val('');
+  $('#system-update-mount-helper').text('').removeAttr('style');
+  clearSystemUpdateLoadedInfo();
+}
+
+function clearSystemUpdateLoadedInfo() {
+  systemUpdateInfo = null;
+  $('#system-update-current-ablestack-version').text('N/A');
+  $('#system-update-target-ablestack-version').text('N/A');
+  $('#button-open-modal-system-update-confirm').prop('disabled', true).attr('aria-disabled', 'true');
+}
+
+function setSystemUpdateHelper(message, isError) {
+  const $helper = $('#system-update-mount-helper');
+  $helper.text(message || '');
+  if (isError) {
+    $helper.css('color', '#c9190b');
+  } else {
+    $helper.css('color', '#3e8635');
+  }
+}
+
+function updateSystemUpdateInfo(info) {
+  systemUpdateInfo = info;
+  $('#input-system-update-mount-path').val(info.mount_path);
+  $('#system-update-current-ablestack-version').text(info.current_ablestack_version || 'N/A');
+  $('#system-update-target-ablestack-version').text(info.target_ablestack_version || 'N/A');
+  $('#button-open-modal-system-update-confirm').prop('disabled', false).attr('aria-disabled', 'false');
+}
+
+function getSystemUpdateErrorText(err) {
+  if (err && err.message) {
+    return err.message;
+  }
+  if (err && err.problem) {
+    return err.problem;
+  }
+  return String(err || "");
+}
+
+function getSystemUpdateMountPathErrorText(detail) {
+  const detailText = $.trim(detail || "");
+  if (detailText == "") {
+    return "마운트 경로를 확인해 주세요.";
+  }
+  return "마운트 경로를 확인해 주세요. " + detailText;
+}
+
+function isSystemUpdateHelperMissing(err) {
+  const errorText = getSystemUpdateErrorText(err);
+  return errorText.indexOf("ablestack_update.py") >= 0
+    && (errorText.indexOf("can't open file") >= 0 || errorText.indexOf("No such file or directory") >= 0);
+}
+
+function normalizeSystemUpdatePath(path) {
+  const normalizedPath = $.trim(path).replace(/\/+$/, "");
+  return normalizedPath || "/";
+}
+
+function joinSystemUpdatePath(mountPath, relativePath) {
+  const normalizedPath = normalizeSystemUpdatePath(mountPath);
+  if (normalizedPath == "/") {
+    return "/" + relativePath;
+  }
+  return normalizedPath + "/" + relativePath;
+}
+
+function normalizeSystemUpdateValue(value) {
+  let normalizedValue = $.trim(value || "");
+  if (normalizedValue.length >= 2) {
+    const firstChar = normalizedValue.charAt(0);
+    const lastChar = normalizedValue.charAt(normalizedValue.length - 1);
+    if ((firstChar == '"' || firstChar == "'") && firstChar == lastChar) {
+      normalizedValue = normalizedValue.substring(1, normalizedValue.length - 1);
+    }
+  }
+  return normalizedValue;
+}
+
+function parseSystemUpdateKeyValues(data) {
+  const values = {};
+  const lines = String(data || "").split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = $.trim(lines[i]);
+    const splitIndex = line.indexOf("=");
+    if (line == "" || line.charAt(0) == "#" || splitIndex < 0) {
+      continue;
+    }
+    const key = $.trim(line.substring(0, splitIndex));
+    const value = line.substring(splitIndex + 1);
+    values[key] = normalizeSystemUpdateValue(value);
+  }
+  return values;
+}
+
+function loadSystemUpdateInfoFallback(mountPath) {
+  const normalizedMountPath = normalizeSystemUpdatePath(mountPath);
+  const ksPath = joinSystemUpdatePath(normalizedMountPath, "ks/ablestack-ks.cfg");
+  const updateScriptPath = joinSystemUpdatePath(normalizedMountPath, "update.sh");
+
+  return Promise.all([
+    cockpit.spawn(["test", "-d", normalizedMountPath], { superuser: true }),
+    cockpit.spawn(["test", "-f", updateScriptPath], { superuser: true }),
+    cockpit.spawn(["cat", "/etc/os-release"], { superuser: true }),
+    cockpit.spawn(["cat", ksPath], { superuser: true })
+  ]).then(function (data) {
+    const currentInfo = parseSystemUpdateKeyValues(data[2]);
+    const targetKsInfo = parseSystemUpdateKeyValues(data[3]);
+    const targetAblestackVersion = targetKsInfo.ABLESTACK_VERSION || "";
+
+    if (targetAblestackVersion == "") {
+      throw new Error("ks/ablestack-ks.cfg 파일에서 ABLESTACK_VERSION 값을 찾을 수 없습니다.");
+    }
+
+    return {
+      mount_path: normalizedMountPath,
+      current_ablestack_version: currentInfo.PRETTY_NAME || "N/A",
+      target_ablestack_version: targetAblestackVersion,
+      update_script: updateScriptPath
+    };
+  });
+}
+
+function runSystemUpdateFallback(mountPath) {
+  const normalizedMountPath = normalizeSystemUpdatePath(mountPath);
+  return cockpit.spawn(
+    ["/bin/bash", "-c", "cd \"$1\" && exec /bin/bash ./update.sh", "ablestack-update", normalizedMountPath],
+    { superuser: true }
+  ).then(function (data) {
+    return {
+      code: 200,
+      val: {
+        message: "ABLESTACK Version 업데이트 실행이 완료되었습니다.",
+        stdout: String(data || ""),
+        stderr: ""
+      }
+    };
+  });
+}
+
+function loadSystemUpdateInfo() {
+  const mountPath = $.trim($('#input-system-update-mount-path').val());
+  if (mountPath == "") {
+    setSystemUpdateHelper("ISO 마운트 경로를 입력해 주세요.", true);
+    $('#button-open-modal-system-update-confirm').prop('disabled', true).attr('aria-disabled', 'true');
+    return;
+  }
+
+  setSystemUpdateHelper("버전 정보를 확인 중입니다.", false);
+  $('#button-system-update-load-info').prop('disabled', true).attr('aria-disabled', 'true');
+  $('#button-open-modal-system-update-confirm').prop('disabled', true).attr('aria-disabled', 'true');
+
+  cockpit.spawn(["python3", pluginpath + "/python/host/ablestack_update.py", "info", "--mount-path", mountPath], { superuser: true })
+    .then(function (data) {
+      const retVal = JSON.parse(data);
+      if (retVal.code == 200) {
+        updateSystemUpdateInfo(retVal.val);
+        setSystemUpdateHelper("업데이트 ISO 정보를 확인했습니다.", false);
+      } else {
+        systemUpdateInfo = null;
+        setSystemUpdateHelper(getSystemUpdateMountPathErrorText(retVal.val), true);
+      }
+    })
+    .catch(function (err) {
+      if (isSystemUpdateHelperMissing(err)) {
+        return loadSystemUpdateInfoFallback(mountPath)
+          .then(function (info) {
+            updateSystemUpdateInfo(info);
+            setSystemUpdateHelper("업데이트 ISO 정보를 확인했습니다.", false);
+          })
+          .catch(function (fallbackErr) {
+            systemUpdateInfo = null;
+            setSystemUpdateHelper(getSystemUpdateMountPathErrorText(getSystemUpdateErrorText(fallbackErr)), true);
+          });
+      }
+      systemUpdateInfo = null;
+      setSystemUpdateHelper(getSystemUpdateMountPathErrorText(getSystemUpdateErrorText(err)), true);
+    })
+    .finally(function () {
+      $('#button-system-update-load-info').prop('disabled', false).attr('aria-disabled', 'false');
+    });
+}
+
+function openSystemUpdateModal() {
+  resetSystemUpdateModal();
+  $('#div-modal-system-update').show();
+}
+
+function closeSystemUpdateModal() {
+  $('#div-modal-system-update').hide();
+}
+
+function closeSystemUpdateConfirmModal() {
+  $('#div-modal-system-update-confirm').hide();
+}
+
+function resetSystemUpdateConfirmModal() {
+  $('#modal-input-system-update-warning-check').prop('checked', false);
+  $('#button-execution-modal-system-update').prop('disabled', true).attr('aria-disabled', 'true');
+}
+
+$(document).on('click', '#button-open-modal-system-update', function () {
+  if ($(this).prop('disabled')) {
+    return;
+  }
+  openSystemUpdateModal();
+});
+
+$(document).on('click', '#button-close-modal-system-update, #button-cancel-modal-system-update', function () {
+  closeSystemUpdateModal();
+});
+
+$(document).on('click', '#button-system-update-load-info', function () {
+  loadSystemUpdateInfo();
+});
+
+$(document).on('input', '#input-system-update-mount-path', function () {
+  clearSystemUpdateLoadedInfo();
+  $('#system-update-mount-helper').text('').removeAttr('style');
+});
+
+$(document).on('keydown', '#input-system-update-mount-path', function (e) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    loadSystemUpdateInfo();
+  }
+});
+
+$(document).on('submit', '#div-modal-system-update form', function (e) {
+  e.preventDefault();
+  loadSystemUpdateInfo();
+});
+
+$(document).on('click', '#button-open-modal-system-update-confirm', function () {
+  if (!systemUpdateInfo || $(this).prop('disabled')) {
+    setSystemUpdateHelper("업데이트 ISO 정보를 먼저 확인해 주세요.", true);
+    return;
+  }
+  resetSystemUpdateConfirmModal();
+  $('#div-modal-system-update-confirm').show();
+});
+
+$(document).on('click', '#button-close-modal-system-update-confirm, #button-cancel-modal-system-update-confirm', function () {
+  closeSystemUpdateConfirmModal();
+});
+
+$(document).on('change', '#modal-input-system-update-warning-check', function () {
+  const checked = $(this).is(':checked');
+  $('#button-execution-modal-system-update').prop('disabled', !checked).attr('aria-disabled', String(!checked));
+});
+
+$(document).on('click', '#button-execution-modal-system-update', function () {
+  if ($(this).prop('disabled')) {
+    return;
+  }
+  if (!systemUpdateInfo || !systemUpdateInfo.mount_path) {
+    closeSystemUpdateConfirmModal();
+    setSystemUpdateHelper("업데이트 ISO 정보를 먼저 확인해 주세요.", true);
+    $('#div-modal-system-update').show();
+    return;
+  }
+
+  closeSystemUpdateConfirmModal();
+  closeSystemUpdateModal();
+  $('#div-modal-spinner-header-txt').text('ABLESTACK Version 업데이트');
+  $('#div-modal-spinner-body-txt').text('ABLESTACK Version 업데이트를 실행 중입니다.');
+  $('#div-modal-spinner').show();
+
+  function showSystemUpdateResult(retVal) {
+    $('#div-modal-spinner').hide();
+    $("#modal-status-alert-title").html("ABLESTACK Version 업데이트");
+    if (retVal.code == 200) {
+      $("#modal-status-alert-body").html("ABLESTACK Version 업데이트 실행이 완료되었습니다.<br/>업데이트 후 시스템 재부팅이 필요합니다.");
+    } else {
+      $("#modal-status-alert-body").text("ABLESTACK Version 업데이트 실행 중 오류가 발생했습니다 " + retVal.val);
+    }
+    $('#div-modal-status-alert').show();
+  }
+
+  function showSystemUpdateError(err) {
+    $('#div-modal-spinner').hide();
+    $("#modal-status-alert-title").html("ABLESTACK Version 업데이트");
+    $("#modal-status-alert-body").text("ABLESTACK Version 업데이트 실행 중 오류가 발생했습니다 " + getSystemUpdateErrorText(err));
+    $('#div-modal-status-alert').show();
+  }
+
+  cockpit.spawn(["python3", pluginpath + "/python/host/ablestack_update.py", "run", "--mount-path", systemUpdateInfo.mount_path], { superuser: true })
+    .then(function (data) {
+      const retVal = JSON.parse(data);
+      showSystemUpdateResult(retVal);
+    })
+    .catch(function (err) {
+      if (isSystemUpdateHelperMissing(err)) {
+        return runSystemUpdateFallback(systemUpdateInfo.mount_path)
+          .then(function (retVal) {
+            showSystemUpdateResult(retVal);
+          })
+          .catch(function (fallbackErr) {
+            showSystemUpdateError(fallbackErr);
+          });
+      }
+      showSystemUpdateError(err);
+    })
+    .finally(function () {
+      refreshSystemUpdateButton();
+    });
+});
+/** ABLESTACK Version 업데이트 제어 관련 action end */
 
 /** 보안 업데이트 제어 관련 action start */
 $('#button-open-modal-security-update').on('click', function () {

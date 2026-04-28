@@ -16,7 +16,7 @@
                 <div class="pf-v6-c-alert__description" id="main-ribbon-description">
                     <p>ABLESTACK 가상어플라이언스 상태를 확인 중입니다.</p>
                 </div>
-                <div class="pf-v6-c-alert__action-group">
+                <div class="pf-v6-c-alert__action-group ablestack-ribbon-action-group">
                     <button style="display:none" class="pf-v6-c-button pf-m-link" type="button"
                         id="button-open-modal-wizard-storage-cluster">클러스터 구성 준비</button>
                     <button style="display:none" class="pf-v6-c-button pf-m-link" type="button"
@@ -44,6 +44,9 @@
                         다운로드</button>
                     <button class="pf-v6-c-button pf-m-link" type="button" id="button-open-modal-license-register">라이센스 관리</button>
                     <button style="display: none; "class="pf-v6-c-button pf-m-link" type="button" id="button-open-modal-security-update">보안 업데이트</button>
+                    <button class="pf-v6-c-button pf-m-secondary ablestack-ribbon-end-action" type="button"
+                        id="button-open-modal-system-update" disabled
+                        aria-disabled="true">ABLESTACK Version 업데이트</button>
                 </div>
             </div>
         </section>
@@ -2330,6 +2333,135 @@
     </div>
 </div>
 <!-- 라이센스 관리 : Modal 영역 끝 -->
+
+<!-- ABLESTACK Version 업데이트 : Modal 영역 시작 -->
+<div id="div-modal-system-update" class="pf-v6-c-backdrop" style="display:none">
+    <div class="pf-v6-l-bullseye">
+        <div class="pf-v6-c-modal-box pf-m-lg" role="dialog" aria-modal="true" aria-label="ABLESTACK Update">
+            <button id="button-close-modal-system-update" aria-disabled="false" aria-label="Close"
+                class="pf-v6-c-button pf-m-plain" type="button">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <header class="pf-v6-c-modal-box__header">
+                <h1 class="pf-v6-c-modal-box__title"><span class="pf-v6-c-modal-box__title-text">ABLESTACK Version 업데이트</span></h1>
+            </header>
+            <div class="pf-v6-c-modal-box__body">
+                <div class="pf-v6-c-alert pf-m-warning" aria-label="Update warning">
+                    <div class="pf-v6-c-alert__icon">
+                        <i class="fas fa-fw fa-exclamation-triangle" aria-hidden="true"></i>
+                    </div>
+                    <p class="pf-v6-c-alert__title"><strong>업데이트 전 주의사항</strong></p>
+                    <div class="pf-v6-c-alert__description">
+                        <ol>
+                            <li>업데이트 전 서비스 및 가상머신 중지 여부 확인</li>
+                            <li>업데이트 완료 후 시스템 재부팅 필요 (사용자가 직접 수행)</li>
+                            <li>업데이트는 각 호스트에서 개별적으로 실행 필요</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            <div class="pf-v6-c-modal-box__body">
+                <form novalidate class="pf-v6-c-form pf-m-horizontal">
+                    <div class="pf-v6-c-form__group">
+                        <div class="pf-v6-c-form__group-label">
+                            <label class="pf-v6-c-form__label" for="input-system-update-mount-path">
+                                <span class="pf-v6-c-form__label-text">ISO 마운트 경로</span>
+                                <span class="pf-v6-c-form__label-required" aria-hidden="true">&#42;</span>
+                            </label>
+                        </div>
+                        <div class="pf-v6-c-form__group-control">
+                            <div class="pf-v6-l-flex pf-m-align-items-center">
+                                <input class="pf-v6-c-form-control" type="text" id="input-system-update-mount-path"
+                                    name="input-system-update-mount-path" placeholder="/root/tmp" required />
+                                <button id="button-system-update-load-info" class="pf-v6-c-button pf-m-secondary"
+                                    type="button">확인</button>
+                            </div>
+                            <div id="system-update-mount-helper" class="pf-v6-c-form__helper-text" aria-live="polite"></div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="pf-v6-c-modal-box__body">
+                <div class="ablestack-update-version-panel">
+                    <table class="pf-v6-c-table pf-m-compact ablestack-update-version-table" role="grid"
+                        aria-label="ABLESTACK update version comparison">
+                        <thead>
+                            <tr>
+                                <th scope="col">구분</th>
+                                <th scope="col">현재 버전</th>
+                                <th scope="col">업데이트 버전</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <th scope="row">ABLESTACK</th>
+                                <td><span id="system-update-current-ablestack-version">N/A</span></td>
+                                <td><span id="system-update-target-ablestack-version">N/A</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <footer class="pf-v6-c-modal-box__footer">
+                <button id="button-open-modal-system-update-confirm" aria-disabled="true"
+                    class="pf-v6-c-button pf-m-primary" type="button" data-ouia-safe="true" disabled>실행</button>
+                <button id="button-cancel-modal-system-update" aria-disabled="false"
+                    class="pf-v6-c-button pf-m-link" type="button" data-ouia-safe="true">취소</button>
+            </footer>
+        </div>
+    </div>
+</div>
+<!-- ABLESTACK Version 업데이트 : Modal 영역 끝 -->
+
+<!-- ABLESTACK Version 업데이트 실행 확인 : Modal 영역 시작 -->
+<div id="div-modal-system-update-confirm" class="pf-v6-c-backdrop" style="display:none">
+    <div class="pf-v6-l-bullseye">
+        <div class="pf-v6-c-modal-box pf-m-sm" role="dialog" aria-modal="true" aria-label="ABLESTACK Update Confirm">
+            <button id="button-close-modal-system-update-confirm" aria-disabled="false" aria-label="Close"
+                class="pf-v6-c-button pf-m-plain" type="button">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <header class="pf-v6-c-modal-box__header">
+                <h1 class="pf-v6-c-modal-box__title"><span class="pf-v6-c-modal-box__title-text">ABLESTACK Version 실행 확인</span></h1>
+            </header>
+            <div class="pf-v6-c-modal-box__body">
+                <p>ABLESTACK Version 업데이트를 실행하시겠습니까?</p>
+            </div>
+            <div class="pf-v6-c-modal-box__body">
+                <div class="pf-v6-c-alert pf-m-warning" aria-label="Update confirm warning">
+                    <div class="pf-v6-c-alert__icon">
+                        <i class="fas fa-fw fa-exclamation-triangle" aria-hidden="true"></i>
+                    </div>
+                    <p class="pf-v6-c-alert__title"><strong>업데이트 전 주의사항</strong></p>
+                    <div class="pf-v6-c-alert__description">
+                        <ol>
+                            <li>업데이트 전 서비스 및 가상머신 중지 여부 확인</li>
+                            <li>업데이트 완료 후 시스템 재부팅 필요 (사용자가 직접 수행)</li>
+                            <li>업데이트는 각 호스트에서 개별적으로 실행 필요</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            <div class="pf-v6-c-modal-box__body pf-v6-l-flex pf-m-align-items-center ablestack-update-confirm-check">
+                <p>주의사항 확인 완료</p>
+                <label class="pf-v6-c-switch">
+                    <input id="modal-input-system-update-warning-check" class="pf-v6-c-switch__input"
+                        type="checkbox" aria-label="주의사항 확인 완료">
+                    <span class="pf-v6-c-switch__toggle">
+                        <div class="pf-v6-c-switch__toggle-icon" aria-hidden="true"></div>
+                    </span>
+                </label>
+            </div>
+            <footer class="pf-v6-c-modal-box__footer">
+                <button id="button-execution-modal-system-update" aria-disabled="true"
+                    class="pf-v6-c-button pf-m-primary" type="button" data-ouia-safe="true" disabled>실행</button>
+                <button id="button-cancel-modal-system-update-confirm" aria-disabled="false"
+                    class="pf-v6-c-button pf-m-link" type="button" data-ouia-safe="true">취소</button>
+            </footer>
+        </div>
+    </div>
+</div>
+<!-- ABLESTACK Version 업데이트 실행 확인 : Modal 영역 끝 -->
 
 <!-- 보안 업데이트 : Modal 영역 시작 -->
 <div id="div-modal-security-update" class="pf-v6-c-backdrop" style="display: none;">
