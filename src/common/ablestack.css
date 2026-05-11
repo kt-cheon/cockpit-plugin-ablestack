@@ -1,0 +1,541 @@
+.ablestack-page.pf-v6-c-page {
+  display: block;
+  grid-template-areas: none;
+  grid-template-rows: none;
+  grid-template-columns: none;
+  height: auto;
+  max-height: none;
+}
+
+.ablestack-page .pf-v6-c-page__main-container {
+  grid-area: auto;
+}
+
+.ablestack-page .pf-v6-c-page__main-container {
+  margin-inline: var(--pf-t--global--spacer--gutter--default);
+}
+
+.ablestack-page .pf-v6-c-page__main-section {
+  padding-inline: 0;
+  background-color: var(--pf-t--global--background--color--primary--default);
+}
+
+.ablestack-page .pf-v6-c-page__main-section.pf-m-no-padding {
+  padding-inline: 0;
+  background-color: var(--pf-t--global--background--color--primary--default);
+}
+
+.ablestack-page .pf-v6-l-grid {
+  background-color: var(--pf-t--global--background--color--primary--default);
+}
+
+.ablestack-ribbon-action-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  width: 100%;
+}
+
+.ablestack-ribbon-end-action {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.ablestack-update-version-panel {
+  margin-left: 10.5rem;
+  max-width: calc(100% - 10.5rem);
+}
+
+.ablestack-update-version-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  width: 100%;
+  border: 1px solid var(--ablestack-update-table-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.ablestack-update-version-table th,
+.ablestack-update-version-table td {
+  padding: 11px 14px !important;
+  border: 0;
+  overflow: hidden;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ablestack-update-version-table thead th {
+  background-color: var(--ablestack-update-table-header-bg);
+  font-weight: 600;
+}
+
+.ablestack-update-version-table thead th + th,
+.ablestack-update-version-table tbody td {
+  border-left: 1px solid var(--ablestack-update-table-border);
+}
+
+.ablestack-update-version-table tbody th,
+.ablestack-update-version-table tbody td {
+  border-top: 1px solid var(--ablestack-update-table-border);
+}
+
+.ablestack-update-version-table tbody th {
+  background-color: var(--ablestack-update-table-row-label-bg);
+  font-weight: 600;
+}
+
+.ablestack-update-version-table th:first-child {
+  width: 9rem;
+}
+
+.ablestack-update-confirm-check {
+  gap: 12px;
+}
+
+.ablestack-update-confirm-check p {
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .ablestack-update-version-panel {
+    margin-left: 0;
+    max-width: 100%;
+  }
+}
+
+.pf-v6-c-form-control[hidden] {
+  display: none !important;
+}
+
+.ablestack-page .pf-v6-c-card__header-main {
+  flex-grow: 0;
+  flex-shrink: 0;
+}
+
+.ablestack-card-title-status {
+  font-weight: var(--pf-v6-global--FontWeight--bold);
+}
+
+.ablestack-menu-dropdown,
+.ablestack-menu-select {
+  position: relative;
+  display: inline-block;
+}
+
+.ablestack-menu-select {
+  width: 100%;
+}
+
+.ablestack-menu-select .pf-v6-c-menu-toggle {
+  width: 100%;
+}
+
+.pf-v6-c-menu.ablestack-menu {
+  position: absolute;
+  inset-block-start: 100%;
+  inset-inline-start: 0;
+  margin-block-start: var(--pf-t--global--spacer--xs);
+  z-index: var(--pf-t--global--z-index--lg);
+  background-color: var(--pf-t--global--background--color--floating--default);
+  border: 1px solid var(--pf-t--global--border--color--default);
+  box-shadow: var(--pf-t--global--box-shadow--md);
+  min-width: 15rem;
+  display: none;
+}
+
+.ablestack-menu-select .pf-v6-c-menu.ablestack-menu {
+  min-width: 100%;
+}
+
+.pf-v6-c-menu.ablestack-menu.pf-m-align-right {
+  inset-inline-start: auto;
+  inset-inline-end: 0;
+}
+
+.ablestack-menu-dropdown.pf-m-top .pf-v6-c-menu.ablestack-menu {
+  inset-block-start: auto;
+  inset-block-end: 100%;
+  margin-block-start: 0;
+  margin-block-end: var(--pf-t--global--spacer--xs);
+}
+
+.pf-v6-c-menu.ablestack-menu .pf-v6-c-menu__item {
+  width: 100%;
+}
+
+.pf-v6-c-menu.ablestack-menu .pf-v6-c-menu__item:not(.pf-m-disabled):not([disabled]):not([aria-disabled="true"]):hover,
+.pf-v6-c-menu.ablestack-menu .pf-v6-c-menu__item:not(.pf-m-disabled):not([disabled]):not([aria-disabled="true"]):focus {
+  background-color: var(--pf-t--global--background--color--floating--hover);
+}
+
+.pf-v6-c-menu.ablestack-menu .pf-v6-c-menu__item:not(.pf-m-disabled):not([disabled]):not([aria-disabled="true"]):active {
+  background-color: var(--pf-t--global--background--color--floating--clicked);
+}
+
+.pf-v6-c-menu.ablestack-menu .pf-v6-c-menu__item.pf-m-disabled,
+.pf-v6-c-menu.ablestack-menu .pf-v6-c-menu__item[disabled],
+.pf-v6-c-menu.ablestack-menu .pf-v6-c-menu__item[aria-disabled="true"] {
+  opacity: var(--pf-t--global--opacity--disabled, 0.5);
+  cursor: not-allowed;
+  pointer-events: none;
+  background-color: transparent;
+}
+
+:root {
+  --ablestack-update-table-border: #d8d8d8;
+  --ablestack-update-table-header-bg: #f7f7f7;
+  --ablestack-update-table-row-label-bg: #fafafa;
+  --ablestack-extend-hover-bg: #f3f4f6;
+  --ablestack-extend-selected-bg: #e7f1fa;
+  --ablestack-extend-radio-border: #007bba;
+  --ablestack-extend-radio-bg: #007bba;
+  --ablestack-extend-radio-ring: #ffffff;
+}
+
+html.pf-v6-theme-dark {
+  --ablestack-update-table-border: var(--pf-t--global--border--color--default);
+  --ablestack-update-table-header-bg: var(--pf-t--global--background--color--secondary--default);
+  --ablestack-update-table-row-label-bg: var(--pf-t--global--background--color--secondary--default);
+  --ablestack-extend-hover-bg: var(--pf-t--global--background--color--secondary--hover);
+  --ablestack-extend-selected-bg: var(--pf-t--global--background--color--secondary--default);
+  --ablestack-extend-radio-border: var(--pf-t--global--color--brand--200);
+  --ablestack-extend-radio-bg: var(--pf-t--global--color--brand--200);
+  --ablestack-extend-radio-ring: var(--pf-t--global--background--color--primary--default);
+}
+
+.ablestack-extend-method-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+  color: var(--pf-t--global--text--color--regular);
+}
+
+.ablestack-extend-method-option:hover {
+  background-color: var(--ablestack-extend-hover-bg);
+}
+
+.ablestack-extend-method-option.is-selected {
+  background-color: var(--ablestack-extend-selected-bg);
+}
+
+.ablestack-extend-method-text {
+  font-size: 15px;
+}
+
+.ablestack-extend-method-radio {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--ablestack-extend-radio-border);
+  border-radius: 50%;
+  position: relative;
+  cursor: pointer;
+  background-color: transparent;
+  box-shadow: none;
+  flex-shrink: 0;
+}
+
+.ablestack-extend-method-radio:checked {
+  background-color: var(--ablestack-extend-radio-bg);
+  box-shadow: inset 0 0 0 3px var(--ablestack-extend-radio-ring);
+}
+
+:root {
+  --ablestack-grid-border-color: var(--pf-t--global--border--color--200);
+}
+
+html.pf-v6-theme-dark {
+  --ablestack-grid-border-color: var(--pf-t--global--border--color--100);
+}
+
+.ablestack-grid-table {
+  border-collapse: collapse;
+  border-spacing: 0;
+  border: 1px solid var(--ablestack-grid-border-color);
+}
+
+.ablestack-grid-table th,
+.ablestack-grid-table td {
+  border: 1px solid var(--ablestack-grid-border-color) !important;
+}
+
+.ablestack-grid-table thead th {
+  background-color: var(--pf-t--global--background--color--secondary--default);
+  color: var(--pf-t--global--text--color--regular);
+  font-weight: 600;
+}
+
+.ablestack-grid-table tbody td {
+  color: var(--pf-t--global--text--color--regular);
+}
+
+.ablestack-cluster-type-title {
+  color: var(--pf-t--global--text--color--regular);
+  font-weight: 600;
+}
+
+[name="cluster-config-cluster-type-card"].is-selected i.fa-check {
+  color: var(--pf-t--color--green--50);
+}
+
+html.pf-v6-theme-dark [name="cluster-config-cluster-type-card"].is-selected i.fa-check {
+  color: var(--pf-t--color--green--20);
+}
+
+html.pf-v6-theme-dark,
+html.pf-v6-theme-dark body {
+  background-color: var(--pf-t--global--background--color--primary--default);
+  color: var(--pf-t--global--text--color--regular);
+}
+
+.ablestack-status-text {
+  font-weight: 600;
+  letter-spacing: 0.1px;
+}
+
+.ablestack-status-ok {
+  color: var(--pf-t--color--green--40);
+}
+
+.ablestack-status-warn {
+  color: var(--pf-t--color--yellow--40);
+}
+
+.ablestack-status-danger {
+  color: var(--pf-t--color--red--40);
+}
+
+html.pf-v6-theme-dark .ablestack-status-ok {
+  color: var(--pf-t--color--green--20);
+}
+
+html.pf-v6-theme-dark .ablestack-status-warn {
+  color: var(--pf-t--color--yellow--20);
+}
+
+html.pf-v6-theme-dark .ablestack-status-danger {
+  color: var(--pf-t--color--red--20);
+}
+
+html.pf-v6-theme-dark .pf-v6-c-alert {
+  background-color: var(--pf-t--global--background--color--secondary--default);
+  border: 1px solid var(--pf-t--global--border--color--default);
+}
+
+html.pf-v6-theme-dark .pf-v6-c-alert__title {
+  color: var(--pf-t--global--text--color--regular);
+}
+
+html.pf-v6-theme-dark .pf-v6-c-alert__description {
+  color: var(--pf-t--global--text--color--regular);
+}
+
+html.pf-v6-theme-dark .pf-v6-c-alert.pf-m-warning {
+  border: 1px solid var(--pf-t--color--yellow--20);
+  border-left-width: 4px;
+}
+
+html.pf-v6-theme-dark .pf-v6-c-alert.pf-m-warning .pf-v6-c-alert__icon {
+  color: var(--pf-t--color--yellow--20);
+}
+
+html.pf-v6-theme-dark .pf-v6-c-alert.pf-m-info {
+  border: 1px solid var(--pf-t--color--blue--20);
+  border-left-width: 4px;
+}
+
+html.pf-v6-theme-dark .pf-v6-c-alert.pf-m-info .pf-v6-c-alert__icon {
+  color: var(--pf-t--color--blue--20);
+}
+
+html.pf-v6-theme-dark .pf-v6-c-alert.pf-m-success {
+  border: 1px solid var(--pf-t--color--green--20);
+  border-left-width: 4px;
+}
+
+html.pf-v6-theme-dark .pf-v6-c-alert.pf-m-success .pf-v6-c-alert__icon {
+  color: var(--pf-t--color--green--20);
+}
+
+html.pf-v6-theme-dark .pf-v6-c-alert.pf-m-danger {
+  border: 1px solid var(--pf-t--color--red--20);
+  border-left-width: 4px;
+}
+
+html.pf-v6-theme-dark .pf-v6-c-alert.pf-m-danger .pf-v6-c-alert__icon {
+  color: var(--pf-t--color--red--20);
+}
+
+html.pf-v6-theme-dark .pf-v6-c-table {
+  color: var(--pf-t--global--text--color--regular);
+  background-color: var(--pf-t--global--background--color--primary--default);
+}
+
+html.pf-v6-theme-dark .pf-v6-c-table thead th {
+  color: var(--pf-t--global--text--color--regular);
+  background-color: var(--pf-t--global--background--color--secondary--default);
+  font-weight: 600;
+}
+
+html.pf-v6-theme-dark .pf-v6-c-table td,
+html.pf-v6-theme-dark .pf-v6-c-table th {
+  border-color: var(--pf-t--global--border--color--default);
+}
+
+html.pf-v6-theme-dark .pf-v6-c-table tbody,
+html.pf-v6-theme-dark .pf-v6-c-table tbody tr,
+html.pf-v6-theme-dark .pf-v6-c-table tbody tr > th,
+html.pf-v6-theme-dark .pf-v6-c-table tbody tr > td {
+  background-color: var(--pf-t--global--background--color--primary--default) !important;
+  color: var(--pf-t--global--text--color--regular) !important;
+}
+
+html.pf-v6-theme-dark .pf-v6-c-table thead tr > th {
+  background-color: var(--pf-t--global--background--color--secondary--default) !important;
+  color: var(--pf-t--global--text--color--regular) !important;
+}
+
+html.pf-v6-theme-dark .pf-v6-c-table tbody tr:nth-child(even) > th,
+html.pf-v6-theme-dark .pf-v6-c-table tbody tr:nth-child(even) > td {
+  background-color: var(--pf-t--global--background--color--secondary--default) !important;
+}
+
+html.pf-v6-theme-dark .pf-v6-c-table tbody tr:hover > th,
+html.pf-v6-theme-dark .pf-v6-c-table tbody tr:hover > td {
+  background-color: var(--pf-t--global--background--color--secondary--hover) !important;
+}
+
+html.pf-v6-theme-dark .pf-v6-c-form__label-text,
+html.pf-v6-theme-dark .pf-v6-c-check__label,
+html.pf-v6-theme-dark .pf-v6-c-radio__label,
+html.pf-v6-theme-dark .pf-v6-c-description-list__text,
+html.pf-v6-theme-dark .pf-v6-c-content,
+html.pf-v6-theme-dark .pf-v6-c-modal-box__title-text,
+html.pf-v6-theme-dark .pf-v6-c-helper-text__item-text,
+html.pf-v6-theme-dark .pf-v6-c-form__helper-text {
+  color: var(--pf-t--global--text--color--regular);
+}
+
+html.pf-v6-theme-dark .pf-v6-c-check,
+html.pf-v6-theme-dark .pf-v6-c-radio {
+  --pf-v6-c-check--AccentColor: var(--pf-t--global--color--brand--200);
+  --pf-v6-c-radio--AccentColor: var(--pf-t--global--color--brand--200);
+}
+
+html.pf-v6-theme-dark .pf-v6-c-check__input:disabled,
+html.pf-v6-theme-dark .pf-v6-c-radio__input:disabled,
+html.pf-v6-theme-dark input[type="checkbox"]:disabled,
+html.pf-v6-theme-dark input[type="radio"]:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  accent-color: var(--pf-t--global--color--disabled--300);
+}
+
+html.pf-v6-theme-dark .pf-v6-c-check__input:disabled + .pf-v6-c-check__label,
+html.pf-v6-theme-dark .pf-v6-c-radio__input:disabled + .pf-v6-c-radio__label,
+html.pf-v6-theme-dark input[type="checkbox"]:disabled + label,
+html.pf-v6-theme-dark input[type="radio"]:disabled + label {
+  color: var(--pf-t--global--text--color--subtle);
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
+html.pf-v6-theme-dark table[id^="form-table-cluster-config-"] {
+  background-color: var(--pf-t--global--background--color--primary--default) !important;
+  color: var(--pf-t--global--text--color--regular) !important;
+}
+
+html.pf-v6-theme-dark table[id^="form-table-cluster-config-"] thead {
+  background-color: var(--pf-t--global--background--color--secondary--default) !important;
+  color: var(--pf-t--global--text--color--regular) !important;
+  border-bottom-color: var(--ablestack-grid-border-color) !important;
+}
+
+html.pf-v6-theme-dark table[id^="form-table-cluster-config-"] tbody,
+html.pf-v6-theme-dark table[id^="form-table-cluster-config-"] tbody tr,
+html.pf-v6-theme-dark table[id^="form-table-cluster-config-"] tbody td {
+  background-color: var(--pf-t--global--background--color--primary--default) !important;
+  color: var(--pf-t--global--text--color--regular) !important;
+}
+
+html.pf-v6-theme-dark table[id^="form-table-cluster-config-"] th,
+html.pf-v6-theme-dark table[id^="form-table-cluster-config-"] td,
+html.pf-v6-theme-dark table[id^="form-table-cluster-config-"] tr {
+  border-color: var(--ablestack-grid-border-color) !important;
+}
+
+html.pf-v6-theme-dark [style*="color: red"],
+html.pf-v6-theme-dark [style*="color:red"],
+html.pf-v6-theme-dark [style*="color: crimson"],
+html.pf-v6-theme-dark [style*="color:crimson"],
+html.pf-v6-theme-dark [style*="color: maroon"],
+html.pf-v6-theme-dark [style*="color:maroon"] {
+  color: var(--pf-t--color--red--20) !important;
+}
+
+html.pf-v6-theme-dark #gfs-disk-extend-list,
+html.pf-v6-theme-dark #gfs-disk-extend-add-list {
+  background-color: var(--pf-t--global--background--color--secondary--default) !important;
+  color: var(--pf-t--global--text--color--regular) !important;
+  border: 1px solid var(--pf-t--global--border--color--default);
+}
+
+html.pf-v6-theme-dark #gfs-disk-extend-list label,
+html.pf-v6-theme-dark #gfs-disk-extend-list span,
+html.pf-v6-theme-dark #gfs-disk-extend-add-list label,
+html.pf-v6-theme-dark #gfs-disk-extend-add-list span {
+  color: var(--pf-t--global--text--color--regular) !important;
+}
+
+/* GFS 디스크 이미지 생성 모달 (다크 모드 색상 + GB 줄바꿈 방지) */
+#div-modal-disk-image-create .pf-v6-c-input-group {
+  flex-wrap: nowrap;
+}
+
+#div-modal-disk-image-create .pf-v6-c-input-group__text {
+  white-space: nowrap;
+}
+
+html.pf-v6-theme-dark #div-modal-disk-image-create [style*="color:#6a6e73"] {
+  color: var(--pf-t--global--text--color--subtle) !important;
+}
+
+html.pf-v6-theme-dark #div-modal-disk-image-create .pf-v6-c-input-group__text {
+  color: var(--pf-t--global--text--color--regular);
+  border-color: var(--pf-t--global--border--color--default);
+}
+
+html.pf-v6-theme-dark #div-modal-disk-image-create .pf-v6-c-form-control {
+  background-color: var(--pf-t--global--background--color--primary--default);
+  color: var(--pf-t--global--text--color--regular);
+  border-color: var(--pf-t--global--border--color--default);
+}
+
+.ablestack-modal-spinner {
+  overflow: hidden;
+}
+
+.ablestack-spinner-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.ablestack-spinner {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+
+.ablestack-spinner .pf-v6-c-spinner {
+  display: block;
+}
+.ablestack-page .pf-v6-c-alert {
+  --pf-v6-c-alert--BoxShadow: none;
+  box-shadow: none;
+}

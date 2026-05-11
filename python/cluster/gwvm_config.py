@@ -39,10 +39,10 @@ def createArgumentParser():
 
     # output 민감도 추가(v갯수에 따라 output및 log가 많아짐):
     parser.add_argument('-v', '--verbose', action='count', default=0, help='increase output verbosity')
-    
+
     # flag 추가(샘플임, 테스트용으로 json이 아닌 plain text로 출력하는 플래그 역할)
     parser.add_argument('-H', '--Human', action='store_const', dest='flag_readerble', const=True, help='Human readable')
-    
+
     # Version 추가
     parser.add_argument('-V', '--Version', action='version', version='%(prog)s 1.0')
 
@@ -54,10 +54,10 @@ def openClusterJson():
             ret = json.load(json_file)
     except Exception as e:
         ret = createReturn(code=500, val='cluster.json read error')
-        print ('EXCEPTION : ',e)
+
 
     return ret
-    
+
 def create(args):
     try:
         json_data = openClusterJson()
@@ -68,7 +68,7 @@ def create(args):
 
         with open(json_file_path, 'w') as outfile:
             json.dump(json_data, outfile, indent=4)
-        
+
         my_hosts.remove_all_matching(name="gwvm-mngt")
         my_hosts.remove_all_matching(name="gwvm")
 
@@ -89,11 +89,11 @@ def create(args):
             return createReturn(code=200, val="hosts and cluster.json file copy success.")
         else: # 실패할 경우
             return createReturn(code=500, val="hosts and cluster.json file copy fail.")
-        
+
     except Exception as e:
         # 결과값 리턴
         return createReturn(code=500, val="Please check the \"cluster.json\" file. : "+e)
-    
+
 def remove(args):
     try:
         json_data = openClusterJson()
@@ -104,7 +104,7 @@ def remove(args):
 
         with open(json_file_path, 'w') as outfile:
             json.dump(json_data, outfile, indent=4)
-        
+
         my_hosts.remove_all_matching(name="gwvm-mngt")
         my_hosts.remove_all_matching(name="gwvm")
 
@@ -130,7 +130,7 @@ def remove(args):
     except Exception as e:
         # 결과값 리턴
         return createReturn(code=500, val="Please check the \"cluster.json\" file. : "+e)
-    
+
 
 
 

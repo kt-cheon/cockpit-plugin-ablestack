@@ -63,7 +63,7 @@ def openClusterJson():
             ret = json.load(json_file)
     except Exception as e:
         ret = createReturn(code=500, val='cluster.json read error')
-        print ('EXCEPTION : ',e)
+
 
     return ret
 
@@ -131,7 +131,7 @@ def createCcvmXml(args):
 
                     line = line.replace('<!--ccvm_cloudinit-->', cci_txt)
                 elif '<!--ccvm_disk-->' in line:
-                    if os_type == "ablestack-hci":
+                    if os_type == "ablestack-hci" or os_type == "ablestack-hci-filesystem":
                         crd_txt = "    <disk type='network' device='disk'>\n"
                         crd_txt += "      <source protocol='rbd' name='rbd/ccvm'>\n"
                         crd_txt += "        <host name='scvm' port='6789'/>\n"
@@ -181,15 +181,15 @@ def createCcvmXml(args):
                 elif '<!--service_network_bridge-->' in line:
                     if args.service_network_bridge is not None:
                         snb_txt = "    <interface type='bridge'>\n"
-                        # openvswitch 서비스가 활성화일 경우 해당 코드 추가
-                        if openvswitch_service_check != 0:
-                            snb_txt += "      <filterref filter='allow-all-traffic'/>\n"
                         snb_txt += "      <mac address='" + generateMacAddress() + "'/>\n"
                         snb_txt += "      <source bridge='" + args.service_network_bridge + "'/>\n"
                         snb_txt += "      <target dev='vnet" + str(br_num) + "'/>\n"
                         snb_txt += "      <model type='virtio'/>\n"
                         snb_txt += "      <alias name='net" + str(br_num) + "'/>\n"
                         snb_txt += "      <address type='pci' domain='0x0000' bus='0x00' slot='" + slot_hex_num.pop(0) + "' function='0x0'/>\n"
+                         # openvswitch 서비스가 활성화일 경우 해당 코드 추가
+                        if openvswitch_service_check != 0:
+                            snb_txt += "      <filterref filter='allow-all-traffic'/>\n"
                         snb_txt += "    </interface>"
 
                         br_num += 1
@@ -277,7 +277,7 @@ if __name__ == '__main__':
     logger = createLogger(verbosity=logging.CRITICAL, file_log_level=logging.ERROR, log_file='test.log')
 
     # secret.xml 생성 및 virsh 등록
-    if os_type == "ablestack-hci":
+    if os_type == "ablestack-hci" or os_type == "ablestack-hci-filesystem":
         secret_ret = json.loads(createSecretKey(args.host_names[0].split()))
 
         if secret_ret["code"] == 200 :

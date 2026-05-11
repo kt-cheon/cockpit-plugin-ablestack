@@ -78,7 +78,7 @@ def ccvm_secondary_resize(args):
         os_type = cfg["clusterConfig"]["type"]
 
         rbd_image = "rbd/ccvm"
-        if os_type == "ablestack-hci":
+        if os_type == "ablestack-hci" or os_type == "ablestack-hci-filesystem":
             info = run(["rbd", "info", rbd_image, "--format", "json"], check=True)
             ccvm_info = json.loads(info.stdout)
             original_gib = ccvm_info["size"] / (1024 ** 3)
@@ -86,7 +86,7 @@ def ccvm_secondary_resize(args):
             if new_image_size > 2000:
                 return createReturn(code=500, val="CCVM can support capacities up to 2 TiB.")
 
-        if os_type in ("ablestack-hci", "ablestack-vm"):
+        if os_type in ("ablestack-hci", "ablestack-vm", "ablestack-hci-filesystem"):
             if not is_ccvm_ssh_ok():
                 return createReturn(code=500, val="Please check if CCVM status is running normally.")
             resp = run(["/usr/bin/python3", f"{pluginpath}/python/pcs/main.py", "disable", "--resource", "cloudcenter_res"], check=True)
@@ -104,20 +104,20 @@ def ccvm_secondary_resize(args):
                 run(["qemu-img", "resize", ccvm_file, f"+{args.add_size}G"])
 
         elif os_type == "ablestack-standalone":
-            ccvm_file = "/var/lib/libvirt/images/ccvm.qcow2"
+            ccvm_file = "/mnt/glue/ccvm.qcow2"
             run(["virsh", "shutdown", "ccvm"], check=False)
             if not wait_until(lambda: virsh_state("ccvm") == "shut off", timeout_sec=TIMEOUT_SEC):
                 return createReturn(code=500, val="CCVM shutdown timeout. Please check.")
             run(["qemu-img", "resize", ccvm_file, f"+{args.add_size}G"])
             run(["virsh", "start", "ccvm"])
 
-        if os_type == "ablestack-hci":
+        if os_type == "ablestack-hci" or os_type == "ablestack-hci-filesystem":
             if run(["rbd", "snap", "purge", rbd_image, "--no-progress"], check=False).returncode != 0:
                 return createReturn(code=500, val="CCVM snapshot purge failed.")
             if run(["rbd", "resize", "-s", f"{int(new_image_size)}G", rbd_image], check=False).returncode != 0:
                 return createReturn(code=500, val="CCVM image resize failed.")
 
-        if os_type in ("ablestack-hci", "ablestack-vm"):
+        if os_type in ("ablestack-hci", "ablestack-vm", "ablestack-hci-filesystem"):
             resp = run(["/usr/bin/python3", f"{pluginpath}/python/pcs/main.py", "enable", "--resource", "cloudcenter_res"], check=True)
             resp_json = json.loads((resp.stdout or "").strip() or "{}")
             if resp_json.get("code") != 200:

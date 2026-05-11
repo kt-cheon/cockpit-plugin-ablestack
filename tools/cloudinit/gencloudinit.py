@@ -76,6 +76,7 @@ def argumentParser():
     tmp_parser.add_argument('--sn-ip', metavar='Service IP', help="서비스 네트워크 IP               (ccvm만)")
     tmp_parser.add_argument('--sn-prefix', metavar='Service prefix', help="서비스 네트워크 prefix   (ccvm만)")
     tmp_parser.add_argument('--sn-gw', metavar='Service gw', help="서비스 네트워크 gw               (ccvm만)")
+    tmp_parser.add_argument('--sn-dns', metavar='Service dns', help="서비스 네트워크 dns               (ccvm만)")
     tmp_parser.add_argument('--pn-nic', metavar='Storage NIC',  help="스토리지 네트워크 NIC         ")
     tmp_parser.add_argument('--pn-ip', metavar='Storage IP',    help="스토리지 네트워크 IP          ")
     tmp_parser.add_argument('--pn-prefix', metavar='Service prefix', help="스토리지 네트워크 prefix ", default=24)
@@ -142,7 +143,7 @@ def openClusterJson():
             ret = json.load(json_file)
     except Exception as e:
         ret = createReturn(code=500, val='cluster.json read error')
-        print ('EXCEPTION : ',e)
+
 
     return ret
 
@@ -235,6 +236,22 @@ def genManagement(mgmt_nic: str, mgmt_ip: str, mgmt_prefix: int, mgmt_gw: str, d
         f.write(yaml.dump(yam))
 
 
+def normalize_pubkey(key: str) -> str:
+    """
+    - pubkey에 들어올 수 있는 \r/\n을 제거하고 공백을 정규화합니다.
+    - PyYAML 덤프 시 줄바꿈이 생기지 않도록 '한 줄'을 보장합니다.
+    """
+    if key is None:
+        return ''
+
+    # 개행 제거(중요) + 양끝 공백 제거
+    normalized = key.replace('\r', '').replace('\n', ' ').strip()
+
+    # 연속 공백을 1칸으로 정규화(중요)
+    normalized = ' '.join(normalized.split())
+
+    return normalized
+
 """
 user-data파일을 사용하여 publickey와 privatekey, authorized_key, /etc/hosts를 생성하는 부분
 
@@ -249,7 +266,7 @@ def genUserFromFile(pubkeyfile: str, privkeyfile: str, hostsfile: str):
     #     tmp_meta = f.read()
     # pprint.pprint(yam)
     with open(pubkeyfile, 'rt') as f:
-        pubkey = f.read().strip()
+        pubkey = normalize_pubkey(f.read())
     with open(privkeyfile, 'rt') as f:
         # privkey = '\\n'.join(f.read().splitlines())
         # lines = f.read().splitlines()
@@ -260,34 +277,33 @@ def genUserFromFile(pubkeyfile: str, privkeyfile: str, hostsfile: str):
     # privkey = privkey.replace("\n", "")
     with open(hostsfile, 'rt') as f:
         hosts = f.read()
-    if os_type == "ablestack-hci":
-        yam = {
+    if os_type == "ablestack-hci" or os_type == "ablestack-hci-filesystem":
+            yam = {
             'disable_root': False,
             'ssh_pwauth': True,
             'users': [
                 {
                     'homedir': '/var/lib/ceph',
-                    'groups': 'sudo',
+                    'groups': ['wheel'],
                     'lock_passwd': False,
                     'name': 'ceph',
                     'plain_text_passwd': 'Ablecloud1!',
-                    'ssh-authorized-keys': [pubkey],
-                    'sudo': ['ALL=(ALL) NOPASSWD:ALL']
+                    'ssh_authorized_keys': [pubkey],
+                    'sudo': 'ALL=(ALL) NOPASSWD:ALL'
                 },
                 {
-                    'groups': 'sudo',
+                    'groups': ['wheel'],
                     'lock_passwd': False,
                     'name': 'ablecloud',
                     'plain_text_passwd': 'Ablecloud1!',
-                    'ssh-authorized-keys': [pubkey],
-                    'sudo': ['ALL=(ALL) NOPASSWD:ALL']
+                    'ssh_authorized_keys': [pubkey],
+                    'sudo': 'ALL=(ALL) NOPASSWD:ALL'
                 },
                 {
-                    'disable_root': False,
-                    'ssh_pwauth': True,
                     'name': 'root',
+                    'lock_passwd': False,
                     'plain_text_passwd': 'Ablecloud1!',
-                    'ssh-authorized-keys': [pubkey],
+                    'ssh_authorized_keys': [pubkey]
                 }
             ],
             'write_files':
@@ -344,24 +360,23 @@ def genUserFromFile(pubkeyfile: str, privkeyfile: str, hostsfile: str):
                 ]
         }
     else:
-                yam = {
+        yam = {
             'disable_root': False,
             'ssh_pwauth': True,
             'users': [
                 {
-                    'groups': 'sudo',
+                    'groups': ['wheel'],
                     'lock_passwd': False,
                     'name': 'ablecloud',
                     'plain_text_passwd': 'Ablecloud1!',
-                    'ssh-authorized-keys': [pubkey],
-                    'sudo': ['ALL=(ALL) NOPASSWD:ALL']
+                    'ssh_authorized_keys': [pubkey],
+                    'sudo': 'ALL=(ALL) NOPASSWD:ALL'
                 },
                 {
-                    'disable_root': 0,
-                    'ssh_pwauth': True,
                     'name': 'root',
                     'plain_text_passwd': 'Ablecloud1!',
-                    'ssh-authorized-keys': [pubkey],
+                    'lock_passwd': False,
+                    'ssh_authorized_keys': [pubkey]
                 }
             ],
             'write_files':
@@ -416,14 +431,15 @@ ccvm용 네트워크설정(스토리지 네트워크 추가 없음)하는 부분
 :param 없음
 :return yaml 파일
 """
-def ccvmGen(sn_nic:str, sn_ip:str, sn_prefix: int, sn_gw:str):
+def ccvmGen(sn_nic:str, sn_ip:str, sn_prefix: int, sn_gw:str, sn_dns:str):
     with open(f'{tmpdir}/network-config.mgmt', 'rt') as f:
         yam = yaml.safe_load(f)
 
-    if sn_nic is not None or sn_ip is not None or sn_prefix is not None or sn_gw is not None :
+    if sn_nic is not None or sn_ip is not None or sn_prefix is not None or sn_gw is not None or sn_dns is not None:
             yam['network']['config'].append({'name': sn_nic,
                                             'subnets': [{'address': f'{sn_ip}/{sn_prefix}',
                                                         'gateway': sn_gw,
+                                                        'dns_nameservers': [sn_dns],
                                                         'type': 'static'}],
                                             'type': 'physical'})
     with open(f'{tmpdir}/network-config', 'wt') as f:
@@ -431,6 +447,17 @@ def ccvmGen(sn_nic:str, sn_ip:str, sn_prefix: int, sn_gw:str):
 
     with open(f'{tmpdir}/user-data', 'rt') as f:
         yam2 = yaml.safe_load(f)
+        with open(f'{pluginpath}/shell/host/security_patch.sh', 'rt') as security_patch_file:
+            security_patch = security_patch_file.read()
+        yam2['write_files'].append(
+            {
+                'encoding': 'base64',
+                'content': base64.encodebytes(security_patch.encode()),
+                'owner': 'root:root',
+                'path': '/usr/local/sbin/security_patch.sh',
+                'permissions': '0755'
+            }
+        )
         with open(f'{pluginpath}/shell/host/ccvm_bootstrap.sh', 'rt') as bootstrapfile:
             bootstrap = bootstrapfile.read()
         yam2['write_files'].append(
@@ -450,7 +477,7 @@ def ccvmGen(sn_nic:str, sn_ip:str, sn_prefix: int, sn_gw:str):
                 'content': base64.encodebytes(cluster_json.encode()),
                 'owner': 'root:root',
                 'path': '/etc/cluster.json',
-                'permissions': '0777'
+                'permissions': '0600'
             }
         )
     with open(f'{tmpdir}/user-data', 'wt') as f:
@@ -489,10 +516,9 @@ def scvmGen(pn_nic=None, pn_ip=None, pn_prefix=24, cn_nic=None, cn_ip=None, cn_p
     #     yam2['bootcmd'].append(
     #         [f'/usr/bin/script', '-c', '/root/bootstrap.sh', 'bootstrap.log']
     #     )
-    if os_type == "ablestack-hci":
+    if os_type == "ablestack-hci" or os_type == "ablestack-hci-filesystem":
         yam2['bootcmd'] = [
         ['/usr/bin/systemctl', 'enable', '--now', 'cockpit.socket'],
-        ['/usr/bin/systemctl', 'enable', '--now', 'cockpit.service'],
         ]
         with open(f'{pluginpath}/shell/host/scvm_bootstrap.sh', 'rt') as bootstrapfile:
             bootstrap = bootstrapfile.read()
@@ -527,6 +553,18 @@ def scvmGen(pn_nic=None, pn_ip=None, pn_prefix=24, cn_nic=None, cn_ip=None, cn_p
                     'permissions': '0777'
                 }
             )
+        with open(f'{pluginpath}/shell/host/security_patch.sh', 'rt') as security_patch_file:
+            security_patch = security_patch_file.read()
+            yam2['write_files'].append(
+                {
+                    'encoding': 'base64',
+                    'content': base64.encodebytes(security_patch.encode()),
+                    'owner': 'root:root',
+                    'path': '/usr/local/sbin/security_patch.sh',
+                    'permissions': '0755'
+                }
+            )
+    # if maste
     elif os_type == "powerflex":
         with open(f'{pluginpath}/shell/host/scvm_pf_bootstrap.sh', 'rt') as bootstrapfile:
             bootstrap = bootstrapfile.read()
@@ -541,7 +579,8 @@ def scvmGen(pn_nic=None, pn_ip=None, pn_prefix=24, cn_nic=None, cn_ip=None, cn_p
             )
     # 인터페이스 이름이 동일 하지 않을 경우, scvm에 np0, np1이 붙을 수 있기에 고정으로 사용
     yam2['runcmd'] = [
-    ['/usr/bin/sh', '/usr/local/sbin/sortEth.sh']
+    ['/usr/bin/sh', '/usr/local/sbin/sortEth.sh'],
+    ['/usr/bin/systemctl', 'enable', '--now', 'cockpit.service']
     ]
 
     with open(f'{tmpdir}/user-data', 'wt') as f:
@@ -569,8 +608,8 @@ def gwvmGen( sn_nic: str, sn_ip: str, sn_prefix: int):
         f.write(yaml.dump(yam))
 
     with open(f'{tmpdir}/user-data', 'rt') as f:
-        yam2 = yaml.load(f)
-        with open(f'{pluginpath}/shell/host/gwvm_bootstrap.sh', 'rt') as bootstrapfile:
+        yam2 = yaml.load(f) # type: ignore
+        with open(f'{pluginpath}/shell/host/gwvm_bootstrap.sh', 'rt') as bootstrapfile: # type: ignore
             bootstrap = bootstrapfile.read()
         yam2['write_files'].append(
             {
@@ -650,7 +689,7 @@ def main(args):
     pn_nic=None, pn_ip=None, cn_nic=None, cn_ip=None,
     """
     if args.type == 'ccvm':
-        ret = ccvmGen(sn_nic=args.sn_nic, sn_ip=args.sn_ip, sn_prefix=args.sn_prefix, sn_gw=args.sn_gw)
+        ret = ccvmGen(sn_nic=args.sn_nic, sn_ip=args.sn_ip, sn_prefix=args.sn_prefix, sn_gw=args.sn_gw, sn_dns=args.sn_dns)
     elif args.type == 'scvm':
         ret = scvmGen(pn_nic=args.pn_nic, pn_ip=args.pn_ip, pn_prefix=args.pn_prefix, cn_nic=args.cn_nic, cn_ip=args.cn_ip, cn_prefix=args.cn_prefix, master=args.master)
     elif args.type == 'gwvm':

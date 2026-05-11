@@ -52,7 +52,7 @@ def openClusterJson():
             ret = json.load(json_file)
     except Exception as e:
         ret = createReturn(code=500, val='cluster.json read error')
-        print ('EXCEPTION : ',e)
+
 
     return ret
 
@@ -180,6 +180,48 @@ def resetCloudCenter(args):
             return createReturn(code=200, val="cloud center and local disk reset success")
         else:
             return createReturn(code=500, val="cloud center and local disk reset fail")
+    elif os_type == "ablestack-hci-filesystem":
+        pcs_list = []
+
+        for i in range(len(json_data["clusterConfig"]["pcsCluster"])):
+            if json_data["clusterConfig"]["pcsCluster"]["hostname"+str(i+1)]:
+                pcs_list.append(json_data["clusterConfig"]["pcsCluster"]["hostname"+str(i+1)])
+        # GFS용 초기화
+        pcs_list_str = " ".join(pcs_list)
+        vg_name_check = os.popen("pvs --noheadings -o vg_name 2>/dev/null | grep 'vg_glue' | uniq").read().strip().splitlines()
+
+        if vg_name_check:
+            lv_names = [s.replace('vg', 'lv', 1) if s.startswith('vg') else s for s in vg_name_check]
+            disk_list = os.popen("pvs --noheadings -o pv_name,vg_name 2>/dev/null | grep 'vg_glue' | awk '{print $1}' | cut -d 'p' -f1").read().strip().split("\n")
+            disk = ",".join(disk_list)
+            result = json.loads(python3(pluginpath + '/python/gfs/gfs_manage.py', '--init-pcs-cluster','--disks', disk ,'--vg-name', vg_name_check, '--lv-name', lv_names, '--list-ip', pcs_list_str))
+            if result['code'] not in [200,400]:
+                success_bool = False
+        else:
+            result = json.loads(python3(pluginpath + '/python/gfs/gfs_manage.py', '--init-pcs-cluster', '--list-ip', pcs_list_str))
+            if result['code'] not in [200,400]:
+                success_bool = False
+
+        result = os.system("rbd ls -p rbd | grep ccvm > /dev/null")
+        if result == 0:
+            os.system("rbd rm --no-progress rbd/ccvm")
+
+        # 작업폴더 생성
+        os.system("mkdir -p "+pluginpath+"/tools/vmconfig/ccvm")
+
+        # cloudinit iso 삭제
+        os.system("rm -f /var/lib/libvirt/images/ccvm-cloudinit.iso")
+
+        if success_bool:
+            for i in range(len(json_data["clusterConfig"]["hosts"])):
+                ablecube = json_data["clusterConfig"]["hosts"][i]["ablecube"]
+                ssh('-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=5',ablecube,'python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update','--depth1', 'bootstrap', '--depth2', 'ccvm', '--value', 'false')
+                ssh('-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=5',ablecube,'python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update','--depth1', 'monitoring', '--depth2', 'wall', '--value', 'false')
+                ssh('-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=5',ablecube,'python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update','--depth1', 'bootstrap', '--depth2', 'gfs_configure', '--value', 'false')
+            return createReturn(code=200, val="cloud center and gfs disk reset success")
+        else:
+            return createReturn(code=500, val="cloud center and gfs disk reset fail")
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     # parser 생성
