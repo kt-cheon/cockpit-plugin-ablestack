@@ -11,6 +11,9 @@ import subprocess
 from subprocess import check_output
 from subprocess import call
 from ablestack import *
+import sys
+sys.path.insert(0, "/usr/libexec/ablestack/node-agent")
+from query_helpers import vm_details
 
 env=os.environ.copy()
 env['LANG']="en_US.utf-8"
@@ -90,38 +93,17 @@ def statusDeteil():
         else :
             memory = 'N/A'
 
-        '''pfmp root disk 크기 조회 시 ssh 사용전 ping test'''
-        rc = call(["ping -c 1 -w 1 pfmp"], universal_newlines=True, shell=True, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-        if rc == 0:
-            '''pfmp 에 접속해 df -h 값 세팅'''
-            rootDiskSize = check_output(["/usr/bin/ssh -o StrictHostKeyChecking=no pfmp df -h | grep '\-root ' | awk '{print $2}'"], universal_newlines=True, shell=True, env=env).strip()
-            if rootDiskSize == "" :
-                rootDiskSize = "N/A"
-            output = check_output(["/usr/bin/ssh -o StrictHostKeyChecking=no pfmp df -h | grep '\-root ' | awk '{print $4}'"], universal_newlines=True, shell=True, env=env)
-            rootDiskAvail = output.strip()
-            if rootDiskAvail == "" :
-                rootDiskAvail = "N/A"
-            output = check_output(["/usr/bin/ssh -o StrictHostKeyChecking=no pfmp df -h | grep '\-root ' | awk '{print $5}'"], universal_newlines=True, shell=True, env=env)
-            rootDiskUsePer = output.strip()
-            if rootDiskUsePer == "" :
-                rootDiskUsePer = "N/A"
+        # A single bounded read-only API request replaces repeated remote shell commands.
+        try:
+            details = vm_details("pfmp")
+            rootDiskSize = details["size"]
+            rootDiskAvail = details["available"]
+            rootDiskUsePer = details["usage"]
+            manageNicGw = details["gateway"]
+            manageNicDns = details["dns"]
+        except (OSError, ValueError, RuntimeError):
+            rootDiskSize = rootDiskAvail = rootDiskUsePer = manageNicGw = manageNicDns = 'N/A'
 
-            '''management Nic Gw정보 확인'''
-            output = check_output(["/usr/bin/ssh -o StrictHostKeyChecking=no pfmp /usr/sbin/route -n | grep -P '^0.0.0.0|UG' | awk '{print $2}'"], universal_newlines=True, shell=True, env=env)
-            manageNicGw = output.strip()
-            if manageNicGw == "" :
-                manageNicGw = "N/A"
-
-            output = check_output(["/usr/bin/ssh -o StrictHostKeyChecking=no pfmp /usr/bin/cat -n /etc/resolv.conf | awk '$1 == 2 {print $3}'"], universal_newlines=True, shell=True, env=env)
-            manageNicDns = output.strip()
-            if manageNicDns == "":
-                manageNicDns = "N/A"
-        else :
-            rootDiskSize = 'N/A'
-            rootDiskAvail = 'N/A'
-            rootDiskUsePer = 'N/A'
-            manageNicGw = 'N/A'
-            manageNicDns = 'N/A'
         '''pfmp 관리 nic 확인 시 리턴값 0이면 정상, 아니면 비정상'''
         rc = call(["cat /etc/hosts | grep pfmp"], universal_newlines=True, shell=True, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
         if rc == 0:

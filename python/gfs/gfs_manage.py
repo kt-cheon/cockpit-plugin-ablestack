@@ -4,7 +4,9 @@ import argparse
 import socket
 import time
 from typing import Any, Dict, List
-import paramiko
+import sys
+sys.path.insert(0, "/usr/libexec/ablestack/node-agent")
+from remote_session import RemoteHost
 import subprocess
 import os
 import json
@@ -95,12 +97,9 @@ def run_command(command, ssh_client=None, ignore_errors=False, suppress_errors=T
             raise
 
 def connect_to_host(ip):
-    """Establish an SSH connection to the host."""
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    private_key_path = os.getenv('SSH_PRIVATE_KEY_PATH', '/root/.ssh/id_rsa')
-    ssh.connect(ip, username='root', key_filename=private_key_path, timeout=10, banner_timeout=30, auth_timeout=30)
-    return ssh
+    """Use the enrolled node API; interactive root login is not required."""
+    return RemoteHost(ip)
+
 
 def install_packages(remote_ips):
     """Install required packages on remote hosts."""

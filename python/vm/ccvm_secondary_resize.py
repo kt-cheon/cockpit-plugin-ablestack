@@ -48,7 +48,7 @@ def open_cluster_json():
 
 def is_ccvm_ssh_ok():
     """CCVM SSH 가능 여부"""
-    rc = os.system("ssh -q -o StrictHostKeyChecking=no -o ConnectTimeout=5 ccvm 'echo ok' >/dev/null 2>&1")
+    rc = os.system("/usr/libexec/ablestack/node-remote -q -o StrictHostKeyChecking=no -o ConnectTimeout=5 ccvm 'echo ok' >/dev/null 2>&1")
     return rc == 0
 
 def virsh_state(domain_name):
@@ -131,7 +131,7 @@ def ccvm_secondary_resize(args):
                     " && pvresize /dev/vda3 >/dev/null 2>&1"
                     " && lvextend -l +100%FREE /dev/rl/nfs >/dev/null 2>&1"
                     " && xfs_growfs /nfs >/dev/null 2>&1")
-        rc = os.system(f"ssh -q -o StrictHostKeyChecking=no -o ConnectTimeout=10 ccvm '{grow_cmd}'")
+        rc = os.system(f"/usr/libexec/ablestack/node-remote -q -o StrictHostKeyChecking=no -o ConnectTimeout=10 ccvm '{grow_cmd}'")
         if rc != 0:
             return createReturn(code=500, val="CCVM secondary filesystem expansion failed.")
         return createReturn(code=200, val="CCVM secondary filesystem expansion success.")

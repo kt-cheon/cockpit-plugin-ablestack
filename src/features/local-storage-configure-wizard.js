@@ -313,19 +313,19 @@ function deployLocalStorage() {
   // 설정 초기화 ( 필요시 python까지 종료 )
   var cmd = ['python3', pluginpath + '/python/local/local_manage.py', '--reset', '--disks', disks];
   console.log(cmd);
-  cockpit.spawn(cmd).then(function(data) {
+  ablestack.spawn(cmd).then(function(data) {
     var retVal = JSON.parse(data);
     if (retVal.code == 200){
       setLocalProgressStep("span-local-progress-step1",2);
       setLocalProgressStep("span-local-progress-step2",1);
       cmd = ['python3', pluginpath + '/python/local/local_manage.py', '--create-local-disk', '--disks', disks]
       console.log(cmd);
-      cockpit.spawn(cmd).then(function(data) {
+      ablestack.spawn(cmd).then(function(data) {
         var retVal = JSON.parse(data);
         if (retVal.code == 200){
           // 로컬 스토리지 파티션 생성 및 논리 볼륨 생성 성공
           cmd = ['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', "update", "--depth1", "bootstrap", "--depth2", "local_configure", "--value","true"]
-          cockpit.spawn(cmd)
+          ablestack.spawn(cmd)
 
           setLocalProgressStep("span-local-progress-step2",2);
           showDivisionLocalConfigFinish();
@@ -445,7 +445,7 @@ function setLocalDiskInfo(){
 
   createLoggerInfo("setDiskInfo() start");
 
-  cockpit.spawn(cmd).then(function(data) {
+  ablestack.spawn(cmd).then(function(data) {
     // 초기화
     $('#disk-local-storage-pci-list').empty();
 

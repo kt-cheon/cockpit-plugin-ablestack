@@ -1,0 +1,12 @@
+{
+  "mode": "member",
+  "node_id": null,
+  "management_interface": null,
+  "management_ip": null,
+  "inventory": "/etc/ablestack/node-agent/nodes.json",
+  "enrollment_dir": "/var/lib/ablestack/cube-agent/enrollment",
+  "bundles_dir": "/var/lib/ablestack/cube-agent/bundles",
+  "authority_dir": "/var/lib/ablestack/cube-agent/authority",
+  "agent_rpm": null,
+  "manage_firewall": false
+}

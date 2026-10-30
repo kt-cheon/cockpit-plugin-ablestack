@@ -16,8 +16,10 @@ import json
 import socket
 
 from ablestack import *
+import sys
+sys.path.insert(0, "/usr/libexec/ablestack/node-agent")
+from client import Client
 from sh import python3
-from sh import ssh
 
 json_file_path = pluginpath+"/tools/properties/cluster.json"
 
@@ -70,9 +72,11 @@ def selectPcsExeHost(args):
         for f_key in json_data["clusterConfig"]["pcsCluster"]:
             pcs_host = json_data["clusterConfig"]["pcsCluster"][f_key]
             if pcs_host != "":
-                ret = subprocess.run(["ssh", "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=1", pcs_host, "echo ok"],stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, check=False).stdout.strip()
-                if ret == 'ok':
+                try:
+                    Client().rpc(pcs_host, "health")
                     return createReturn(code=200, val=pcs_host)
+                except (OSError, ValueError, RuntimeError):
+                    continue
 
         return createReturn(code=200, val=hostname)
     except Exception as e:

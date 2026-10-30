@@ -90,7 +90,7 @@ def generateDecToHex():
 def createSecretKey(host_names):
 
     for host_name in host_names:
-        ret_num = os.system("ssh root@"+host_name+" 'sh "+pluginpath+"/shell/host/virsh_secret_key.sh'")
+        ret_num = os.system("/usr/libexec/ablestack/node-remote root@"+host_name+" 'sh "+pluginpath+"/shell/host/virsh_secret_key.sh'")
         # 쉘 스크립트 실행 실패
         if ret_num != 0 :
             return createReturn(code=500, val=host_name+" : pcs 클러스터 secret.xm 설정 실패 ")
@@ -171,8 +171,8 @@ def createCcvmXml(args):
                         # openvswitch 서비스가 활성화일 경우 해당 코드 추가
                         if openvswitch_service_check == 0:
                             mnb_txt += "      <virtualport type='openvswitch' />\n"
-                        else:
-                            mnb_txt += "      <filterref filter='allow-all-traffic'/>\n"
+                        # A plain bridge needs no pass-through nwfilter. Attaching one
+                        # makes VM startup depend on libvirt's iptables filter chains.
                         mnb_txt += "      <address type='pci' domain='0x0000' bus='0x00' slot='" + slot_hex_num.pop(0) + "' function='0x0'/>\n"
                         mnb_txt += "    </interface>"
 
@@ -187,9 +187,6 @@ def createCcvmXml(args):
                         snb_txt += "      <model type='virtio'/>\n"
                         snb_txt += "      <alias name='net" + str(br_num) + "'/>\n"
                         snb_txt += "      <address type='pci' domain='0x0000' bus='0x00' slot='" + slot_hex_num.pop(0) + "' function='0x0'/>\n"
-                         # openvswitch 서비스가 활성화일 경우 해당 코드 추가
-                        if openvswitch_service_check != 0:
-                            snb_txt += "      <filterref filter='allow-all-traffic'/>\n"
                         snb_txt += "    </interface>"
 
                         br_num += 1
@@ -207,7 +204,7 @@ def createCcvmXml(args):
 
             # pcs 클러스터 호스트에 ccvm.xml 복사 실패
             for i in [1,2,3]:
-                ret_num = os.system("scp -q "+pluginpath+"/tools/vmconfig/ccvm/ccvm-temp.xml root@"+host_name+":"+pluginpath+"/tools/vmconfig/ccvm/ccvm.xml")
+                ret_num = os.system("/usr/libexec/ablestack/node-copy -q "+pluginpath+"/tools/vmconfig/ccvm/ccvm-temp.xml root@"+host_name+":"+pluginpath+"/tools/vmconfig/ccvm/ccvm.xml")
                 if ret_num == 0:
                     break
 
@@ -216,7 +213,7 @@ def createCcvmXml(args):
 
             # pcs 클러스터 할 호스트 전체의 폴더 권한 수정
             for i in [1,2,3]:
-                ret_num = os.system("ssh root@"+host_name+" 'chmod 755 -R "+pluginpath+"/tools/vmconfig/ccvm'")
+                ret_num = os.system("/usr/libexec/ablestack/node-remote root@"+host_name+" 'chmod 755 -R "+pluginpath+"/tools/vmconfig/ccvm'")
                 if ret_num == 0:
                     break
 
@@ -225,7 +222,7 @@ def createCcvmXml(args):
 
             # pcs 클러스터 할 호스트 설정 백업전 폴더 생성
             for i in [1,2,3]:
-                ret_num = os.system("ssh root@"+host_name+" 'mkdir -p /usr/share/ablestack/vmconfig'")
+                ret_num = os.system("/usr/libexec/ablestack/node-remote root@"+host_name+" 'mkdir -p /usr/share/ablestack/vmconfig'")
                 if ret_num == 0:
                     break
 
@@ -235,7 +232,7 @@ def createCcvmXml(args):
 
             # pcs 클러스터 할 호스트 설정 복제
             for i in [1,2,3]:
-                ret_num = os.system("ssh root@"+host_name+" 'cp -rf "+pluginpath+"/tools/vmconfig/ccvm /usr/share/ablestack/vmconfig/'")
+                ret_num = os.system("/usr/libexec/ablestack/node-remote root@"+host_name+" 'cp -rf "+pluginpath+"/tools/vmconfig/ccvm /usr/share/ablestack/vmconfig/'")
                 if ret_num == 0:
                     break
 

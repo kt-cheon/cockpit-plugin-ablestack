@@ -19,7 +19,7 @@ scvm/ccvm은 cloud-init으로 배포된 /usr/local/sbin 스크립트를 사용�
 - --update-json-file일 때:
   - security_patch.status=true 업데이트만 수행하고, security_patch.sh는 실행하지 않습니다.
 - --ceph-ssh-change일 때:
-  - security_patch.sh --ceph-ssh-change 를 로컬에서 한 번만 실행합니다(ssh 사용 안 함).
+  - security_patch.sh --ceph-ssh-change 를 로컬에서 한 번만 실행합니다(/usr/libexec/ablestack/node-remote 사용 안 함).
 """
 
 import argparse
@@ -64,7 +64,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--add-host", action="store_true", help="추가 호스트용: 로컬(ablestack-hci일 경우 scvm 포함)에만 security_patch.sh를 실행합니다")
     parser.add_argument("--port-change", action="store_true", help="security_patch.sh 호출 시 --port-change 플래그를 함께 전달합니다")
     parser.add_argument("--update-json-file", action="store_true", help="security_patch.status 를 true 로 업데이트만 수행합니다(security_patch.sh 실행 안 함)")
-    parser.add_argument("--local", action="store_true", help="--update-json-file 사용 시, ssh 대신 현재 호스트에서만 JSON 업데이트를 수행합니다")
+    parser.add_argument("--local", action="store_true", help="--update-json-file 사용 시, /usr/libexec/ablestack/node-remote 대신 현재 호스트에서만 JSON 업데이트를 수행합니다")
     parser.add_argument("--ceph-ssh-change", action="store_true", help="security_patch.sh --ceph-ssh-change 를 로컬에서 한 번만 실행합니다")
 
     return parser.parse_args()
@@ -168,7 +168,7 @@ def update_security_patch_status(conf: Dict, plugin_path: str, host_stat: str) -
 
             subprocess.run(
                 [
-                    "ssh",
+                    "/usr/libexec/ablestack/node-remote",
                     "-o", "StrictHostKeyChecking=no",
                     host,
                     "python3",
@@ -282,7 +282,7 @@ def run_remote(
     )
 
     ssh_cmd = [
-        "/usr/bin/ssh",
+        "/usr/libexec/ablestack/node-remote",
         "-o", "StrictHostKeyChecking=no",
         "-o", "BatchMode=yes",
         "-o", "ConnectTimeout=10",
@@ -338,7 +338,7 @@ def run_remote(
         except FileNotFoundError:
             last_rc = 127
             last_stdout = ""
-            last_stderr = "ssh binary not found"
+            last_stderr = "/usr/libexec/ablestack/node-remote binary not found"
             break
         except Exception as e:
             last_rc = 1

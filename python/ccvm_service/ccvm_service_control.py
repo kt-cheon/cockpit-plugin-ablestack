@@ -37,7 +37,7 @@ def serviceControl(action):
     ip = socket.gethostbyname('ccvm-mngt')
 
     # 서비스 제어 명령
-    result = os.system("ssh root@"+ip+" 'systemctl "+args.action+" "+args.service_name+"' > /dev/null")
+    result = os.system("/usr/libexec/ablestack/node-remote root@"+ip+" 'systemctl "+args.action+" "+args.service_name+"' > /dev/null")
 
     if result == 0: #서비스 제어가 성공일 경우
         return createReturn(code=200, val=args.service_name+" service "+args.action+" control success")

@@ -16,7 +16,8 @@ import socket
 
 from ablestack import *
 from sh import python3
-from sh import ssh
+from sh import Command as _RemoteCommand
+ssh = _RemoteCommand('/usr/libexec/ablestack/node-remote')
 
 hosts_file_path = "/etc/hosts"
 ablecloud_file_path = pluginpath+"/tools/properties/ablestack.json"

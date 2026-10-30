@@ -474,13 +474,13 @@ function deployPfmpVM() {
   setPfmpProgressStep("span-pfmp-progress-step1",1);
   var reset_pfmp_vm_cmd = ['python3', pluginpath + '/python/pfmp/reset_pfmp_vm.py'];
   if(console_log){console.log(reset_pfmp_vm_cmd);}
-  cockpit.spawn(reset_pfmp_vm_cmd)
+  ablestack.spawn(reset_pfmp_vm_cmd)
     .then(function(data){
       //결과 값 json으로 return
       var reset_pfmp_result = JSON.parse(data);
       if(reset_pfmp_result.code=="200") { //정상
         //=========== 2. cloudinit iso 파일 생성 ===========
-        // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/pfmp/cloudinit 경로에 hosts, ssh key 파일 저장
+        // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/pfmp/cloudinit 경로에 hosts, /usr/libexec/ablestack/node-remote key 파일 저장
         setPfmpProgressStep("span-pfmp-progress-step1",2);
         setPfmpProgressStep("span-pfmp-progress-step2",1);
 
@@ -502,7 +502,7 @@ function deployPfmpVM() {
           ,"--hostname","pfmp"
         ];
         if(console_log){console.log(create_pfmp_cloudinit_cmd);}
-        cockpit.spawn(create_pfmp_cloudinit_cmd)
+        ablestack.spawn(create_pfmp_cloudinit_cmd)
           .then(function(data){
             //결과 값 json으로 return
             var create_pfmp_cloudinit_result = JSON.parse(data);
@@ -511,7 +511,7 @@ function deployPfmpVM() {
               setPfmpProgressStep("span-pfmp-progress-step2",2);
               setPfmpProgressStep("span-pfmp-progress-step3",1);
               if(console_log){console.log(xml_create_cmd);}
-              cockpit.spawn(xml_create_cmd)
+              ablestack.spawn(xml_create_cmd)
                 .then(function(data){
                   //결과 값 json으로 return
                   var create_pfmp_xml_result = JSON.parse(data);
@@ -530,7 +530,7 @@ function deployPfmpVM() {
                       ,"-data2", cn_ip + " - " + IncrementIpAddress(cn_ip,4)
                     ];
                     if(console_log){console.log(pfmp_setup);}
-                    cockpit.spawn(pfmp_setup)
+                    ablestack.spawn(pfmp_setup)
                       .then(function(data){
                         //결과 값 json으로 return
                         var result = JSON.parse(data);
@@ -779,7 +779,7 @@ function validatePfmpVm(){
  * Meathod Name : setPfmpSshPrivateKeyInfo
  * Date Created : 2024.09.04
  * Writer : 정민철
- * Description : 스토리지센터 가상머신에 사용할 ssh private key 파일 세팅
+ * Description : 스토리지센터 가상머신에 사용할 /usr/libexec/ablestack/node-remote private key 파일 세팅
  * Parameter : String
  * Return : 없음
  * History : 2024.09.04 최초 작성
@@ -796,7 +796,7 @@ function validatePfmpVm(){
  * Meathod Name : setPfmpSshPublicKeyInfo
  * Date Created : 2024.09.04
  * Writer : 정민철
- * Description : 스토리지센터 가상머신에 사용할 ssh public key 파일 세팅
+ * Description : 스토리지센터 가상머신에 사용할 /usr/libexec/ablestack/node-remote public key 파일 세팅
  * Parameter : String
  * Return : 없음
  * History : 2024.09.04 최초 작성

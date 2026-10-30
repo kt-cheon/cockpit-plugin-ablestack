@@ -28,7 +28,7 @@ $(".tab-available").keydown(function (e) {
   var cmd = ["python3",pluginpath + "/python/nic/network_action.py","list"];
 
   if(excute_host == undefined || excute_host == null || excute_host == ""){
-    cockpit.spawn(cmd).then(function(data){
+    ablestack.spawn(cmd).then(function(data){
 
       setNicSelectBox(select_box_id, data)
 
@@ -37,7 +37,7 @@ $(".tab-available").keydown(function (e) {
       //alert("setNicBridge error");
     });
   }else{
-    cockpit.spawn(cmd,{ host: excute_host}).then(function(data){
+    ablestack.spawn(cmd,{ host: excute_host}).then(function(data){
 
       setNicSelectBox(select_box_id, data)
 
@@ -711,7 +711,7 @@ function setPfmpProgressStep(span_id, status){
 
 function checkHostName(option) {
 
-  cockpit.script(["hostname"])
+  ablestack.script(["hostname"])
     .then(function (data) {
       $('#form-input-current-host-name'+option).val(data);
     })
@@ -1020,7 +1020,7 @@ function settingProfile(clusterJsonConf, option, os_type, iscsi_check){
  * Return : 없음
  **/
  function settingSshKey(option){
-  cockpit.spawn(['cat', '/root/.ssh/id_rsa'])
+  ablestack.spawn(['cat', '/root/.ssh/id_rsa'])
   .then(data=>{;
     if(option == "-scvm"){
       $('#form-textarea-storage-vm-ssh-private-key-file').val(data);
@@ -1034,7 +1034,7 @@ function settingProfile(clusterJsonConf, option, os_type, iscsi_check){
      console.log("호스트의 id_rsa 파일 읽기 실패" + err);
   });
 
-  cockpit.spawn(['cat', '/root/.ssh/id_rsa.pub'])
+  ablestack.spawn(['cat', '/root/.ssh/id_rsa.pub'])
   .then(data=>{;
     if(option == "-scvm"){
       $('#form-textarea-storage-vm-ssh-public-key-file').val(data);
@@ -1841,8 +1841,8 @@ async function clusterConfigProfile(operating_system, setting, iscsi_check) {
 
   try {
    if (operating_system === 'ablestack-standalone') {
-    const hostname = (await cockpit.spawn([ 'hostname' ])).trim();
-    const ipData = (await cockpit.spawn([ 'ip', 'route', 'get', '1' ])).trim();
+    const hostname = (await ablestack.spawn([ 'hostname' ])).trim();
+    const ipData = (await ablestack.spawn([ 'ip', 'route', 'get', '1' ])).trim();
     const host_ip = ipData.split(/\s+/)[6];
 
     columns = [

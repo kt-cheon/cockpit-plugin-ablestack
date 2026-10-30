@@ -17,7 +17,8 @@ import time
 
 from ablestack import *
 from python_hosts import Hosts, HostsEntry
-from sh import ssh
+from sh import Command as _RemoteCommand
+ssh = _RemoteCommand('/usr/libexec/ablestack/node-remote')
 
 env=os.environ.copy()
 env['LANG']="en_US.utf-8"
@@ -67,14 +68,14 @@ def ContainerInstall():
 
     for i in range(len(json_data["clusterConfig"]["hosts"])):
         host = json_data["clusterConfig"]["hosts"][i]["ablecube"]
-        os.system("scp -o StrictHostKeyChecking=no " + pfmp_json_file_path + " " + host + ":" + pfmp_json_file_path + " > /dev/null")
+        os.system("/usr/libexec/ablestack/node-copy -o StrictHostKeyChecking=no " + pfmp_json_file_path + " " + host + ":" + pfmp_json_file_path + " > /dev/null")
         os.system("systemctl disable --now firewalld.service")
 
-    result = os.system("scp -o StrictHostKeyChecking=no " + pfmp_json_file_path + " pfmp:"+ pfmp_config_path + " > /dev/null")
+    result = os.system("/usr/libexec/ablestack/node-copy -o StrictHostKeyChecking=no " + pfmp_json_file_path + " pfmp:"+ pfmp_config_path + " > /dev/null")
 
     if result == 0:
 
-        ssh_command = ['ssh', '-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=5', 'pfmp', 'sh', '/opt/dell/pfmp/PFMP_Installer/scripts/setup_installer.sh']
+        ssh_command = ['/usr/libexec/ablestack/node-remote', '-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=5', 'pfmp', 'sh', '/opt/dell/pfmp/PFMP_Installer/scripts/setup_installer.sh']
 
         process = subprocess.Popen(ssh_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
@@ -84,15 +85,15 @@ def ContainerInstall():
             process.wait()
 
             if process.returncode == 0:
-                container_id = subprocess.check_output(['ssh -o StrictHostKeyChecking=no pfmp podman ps -f "name=atlantic_installer" -a --format "{{.ID}}"'],universal_newlines=True, shell=True, env=env).strip()
+                container_id = subprocess.check_output(['/usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no pfmp podman ps -f "name=atlantic_installer" -a --format "{{.ID}}"'],universal_newlines=True, shell=True, env=env).strip()
 
                 # subprocess.run(['ssh', '-o', 'StrictHostKeyChecking=no', 'pfmp','podman exec -it ' + container_id + ' useradd -m ablecloud > /dev/null; 2>&1'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 # subprocess.run(['ssh', '-o', 'StrictHostKeyChecking=no', 'pfmp','podman exec -it --user ablecloud ' + container_id + ' mkdir -p /home/ablecloud/.ssh > /dev/null'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 # subprocess.run(['ssh', '-o', 'StrictHostKeyChecking=no', 'pfmp','podman cp /home/ablecloud/.ssh/id_rsa ' + container_id + ':/home/ablecloud/.ssh/'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                subprocess.run(['ssh', '-o', 'StrictHostKeyChecking=no', 'pfmp','podman exec -it ' + container_id + ' mkdir -p /root/.ssh > /dev/null'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                subprocess.run(['ssh', '-o', 'StrictHostKeyChecking=no', 'pfmp','podman cp /root/.ssh/id_rsa ' + container_id + ':/root/.ssh/'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.run(['/usr/libexec/ablestack/node-remote', '-o', 'StrictHostKeyChecking=no', 'pfmp','podman exec -it ' + container_id + ' mkdir -p /root/.ssh > /dev/null'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.run(['/usr/libexec/ablestack/node-remote', '-o', 'StrictHostKeyChecking=no', 'pfmp','podman cp /root/.ssh/id_rsa ' + container_id + ':/root/.ssh/'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 # ablecloud 모니터 계정 json 파일 복사
-                subprocess.run(['ssh','-o', 'StrictHostKeyChecking=no', 'pfmp','podman cp /opt/dell/pfmp/PFMP_Installer/config/keycloakrealm.json ' + container_id + ':/app/playbooks/files/PFMP_Installer/templates/keycloakrealm_t.json'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.run(['/usr/libexec/ablestack/node-remote','-o', 'StrictHostKeyChecking=no', 'pfmp','podman cp /opt/dell/pfmp/PFMP_Installer/config/keycloakrealm.json ' + container_id + ':/app/playbooks/files/PFMP_Installer/templates/keycloakrealm_t.json'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
                 return createReturn(code=200, val="Success PFMP Container Install")
@@ -105,12 +106,12 @@ def ContainerInstall():
         finally:
             process.terminate()
     else:
-        return createReturn(code=500, val="scp Connection Failed")
+        return createReturn(code=500, val="/usr/libexec/ablestack/node-copy Connection Failed")
 
 
 def install():
 
-    ssh_command = ['ssh', '-o', 'StrictHostKeyChecking=no', 'pfmp', '-t', 'sh', '/opt/dell/pfmp/PFMP_Installer/scripts/install_PFMP.sh']
+    ssh_command = ['/usr/libexec/ablestack/node-remote', '-o', 'StrictHostKeyChecking=no', 'pfmp', '-t', 'sh', '/opt/dell/pfmp/PFMP_Installer/scripts/install_PFMP.sh']
 
     process = subprocess.Popen(ssh_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     last_line = ""
@@ -123,10 +124,10 @@ def install():
                 for i in range(len(json_data["clusterConfig"]["hosts"])):
                     host = json_data["clusterConfig"]["hosts"][i]["ablecube"]
                     scvm = json_data["clusterConfig"]["hosts"][i]["scvm"]
-                    subprocess.run(['ssh', '-o', 'StrictHostKeyChecking=no', host, 'python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update', '--depth1', 'bootstrap', '--depth2', 'pfmp', '--value', 'true'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    subprocess.run(['/usr/libexec/ablestack/node-remote', '-o', 'StrictHostKeyChecking=no', host, 'python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update', '--depth1', 'bootstrap', '--depth2', 'pfmp', '--value', 'true'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                     if len(json_data["clusterConfig"]["hosts"]) != i+1:
-                        subprocess.run(['ssh', '-o', 'StrictHostKeyChecking=no', scvm, 'systemctl restart activemq.service'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                        subprocess.run(['ssh', '-o', 'StrictHostKeyChecking=no', scvm, 'scli --add_certificate --certificate_file /opt/emc/scaleio/mdm/cfg/mgmt_ca.pem'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        subprocess.run(['/usr/libexec/ablestack/node-remote', '-o', 'StrictHostKeyChecking=no', scvm, 'systemctl restart activemq.service'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        subprocess.run(['/usr/libexec/ablestack/node-remote', '-o', 'StrictHostKeyChecking=no', scvm, 'scli --add_certificate --certificate_file /opt/emc/scaleio/mdm/cfg/mgmt_ca.pem'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
                 return createReturn(code=200, val="Success PFMP Install")
 
@@ -179,7 +180,7 @@ def remove():
         return createReturn(code=500, val="Please check the \"cluster.json\" file. : "+e)
 
 def reset():
-    ssh_command = ['ssh', '-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=5', 'pfmp', 'sh', '/opt/dell/pfmp/PFMP_Installer/scripts/reset_installer.sh']
+    ssh_command = ['/usr/libexec/ablestack/node-remote', '-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=5', 'pfmp', 'sh', '/opt/dell/pfmp/PFMP_Installer/scripts/reset_installer.sh']
 
     process = subprocess.Popen(ssh_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     try:

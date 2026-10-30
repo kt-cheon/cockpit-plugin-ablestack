@@ -18,7 +18,7 @@ $('#buttion-create-modal-smb-construction').on('click',function(){
     $('#div-modal-spinner-header-txt').text('SMB 편집 중');
     $('#div-modal-spinner').show();
 
-    cockpit.spawn(['python3', pluginpath + '/python/glue/gluefs.py', 'quota', '--path', '/smb', '--quota', quota]).then(function(data){
+    ablestack.spawn(['python3', pluginpath + '/python/glue/gluefs.py', 'quota', '--path', '/smb', '--quota', quota]).then(function(data){
       var retVal = JSON.parse(data);
       $('#div-modal-spinner').hide();
       if(retVal.code == 200){
@@ -41,10 +41,10 @@ $('#buttion-create-modal-smb-construction').on('click',function(){
       $('#div-modal-spinner-header-txt').text('SMB 구성 중');
       $('#div-modal-spinner').show();
 
-      cockpit.spawn(['python3', pluginpath + '/python/glue/smb.py','create', '-u', user_name, '-p', user_pw]).then(function(data){
+      ablestack.spawn(['python3', pluginpath + '/python/glue/smb.py','create', '-u', user_name, '-p', user_pw]).then(function(data){
         var retVal = JSON.parse(data);
         if(retVal.code == 200){
-          cockpit.spawn(['python3', pluginpath + '/python/glue/gluefs.py','quota','--path','/smb','--quota', quota]).then(function(data){
+          ablestack.spawn(['python3', pluginpath + '/python/glue/gluefs.py','quota','--path','/smb','--quota', quota]).then(function(data){
             var retVal = JSON.parse(data);
 
             $('#div-modal-spinner').hide();

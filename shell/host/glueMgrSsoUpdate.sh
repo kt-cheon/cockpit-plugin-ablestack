@@ -27,7 +27,7 @@ echo "$SCVM_HOSTS" | while read -r LINE; do
   ROOT_URL_GLUE="https://$SCVM_HOST_IP:8443"
 
 # 원격 서버($SCVM_HOST_NAME)에서 MGR 컨테이너 검색
-ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$SCVM_HOST_NAME" \
+/usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$SCVM_HOST_NAME" \
   CERT_TARGET_PATH="$CERT_TARGET_PATH" \
   KC_URL="$KC_URL" \
   ROOT_URL_GLUE="$ROOT_URL_GLUE" \

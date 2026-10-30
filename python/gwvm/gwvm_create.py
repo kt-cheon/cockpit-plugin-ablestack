@@ -19,7 +19,8 @@ from subprocess import check_output
 
 from ablestack import *
 from sh import python3
-from sh import ssh
+from sh import Command as _RemoteCommand
+ssh = _RemoteCommand('/usr/libexec/ablestack/node-remote')
 from python_hosts import Hosts, HostsEntry
 
 env=os.environ.copy()
@@ -85,7 +86,7 @@ def create(args):
 
         # 호스트의 cluster.json 파일 scvm에 복사
         # os.system("rm -f "+json_file_path)
-        os.system("scp -q -o StrictHostKeyChecking=no root@"+ablecube_host+":" + json_file_path + " " + json_file_path)
+        os.system("/usr/libexec/ablestack/node-copy -q -o StrictHostKeyChecking=no root@"+ablecube_host+":" + json_file_path + " " + json_file_path)
 
         host_list = []
         for f_val in json_data["clusterConfig"]["hosts"]:
@@ -198,7 +199,7 @@ def create(args):
             while True:
                 time.sleep(10)
                 cnt_num += 1
-                gwvm_boot_check = os.system("ssh -q -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@"+mngt_ip+" 'echo ok > /dev/null 2>&1'")
+                gwvm_boot_check = os.system("/usr/libexec/ablestack/node-remote -q -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@"+mngt_ip+" 'echo ok > /dev/null 2>&1'")
                 if gwvm_boot_check == 0 or cnt_num > 3000:
                     break
 

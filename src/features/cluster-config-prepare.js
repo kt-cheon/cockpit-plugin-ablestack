@@ -9,6 +9,75 @@
 var cur_step_wizard_cluster_config_prepare = "1";
 var option = "";
 let HostProfileData = [];
+let clusterAgentRegistration = null;
+
+$('#form-input-cluster-agent-registration').on('change', function () {
+  clusterAgentRegistration = null;
+  const file = this.files && this.files[0];
+  if (!file) return;
+  if (file.size > 1024 * 1024) {
+    alert('호스트 통신 등록 파일은 1MiB 이하여야 합니다.');
+    this.value = '';
+    return;
+  }
+  const input = this;
+  const reader = new FileReader();
+  reader.onload = function () {
+    try {
+      const registration = JSON.parse(reader.result);
+      if (registration.format !== 'ablestack-cube-enrollment-v1') throw new Error('format');
+      clusterAgentRegistration = registration;
+    } catch (error) {
+      input.value = '';
+      alert('올바른 호스트 통신 등록 파일을 선택하십시오.');
+    }
+  };
+  reader.onerror = function () { input.value = ''; alert('호스트 통신 등록 파일을 읽을 수 없습니다.'); };
+  reader.readAsText(file);
+});
+
+async function prepareClusterAgent(hostFileType, osType, hostsJson, ccvmIp, pcsHosts) {
+  const cluster = {clusterConfig: {type: osType, hosts: JSON.parse(hostsJson), ccvm: {ip: ccvmIp}, pcsCluster: {}}};
+  pcsHosts.forEach(function (host, index) { cluster.clusterConfig.pcsCluster['hostname' + (index + 1)] = host; });
+  const command = ['python3', '/usr/libexec/ablestack/node-agent/cluster_enrollment.py',
+    'prepare', '--source', hostFileType];
+  // Keep private enrollment material in stdin, out of command arguments and logs.
+  const process = ablestack.spawn(command, {err: 'message'});
+  process.input(JSON.stringify({cluster: cluster, registration: clusterAgentRegistration}));
+  const response = await new Promise(function (resolve, reject) {
+    process.then(resolve, function (error, message) { reject(new Error(message || error.message)); });
+  });
+  const result = JSON.parse(response);
+  const downloads = $('#cluster-agent-registration-downloads').empty();
+  if (result.exports.length) {
+    $('<p>').text('다른 호스트의 클러스터 구성 준비에서 해당 호스트용 통신 등록 파일을 사용하십시오.').appendTo(downloads);
+  }
+  result.exports.forEach(function (host) {
+    $('<button>', {type: 'button', class: 'pf-v6-c-button pf-m-link'}).text(host + ' 통신 등록 파일 다운로드')
+      .on('click', async function () {
+        this.disabled = true;
+        try {
+          const content = await ablestack.spawn(['python3', '/usr/libexec/ablestack/node-agent/cluster_enrollment.py',
+            'export', '--host', host], {err: 'message'});
+          const url = URL.createObjectURL(new Blob([content], {type: 'application/json'}));
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = host + '.cube-agent.json';
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        } catch (error) {
+          alert('통신 등록 파일 다운로드에 실패했습니다: ' + error.message);
+        } finally {
+          this.disabled = false;
+        }
+      }).appendTo(downloads);
+  });
+  clusterAgentRegistration = null;
+  $('#form-input-cluster-agent-registration').val('');
+  return result;
+}
 
 // Document.ready 시작
 $(document).ready(function () {
@@ -291,7 +360,7 @@ $('#button-next-step-modal-wizard-cluster-config-prepare').on('click', function 
       console.log(ipmi_config);
       check_ipmi_cmd = ['python3',pluginpath + '/python/gfs/gfs_manage.py' , '--check-ipmi', '--stonith', ipmi_config];
       console.log(check_ipmi_cmd);
-      cockpit.spawn(check_ipmi_cmd)
+      ablestack.spawn(check_ipmi_cmd)
       .then(function(data) {
         var retVal = JSON.parse(data);
         console.log(retVal);
@@ -406,11 +475,28 @@ $('#button-next-step-modal-wizard-cluster-config-prepare').on('click', function 
 
       var console_log = true;
       // writeSshKeyFile 작업이 완료될떄까지 5초 delay
-      setTimeout(function(){
+      setTimeout(async function(){
         var iscsi_check = $('#iscsi-net-switch').is(':checked') ? 'true' : 'false';
 
         setClusterProgressStep("span-cluster-progress-step1",2);
         setClusterProgressStep("span-cluster-progress-step2",1);
+        try {
+          await prepareClusterTime();
+          await prepareClusterAgent(host_file_type, os_type, ret_json_string, ccvm_mgmt_ip, host_names);
+        } catch (error) {
+          setClusterProgressFail(2);
+          alert('시간서버 설정 또는 호스트 통신 등록에 실패했습니다. ' + error.message);
+          $('#div-modal-wizard-cluster-config-deploy').hide();
+          $('#div-modal-wizard-cluster-config-review').show();
+          $('#button-next-step-modal-wizard-cluster-config-prepare').show().html('완료');
+          $('#button-before-step-modal-wizard-cluster-config-prepare').show();
+          $('#button-cancel-config-modal-wizard-cluster-config-prepare').show();
+          ['overview', 'cluster-type', 'ssh-key', 'ip-info', 'time-server', 'review'].forEach(function (step) {
+            $('#nav-button-cluster-config-' + step).removeClass('pf-m-disabled');
+          });
+          cur_step_wizard_cluster_config_prepare = '6';
+          return;
+        }
         // 신규일때
         // writeConfigFile(ret_json_string);
         let cluster_host_yn = $('input[name=radio-cluster-host]:checked').val()
@@ -427,7 +513,7 @@ $('#button-next-step-modal-wizard-cluster-config-prepare').on('click', function 
           }
 
           if(console_log){console.log(cluster_config_cmd);}
-          cockpit.spawn(cluster_config_cmd)
+          ablestack.spawn(cluster_config_cmd)
           .then(function(data){
             var retVal = JSON.parse(data);
             if(retVal.code == "200"){
@@ -479,13 +565,13 @@ $('#button-next-step-modal-wizard-cluster-config-prepare').on('click', function 
               host_ping_test_and_cluster_config_cmd.push("-ets", extenal_timeserver)
             }
             if(console_log){console.log(host_ping_test_and_cluster_config_cmd);}
-            cockpit.spawn(host_ping_test_and_cluster_config_cmd)
+            ablestack.spawn(host_ping_test_and_cluster_config_cmd)
             .then(function(data){
               var retVal = JSON.parse(data);
               if(retVal.code == "200"){
                 var pcs_config_setting_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--extend-pcs-cluster', '--password', 'password', '--stonith', ipmi_config, '--mount-point', gfs_mount_point, '--iscsi-check', iscsi_check, '--list-ip', all_host_name];
                 console.log(pcs_config_setting_cmd);
-                cockpit.spawn(pcs_config_setting_cmd)
+                ablestack.spawn(pcs_config_setting_cmd)
                 .then(function(data){
                   var retVal = JSON.parse(data);
                   if(retVal.code == "200"){
@@ -493,13 +579,13 @@ $('#button-next-step-modal-wizard-cluster-config-prepare').on('click', function 
                     setClusterProgressStep("span-cluster-progress-step3",1);
                     var etc_config_cmd = ['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'allUpdate'];
                     if(console_log){console.log(etc_config_cmd);}
-                    cockpit.spawn(etc_config_cmd)
+                    ablestack.spawn(etc_config_cmd)
                     .then(function(data){
                       var retVal = JSON.parse(data);
                       if(retVal.code == "200"){
                         var set_alert_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--set-alert', '--list-ip', all_host_name];
                         console.log(set_alert_cmd);
-                        cockpit.spawn(set_alert_cmd)
+                        ablestack.spawn(set_alert_cmd)
                         .then(function(data){
                           var retVal = JSON.parse(data);
                           if(retVal.code == "200"){
@@ -572,7 +658,7 @@ $('#button-next-step-modal-wizard-cluster-config-prepare').on('click', function 
               host_ping_test_and_cluster_config_cmd.push("-ets", extenal_timeserver)
             }
             if(console_log){console.log(host_ping_test_and_cluster_config_cmd);}
-            cockpit.spawn(host_ping_test_and_cluster_config_cmd)
+            ablestack.spawn(host_ping_test_and_cluster_config_cmd)
             .then(function(data){
               var retVal = JSON.parse(data);
               if(retVal.code == "200"){
@@ -581,7 +667,7 @@ $('#button-next-step-modal-wizard-cluster-config-prepare').on('click', function 
 
                 var etc_config_cmd = ['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'allUpdate'];
                 if(console_log){console.log(etc_config_cmd);}
-                cockpit.spawn(etc_config_cmd)
+                ablestack.spawn(etc_config_cmd)
                 .then(function(data){
                   var retVal = JSON.parse(data);
                   if(retVal.code == "200"){
@@ -966,7 +1052,7 @@ $('#button-accordion-timeserver').on('click', function () {
   }
 });
 
-// ssh-key 클러스터 구성 준비 마법사가 시작되면 ssh key키를 생성하고 읽어와 hidden 처리된 textarea에 저장
+// ssh-key 클러스터 구성 준비 마법사가 시작되면 /usr/libexec/ablestack/node-remote key키를 생성하고 읽어와 hidden 처리된 textarea에 저장
 // $('#button-open-modal-wizard-storage-cluster').on('click', function () {
 //   readSshKeyFile();
 // });
@@ -1086,7 +1172,7 @@ $('#span-modal-wizard-cluster-config-finish-hosts-file-download').on('click', fu
 function createClusterJsonLink(){
   let conf_file_path = pluginpath+ "/tools/properties/cluster.json";
 
-  cockpit.file(conf_file_path).read()
+  ablestack.file(conf_file_path).read()
   .done(function (content) {
     $('#div-textarea-cluster-config-confirm-json-conf').val(content);
   }).fail(function (error) {
@@ -1162,6 +1248,10 @@ function resetClusterConfigWizard() {
  **/
 async function resetClusterConfigWizardWithData() {
 
+  clusterAgentRegistration = null;
+  $('#form-input-cluster-agent-registration').val('');
+  $('#cluster-agent-registration-downloads').empty();
+
   // 입력된 모든 데이터를 초기화한다.
   $('#nav-button-cluster-config-overview').addClass('pf-m-current');
   $('#nav-button-cluster-config-cluster-type').removeClass('pf-m-current');
@@ -1179,8 +1269,8 @@ async function resetClusterConfigWizardWithData() {
   $('input[name=form-input-cluster-config-ssh-key-file]').val("");
   $('textarea[name=div-textarea-cluster-config-temp-new-ssh-key-file]').val("");
   $('textarea[name=div-textarea-cluster-config-temp-existing-ssh-key-file]').val("");
-  cockpit.script(["rm -f /root/.ssh/temp_id_rsa"])
-  cockpit.script(["rm -f /root/.ssh/temp_id_rsa.pub"])
+  ablestack.script(["rm -f /root/.ssh/temp_id_rsa"])
+  ablestack.script(["rm -f /root/.ssh/temp_id_rsa.pub"])
   // hosts
   $('#form-radio-hosts-new').prop('checked', true);
   $('#form-radio-hosts-new').removeAttr('disabled');
@@ -1271,7 +1361,7 @@ async function resetClusterConfigWizardWithData() {
 
 function generateSshkey() {
   return new Promise(function (resolve) {
-    resolve(cockpit.script(["ssh-keygen -t rsa -b 2048 -f /root/.ssh/temp_id_rsa -N '' <<<y 2>&1 >/dev/null"]));
+    resolve(ablestack.script(["ssh-keygen -t rsa -b 2048 -f /root/.ssh/temp_id_rsa -N '' <<<y 2>&1 >/dev/null"]));
   });
 }
 
@@ -1289,7 +1379,7 @@ function generateSshkey() {
 async function readSshKeyFile() {
   await generateSshkey();
   // 개인키 읽어오기
-  cockpit.file("/root/.ssh/temp_id_rsa").read()
+  ablestack.file("/root/.ssh/temp_id_rsa").read()
     .done(function (tag) {
       // console.log(tag);
       // ssh_key_textarea에 텍스트 삽입
@@ -1298,7 +1388,7 @@ async function readSshKeyFile() {
     .fail(function (error) {
     });
   // 공개키 읽어오기
-  cockpit.file("/root/.ssh/temp_id_rsa.pub").read()
+  ablestack.file("/root/.ssh/temp_id_rsa.pub").read()
     .done(function (tag) {
       // console.log(tag);
       // ssh_key_textarea에 텍스트 삽입
@@ -1480,21 +1570,21 @@ function saveAsFile(id, str, filename) {
 
 async function writeSshKeyFile(text1, text2) {
   try {
-    await cockpit.script("mkdir -p /root/.ssh && touch /root/.ssh/id_rsa");
-    await cockpit.file("/root/.ssh/id_rsa").replace(text1);
-    await cockpit.script("chmod 600 /root/.ssh/id_rsa");
+    await ablestack.script("mkdir -p /root/.ssh && touch /root/.ssh/id_rsa");
+    await ablestack.file("/root/.ssh/id_rsa").replace(text1);
+    await ablestack.script("chmod 600 /root/.ssh/id_rsa");
 
-    await cockpit.script("touch /root/.ssh/id_rsa.pub");
-    await cockpit.file("/root/.ssh/id_rsa.pub").replace(text2);
-    await cockpit.script("chmod 644 /root/.ssh/id_rsa.pub");
+    await ablestack.script("touch /root/.ssh/id_rsa.pub");
+    await ablestack.file("/root/.ssh/id_rsa.pub").replace(text2);
+    await ablestack.script("chmod 644 /root/.ssh/id_rsa.pub");
 
-    await cockpit.script("cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys");
-    await cockpit.script("sort /root/.ssh/authorized_keys | uniq > /root/.ssh/authorized_keys.uniq");
-    await cockpit.script("mv -f /root/.ssh/authorized_keys.uniq /root/.ssh/authorized_keys");
-    await cockpit.script("chmod 644 /root/.ssh/authorized_keys");
+    await ablestack.script("cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys");
+    await ablestack.script("sort /root/.ssh/authorized_keys | uniq > /root/.ssh/authorized_keys.uniq");
+    await ablestack.script("mv -f /root/.ssh/authorized_keys.uniq /root/.ssh/authorized_keys");
+    await ablestack.script("chmod 644 /root/.ssh/authorized_keys");
 
     // 임시 키 삭제
-    await cockpit.script("rm -f /root/.ssh/temp_id_rsa /root/.ssh/temp_id_rsa.pub");
+    await ablestack.script("rm -f /root/.ssh/temp_id_rsa /root/.ssh/temp_id_rsa.pub");
 
   } catch (err) {
     console.error("SSH 키 처리 중 오류 발생:", err);
@@ -1678,15 +1768,8 @@ async function modifyTimeServer(timeserver_confirm_ip_text, file_type, timeserve
   chrony_text +="# Select which information is logged."+"\n";
   chrony_text +="#log measurements statistics tracking"+"\n";
 
-  //파일쓰기 재시작
-  cockpit.file(chrony_file_root).replace(chrony_text)
-  .done(function (data) { //성공
-    //재시작
-    cockpit.script(["systemctl restart chronyd"])
-  })
-  .fail(function (error) { //실패
-
-  });
+  await ablestack.file(chrony_file_root).replace(chrony_text);
+  await ablestack.spawn(['systemctl', 'restart', 'chronyd.service']);
 }
 
 
@@ -1820,9 +1903,9 @@ function validateClusterConfigPrepare(timeserver_type, os_type) {
  * Return : 없음
  * History : 2022.09.13 최초 작성
  */
- function showDivisionClusterConfigFinish() {
+ async function prepareClusterTime() {
   // time server 파일
-  timeserver_type = $('input[name=radio-timeserver]:checked').val();
+  const timeserver_type = $('input[name=radio-timeserver]:checked').val();
   let timeserver_current_host_num = $('input[name=radio-timeserver_host_num]:checked').val();
   let timeserver_confirm_ip_list = new Array();
   for (let i = 1; i <= 2; i++) {
@@ -1833,14 +1916,16 @@ function validateClusterConfigPrepare(timeserver_type, os_type) {
     timeserver_confirm_ip_list = timeserver_confirm_ip_list.filter(function (item) {
       return item !== null && item !== undefined && item !== '';
     });
-    modifyTimeServer(timeserver_confirm_ip_list, timeserver_type, timeserver_current_host_num, "true");
+    await modifyTimeServer(timeserver_confirm_ip_list, timeserver_type, timeserver_current_host_num, "true");
   }else{
     timeserver_confirm_ip_list = timeserver_confirm_ip_list.filter(function (item) {
       return item !== null && item !== undefined && item !== '';
     });
-    modifyTimeServer(timeserver_confirm_ip_list, timeserver_type, timeserver_current_host_num);
+    await modifyTimeServer(timeserver_confirm_ip_list, timeserver_type, timeserver_current_host_num);
   }
+}
 
+function showDivisionClusterConfigFinish() {
   $('#button-next-step-modal-wizard-cluster-config-prepare').show();
   $('#button-next-step-modal-wizard-cluster-config-prepare').html('종료');
 
@@ -1910,6 +1995,7 @@ function clusterconfigscreenConversion(){
  * History : 2024.11.11 최초 작성
  */
 function saveTableData(host_file_type,iscsi_check) {
+  HostProfileData = [];
   // 선택자 설정
   const selector = host_file_type === "new"
     ? '#form-table-tbody-cluster-config-new-host-profile tr'

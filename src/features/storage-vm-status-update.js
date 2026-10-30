@@ -19,7 +19,7 @@ $('#button-storage-vm-status-update').on('click', function(){
 
   var cmd = $('#scvm-status-update-cmd').val();
   if(cmd == "stop"){//스토리지센터VM 정지 버튼 클릭시
-    cockpit.spawn(["python3", pluginpath+"/python/scvm_status/scvm_status_update.py", "stop" ])
+    ablestack.spawn(["python3", pluginpath+"/python/scvm_status/scvm_status_update.py", "stop" ])
     .then(function(data){
       //console.log(data);
       var retVal = JSON.parse(data);
@@ -36,7 +36,7 @@ $('#button-storage-vm-status-update').on('click', function(){
       console.log(":::scvm stop Error::: " + data);
     });
   }else if(cmd == "start"){//스토리지센터VM 시작 버튼 클릭시
-    cockpit.spawn(["python3", pluginpath+"/python/scvm_status/scvm_status_update.py", "start" ])
+    ablestack.spawn(["python3", pluginpath+"/python/scvm_status/scvm_status_update.py", "start" ])
     .then(function(data){
       //console.log(data);
       var retVal = JSON.parse(data);
@@ -53,13 +53,13 @@ $('#button-storage-vm-status-update').on('click', function(){
       console.log(":::scvm delete Error::: "+data);
     });
   }else if(cmd == "delete"){//스토리지센터VM 삭제 버튼 클릭시
-    cockpit.spawn(["python3", pluginpath+"/python/scvm_status/scvm_status_update.py", "delete" ])
+    ablestack.spawn(["python3", pluginpath+"/python/scvm_status/scvm_status_update.py", "delete" ])
     .then(function(data){
       //console.log(data);
       var retVal = JSON.parse(data);
       if(retVal.code == "200"){
         //scvm bootstrap 프로퍼티 초기화
-        cockpit.spawn(["python3", pluginpath+"/python/ablestack_json/ablestackJson.py", "update", "--depth1", "bootstrap", "--depth2", "scvm", "--value", "false"])
+        ablestack.spawn(["python3", pluginpath+"/python/ablestack_json/ablestackJson.py", "update", "--depth1", "bootstrap", "--depth2", "scvm", "--value", "false"])
         .then(function(data){
           createLoggerInfo("Success in initializing ablestackJson's scvm setting to false");
           console.log("Success in initializing ablestackJson's scvm setting to false");
@@ -82,7 +82,7 @@ $('#button-storage-vm-status-update').on('click', function(){
   }else if(cmd == "bootstrap"){//SCC bootstrap실행 버튼 클릭시
     $('#div-modal-spinner-header-txt').text('스토리지센터를 구성하고 있습니다.');
     // /root/bootstrap.sh 파일을 실행함.
-    cockpit.spawn(["sh", pluginpath+"/shell/host/bootstrap_run.sh","scvm"])
+    ablestack.spawn(["sh", pluginpath+"/shell/host/bootstrap_run.sh","scvm"])
     .then(function(data){
       console.log(data);
       location.reload();
@@ -95,7 +95,7 @@ $('#button-storage-vm-status-update').on('click', function(){
     $('#div-modal-spinner-header-txt').text('클라우드센터를 구성하고 있습니다.');
     // /root/bootstrap.sh 파일을 실행함.
     var license_type = sessionStorage.getItem("license_type");
-    cockpit.spawn(["sh", pluginpath+"/shell/host/bootstrap_run.sh","ccvm", license_type])
+    ablestack.spawn(["sh", pluginpath+"/shell/host/bootstrap_run.sh","ccvm", license_type])
       .then(function(data){
         console.log(data);
         location.reload();

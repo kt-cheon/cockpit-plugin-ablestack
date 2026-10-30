@@ -158,7 +158,7 @@ def jsonUpdateAllHosts():
             try:
                 result = subprocess.run(
                     [
-                        '/usr/bin/ssh',
+                        '/usr/libexec/ablestack/node-remote',
                         '-o', 'BatchMode=yes',
                         '-o', 'StrictHostKeyChecking=no',
                         '-o', 'ConnectTimeout=5',

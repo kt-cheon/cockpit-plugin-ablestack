@@ -16,7 +16,8 @@ import socket
 
 from ablestack import *
 from sh import python3
-from sh import ssh
+from sh import Command as _RemoteCommand
+ssh = _RemoteCommand('/usr/libexec/ablestack/node-remote')
 
 json_file_path = pluginpath+"/tools/properties/cluster.json"
 def createArgumentParser():
@@ -93,14 +94,14 @@ def updateAllHostGlueConfig(args):
                         return createReturn(code=500, val=return_val + " : " + f_val2["scvmMngt"])
 
                 # cube 호스트 및 scvm에 keyring, ceph.conf 파일 전송
-                return_val = "cube host and scvm scp keyring, ceph.conf Failed"
+                return_val = "cube host and scvm /usr/libexec/ablestack/node-copy keyring, ceph.conf Failed"
 
                 for f_val3 in json_data["clusterConfig"]["hosts"]:
-                    ret_scp = os.system("scp -q /etc/ceph/* root@"+f_val3["ablecube"]+":/etc/ceph/")
+                    ret_scp = os.system("/usr/libexec/ablestack/node-copy -q /etc/ceph/* root@"+f_val3["ablecube"]+":/etc/ceph/")
                     if ret_scp != 0:
                         return createReturn(code=500, val=f_val3["ablecube"]+" : Glue Config copy Failed.")
 
-                    ret_scp = os.system("scp -q /etc/ceph/* root@"+f_val3["scvmMngt"]+":/etc/ceph/")
+                    ret_scp = os.system("/usr/libexec/ablestack/node-copy -q /etc/ceph/* root@"+f_val3["scvmMngt"]+":/etc/ceph/")
                     if ret_scp != 0:
                         return createReturn(code=500, val=f_val3["scvmMngt"]+" : Glue Config copy Failed.")
 

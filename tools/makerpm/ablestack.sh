@@ -1,50 +1,19 @@
-# Copyright (c) 2021 ABLECLOUD Co. Ltd
-# 이 파일은 rpmbuild 이후 실행되는 스크립트 파일입니다.
-# 최초 작성일 : 2021. 04. 02
-
-
 #!/bin/sh
+# Copyright (c) 2021 ABLECLOUD Co. Ltd
+# RPM 설치 후 실행한다. $1: 최초 설치=1, 업데이트=2 이상.
 
-# 함수명 : conf
-# PATH 정의
-conf(){
-COCKPIT_PATH="/usr/share/cockpit"
-RPM_PATH="$COCKPIT_PATH/ablestack/tools/makerpm/rpmbuild"
-return
-}
+set -eu
 
-# 함수명 : settingFile
-# 파일 삭제 및 권한 설정 함수
-settingFile() {
-echo "====================Start of All process"
-echo "1. setting Files"
-rm -rf $RPM_PATH
-chmod 644 $COCKPIT_PATH/ablestack/*
-return
-}
+# default/no argument는 기존 수동 실행 방식과 호환한다.
+case "${1:-1}" in
+    1|default)
+        if command -v systemctl >/dev/null 2>&1; then
+            if ! systemctl enable --now cockpit.socket; then
+                echo "Warning: cockpit.socket could not be enabled; check the service status." >&2
+            fi
+        fi
+        ;;
+esac
 
-# 함수명 : startCockpit
-# cockpit 서비스 재시작
-startCockpit() {
-echo "2. cockpit service start"
-systemctl enable --now cockpit.socket
-systemctl restart cockpit
-return
-}
-
-# 함수명 : default
-# 프로세스 종료
-default(){
-settingFile
-startCockpit
-echo "====================End of All process"
-pkill -9 -f /usr/share/cockpit/ablestack/tools/makerpm/ablestack.sh
-}
-
-# 스크립트 실행
-productName=$1
-echo $productName
-if [ $productName="default" ]; then
- conf
- default
-fi
+# 업데이트 중에는 Cockpit을 재시작하지 않아 진행 중인 세션을 유지한다.
+exit 0

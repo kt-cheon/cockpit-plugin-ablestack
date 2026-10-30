@@ -227,7 +227,7 @@ def run_ssh_command(host, cmd):
         remote_cmd = cmd
 
     return subprocess.run(
-        ["ssh", f"root@{host}", remote_cmd],
+        ["/usr/libexec/ablestack/node-remote", f"root@{host}", remote_cmd],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,

@@ -336,7 +336,7 @@ async function ccvmDbBackup() {
   console.log(regular_input_ccvm_backup_time_one);
   console.log(regular_input_ccvm_backup_time_two);
   console.log(form_input_db_backup_cloud_vm_number);
-  await cockpit.spawn(['/usr/bin/python3', pluginpath+'/python/vm/dump_ccvm.py', radio_ccvm_backup, '--path', regular_input_ccvm_backup_path, '--repeat',
+  await ablestack.spawn(['/usr/bin/python3', pluginpath+'/python/vm/dump_ccvm.py', radio_ccvm_backup, '--path', regular_input_ccvm_backup_path, '--repeat',
   regular_option_ccvm_backup, '--timeone', regular_input_ccvm_backup_time_one, '--timetwo', regular_input_ccvm_backup_time_two, '--delete', form_input_db_backup_cloud_vm_number])
   .then(function(data){
     console.log(data);
@@ -374,7 +374,7 @@ async function ccvmDbBackup() {
   });
   // 파이썬 파일 실행 결과에 따라 다운로드 링크 생성
   if (result == "200" && radio_ccvm_backup == "instantBackup") {
-    await cockpit.file(dump_sql_file_path,
+    await ablestack.file(dump_sql_file_path,
       { max_read_size: 104857600
       }).read()
     .done(function (tag) {
@@ -404,7 +404,7 @@ async function ccvmDbBackup() {
       createLoggerInfo("Creation download link of ccvm_mysqldump is failed");
       console.log("Creation download link of ccvm_mysqldump is failed");
     });
-    cockpit.file().close()
+    ablestack.file().close()
   }else {
     $('#button-execution-modal-cloud-vm-db-dump').show();
     $('#button-cancel-modal-cloud-vm-db-dump').show();
@@ -440,7 +440,7 @@ async function checkDBBackupCronjob() {
 
  try {
   // 1) 현재 예약 조회입니다.
-  const data = await cockpit.spawn(
+  const data = await ablestack.spawn(
    ['/usr/bin/python3', pluginpath + '/python/vm/dump_ccvm.py', 'checkBackup', '--checkOption', span_ccvm_backup_check],
    { err: 'message' }
   );
@@ -457,7 +457,7 @@ async function checkDBBackupCronjob() {
     // regularBackup 은 daily 에도 --timetwo 가 필요하므로 더미값 '0' 을 전달합니다.
     // 경로는 기본 백업 경로로 /home/db_backup 을 사용합니다.
     try {
-     const createOut = await cockpit.spawn(
+     const createOut = await ablestack.spawn(
       [
        '/usr/bin/python3',
        pluginpath + '/python/vm/dump_ccvm.py',
@@ -476,7 +476,7 @@ async function checkDBBackupCronjob() {
      console.log('[backup] default schedule create result:', createOut);
 
      // 생성 직후 다시 조회하여 최초 실행 일정을 얻습니다.
-     const recheck = await cockpit.spawn(
+     const recheck = await ablestack.spawn(
       ['/usr/bin/python3', pluginpath + '/python/vm/dump_ccvm.py', 'checkBackup', '--checkOption', 'r'],
       { err: 'message' }
      );
@@ -583,7 +583,7 @@ async function deactiveDBBackupCronjob() {
 
  try {
   // 파이썬 스크립트로 해당 타입(r/d) 예약 비활성화를 요청합니다.
-  const data = await cockpit.spawn(
+  const data = await ablestack.spawn(
    [
     '/usr/bin/python3',
     pluginpath + '/python/vm/dump_ccvm.py',

@@ -170,7 +170,7 @@ $(document).ready(function () {
 
   // 라이선스 상태 확인 함수
   function checkLicenseStatusConfirm() {
-    cockpit.spawn(['python3', pluginpath + '/python/license/register_license.py', '--status'])
+    ablestack.spawn(['python3', pluginpath + '/python/license/register_license.py', '--status'])
       .then(function (data) {
         var result = JSON.parse(data);
         if (result.code == 200) {
@@ -296,7 +296,7 @@ $(document).ready(function () {
         const base64Content = btoa(fileContent);
 
         // 라이선스 등록 API 호출
-        cockpit.spawn([
+        ablestack.spawn([
           'python3',
           '/usr/share/cockpit/ablestack/python/license/register_license.py',
           '--license-content',
@@ -392,7 +392,7 @@ $('#button-open-modal-wizard-monitoring-center').on('click', function () {
 $('#button-link-storage-center-dashboard').on('click', function () {
   // storageCenter url 링크 주소 가져오기
   createLoggerInfo("button-link-storage-center-dashboard click");
-  cockpit.spawn(["python3", pluginpath + "/python/url/create_address.py", "storageCenter"])
+  ablestack.spawn(["python3", pluginpath + "/python/url/create_address.py", "storageCenter"])
     .then(function (data) {
       var retVal = JSON.parse(data);
       if (retVal.code == 200) {
@@ -415,7 +415,7 @@ $('#button-link-local-storage-configure').on('click', function () {
 $('#button-link-cloud-center').on('click', function () {
   // 클라우드센터 연결
   createLoggerInfo("button-link-cloud-center click");
-  cockpit.spawn(["python3", pluginpath + "/python/url/create_address.py", "cloudCenter"])
+  ablestack.spawn(["python3", pluginpath + "/python/url/create_address.py", "cloudCenter"])
     .then(function (data) {
       var retVal = JSON.parse(data);
       if (retVal.code == 200) {
@@ -434,7 +434,7 @@ $('#button-link-cloud-center').on('click', function () {
 
 $('#button-link-monitoring-center').on('click', function () {
   // 모니터링센터 대시보드 연결
-  cockpit.spawn(["python3", pluginpath + "/python/url/create_address.py", "wallCenter"])
+  ablestack.spawn(["python3", pluginpath + "/python/url/create_address.py", "wallCenter"])
     .then(function (data) {
       var retVal = JSON.parse(data);
       if (retVal.code == 200) {
@@ -579,15 +579,15 @@ $(document).on('click', '.ablestack-menu-dropdown .pf-v6-c-menu__item', function
  */
 function scvm_bootstrap_run() {
   $("#modal-status-alert-title").html("스토리지센터 가상머신 상태 체크");
-  $("#modal-status-alert-body").html("스토리지센터 가상머신이 구성되지 않아<br>스토리지센터를 구성할 수 없습니다.<br><br>잠시 후 다시 실행해 주세요.");
+  $("#modal-status-alert-body").text("SCVM과 통신하거나 초기 설정 상태를 확인하지 못했습니다. SCVM의 cloud-init 및 cube-agent.service 상태와 관리망 연결을 확인해 주세요.");
   createLoggerInfo("scvm_bootstrap_run() start");
   //scvm ping 체크
-  cockpit.spawn(["python3", pluginpath + "/python/cloudinit_status/cloudinit_status.py", "ping", "--target", "scvm"])
+  ablestack.spawn(["python3", pluginpath + "/python/cloudinit_status/cloudinit_status.py", "ping", "--target", "scvm"])
     .then(function (data) {
       var retVal = JSON.parse(data);
       if (retVal.code == 200) {
         //scvm 의 cloudinit 실행이 완료되었는지 확인하기 위한 명렁
-        cockpit.spawn(["python3", pluginpath + "/python/cloudinit_status/cloudinit_status.py", "status", "--target", "scvm"])
+        ablestack.spawn(["python3", pluginpath + "/python/cloudinit_status/cloudinit_status.py", "status", "--target", "scvm"])
           .then(function (data) {
             var retVal = JSON.parse(data);
             //cloudinit status: done 일때
@@ -598,19 +598,23 @@ function scvm_bootstrap_run() {
               $('#scvm-status-update-cmd').val("bootstrap");
               $('#div-modal-storage-vm-status-update').show();
             } else {
+              $("#modal-status-alert-body").text("SCVM 초기 설정이 완료되지 않았거나 상태 조회에 실패했습니다. " + JSON.stringify(retVal.val));
               $('#div-modal-status-alert').show();
             }
           })
           .catch(function (data) {
+            $("#modal-status-alert-body").text("SCVM 초기 설정 상태 조회에 실패했습니다. " + String(data));
             $('#div-modal-status-alert').show();
             createLoggerInfo(":::scvm_bootstrap_run() Error :::");
             console.log(":::scvm_bootstrap_run() Error :::" + data);
           });
       } else {
+        $("#modal-status-alert-body").text("SCVM의 Cube Agent에 연결할 수 없습니다. " + JSON.stringify(retVal.val));
         $('#div-modal-status-alert').show();
       }
     })
     .catch(function (data) {
+      $("#modal-status-alert-body").text("SCVM 연결 확인에 실패했습니다. " + String(data));
       $('#div-modal-status-alert').show();
       createLoggerInfo(":::scvm_bootstrap_run() Error :::");
       console.log(":::scvm_bootstrap_run() Error :::" + data);
@@ -629,7 +633,7 @@ function scvm_bootstrap_run() {
 function scc_link_go() {
   // storageCenter url 링크 주소 가져오기
   createLoggerInfo("scc_link_go() start");
-  cockpit.spawn(["python3", pluginpath + "/python/url/create_address.py", "storageCenter"])
+  ablestack.spawn(["python3", pluginpath + "/python/url/create_address.py", "storageCenter"])
     .then(function (data) {
       createLoggerInfo("scc_link_go start");
       var retVal = JSON.parse(data);
@@ -652,7 +656,7 @@ function scc_link_go() {
 $('#menu-item-linkto-storage-center-vm').on('click', function () {
   // storageCenterVm url 링크 주소 가져오기
   createLoggerInfo("menu-item-linkto-storage-center-vm click");
-  cockpit.spawn(["python3", pluginpath + "/python/url/create_address.py", "storageCenterVm"])
+  ablestack.spawn(["python3", pluginpath + "/python/url/create_address.py", "storageCenterVm"])
     .then(function (data) {
       var retVal = JSON.parse(data);
       if (retVal.code == 200) {
@@ -677,10 +681,10 @@ $('#menu-item-linkto-storage-center-vm').on('click', function () {
 function checkConfigStatus() {
   //createLoggerInfo("checkConfigStatus() start");
   return new Promise((resolve) => {
-    cockpit.spawn(['grep', '-c', 'ablecube', '/etc/hosts'])
+    ablestack.spawn(['grep', '-c', 'ablecube', '/etc/hosts'])
       .then(data => {
         if (data >= 1) {
-          cockpit.spawn(['cat', '/root/.ssh/id_rsa.pub'])
+          ablestack.spawn(['cat', '/root/.ssh/id_rsa.pub'])
             .then(data => {
               sessionStorage.setItem("ccfg_status", "true");
               saveHostInfo();
@@ -693,11 +697,11 @@ function checkConfigStatus() {
               resetBootstrap();
               resolve();
             })
-          cockpit.spawn(["cat", pluginpath + "/tools/properties/cluster.json"])
+          ablestack.spawn(["cat", pluginpath + "/tools/properties/cluster.json"])
             .then(function (data) {
               var clusterJsonConf = JSON.parse(data);
               sessionStorage.setItem("iscsi_check", clusterJsonConf.clusterConfig.iscsi_storage);
-              cockpit.spawn(["cat", pluginpath + "/tools/properties/ablestack.json"]).then(function (data) {
+              ablestack.spawn(["cat", pluginpath + "/tools/properties/ablestack.json"]).then(function (data) {
                 var ablestackJsonConf = JSON.parse(data);
                 sessionStorage.setItem("security_patch", ablestackJsonConf.security_patch.status);
               }).catch(function (data) {
@@ -723,7 +727,7 @@ function checkConfigStatus() {
 
 function checkLicenseStatus() {
   return new Promise((resolve) => {
-    cockpit.spawn(['python3', pluginpath + '/python/license/register_license.py', '--status'])
+    ablestack.spawn(['python3', pluginpath + '/python/license/register_license.py', '--status'])
       .then(function (data) {
         var result = JSON.parse(data);
         if (result.code == 200) {
@@ -769,14 +773,14 @@ $('#button-execution-modal-pfmp-install').on('click', function () {
   createLoggerInfo("pfmp_install() start");
 
   updatePfmpInstall(35, "second");
-  cockpit.spawn(["python3", pluginpath + "/python/pfmp/pfmp_install.py", "pre_install"])
+  ablestack.spawn(["python3", pluginpath + "/python/pfmp/pfmp_install.py", "pre_install"])
     .then(function (data) {
       var retVal = JSON.parse(data);
       if (retVal.code == 200) {
         $("#div-modal-spinner-pfmp-header-txt").text("PFMP 클러스터 및 앱을 설치 중입니다. ");
         createLoggerInfo("pfmp containers install success");
         updatePfmpInstall(105, "minute");
-        cockpit.spawn(["python3", pluginpath + "/python/pfmp/pfmp_install.py", "install"])
+        ablestack.spawn(["python3", pluginpath + "/python/pfmp/pfmp_install.py", "install"])
           .then(function (data) {
             var retVal = JSON.parse(data);
             console.log(retVal);
@@ -784,7 +788,7 @@ $('#button-execution-modal-pfmp-install').on('click', function () {
               console.log(retVal);
               $("#div-modal-spinner-pfmp-header-txt").text("PFMP 가상머신을 삭제 중입니다.");
               updatePfmpInstall(2, "second");
-              cockpit.spawn(["python3", pluginpath + "/python/pfmp/pfmp_install.py", "remove"])
+              ablestack.spawn(["python3", pluginpath + "/python/pfmp/pfmp_install.py", "remove"])
                 .then(function (data) {
                   var retVal = JSON.parse(data);
                   console.log(retVal);
@@ -852,7 +856,7 @@ $('#button-execution-modal-update-glue-config').on('click', function () {
   $("#modal-status-alert-body").html("전체 호스트 Glue 설정 업데이트를 실패하였습니다.<br/>CUBE 호스트, SCVM 상태를 확인해주세요.");
   createLoggerInfo("all_host_glue_config_update_modal() start");
 
-  cockpit.spawn(["python3", pluginpath + "/python/glue/update_glue_config.py", "update"])
+  ablestack.spawn(["python3", pluginpath + "/python/glue/update_glue_config.py", "update"])
     .then(function (data) {
       var retVal = JSON.parse(data);
       if (retVal.code == 200) {
@@ -910,7 +914,7 @@ $('#button-execution-modal-remove-cube-host').on('click', function () {
   3) cluster.json 초기화
   4) vmconfig 초기화
   */
-  cockpit.spawn(["python3", pluginpath + "/python/cluster/remove_cube_host.py", "remove"])
+  ablestack.spawn(["python3", pluginpath + "/python/cluster/remove_cube_host.py", "remove"])
     .then(function (data) {
       var retVal = JSON.parse(data);
       if (retVal.code == 200) {
@@ -957,13 +961,13 @@ function checkStorageClusterStatus() {
     $("#scc-css").attr('class', 'pf-v6-c-label pf-m-orange');
     $("#scc-icon").attr('class', 'fas fa-fw fa-exclamation-triangle');
 
-    cockpit.spawn(["cat", pluginpath + "/tools/properties/cluster.json"])
+    ablestack.spawn(["cat", pluginpath + "/tools/properties/cluster.json"])
       .then(function (data) {
         var retVal = JSON.parse(data);
         if (retVal.clusterConfig.type == "powerflex") {
           setPfmpStatus();
           //bootstrap.sh을 실행했는지 여부 확인
-          cockpit.spawn(["python3", pluginpath + "/python/ablestack_json/ablestackJson.py", "status"])
+          ablestack.spawn(["python3", pluginpath + "/python/ablestack_json/ablestackJson.py", "status"])
             .then(function (data) {
               var retVal = JSON.parse(data);
               if (retVal.val.bootstrap.scvm == "false") { //bootstrap.sh 실행 전
@@ -992,13 +996,13 @@ function checkStorageClusterStatus() {
               $("#scvm-after-bootstrap-run").html("");
               $("#scvm-before-bootstrap-run").html("");
             });
-          cockpit.spawn(["python3", pluginpath + "/python/powerflex_status/powerflex_status.py", "status"])
+          ablestack.spawn(["python3", pluginpath + "/python/powerflex_status/powerflex_status.py", "status"])
             .then(function (data) {
               var retVal = JSON.parse(data);
               var pfmp_bootstrap_status = sessionStorage.getItem("pfmp_bootstrap_status");
               if (retVal.code == 200) {
                 //파워플렉스 상태 상세 조회(API => json 형식)
-                cockpit.spawn(["python3", pluginpath + "/python/powerflex_status/powerflex_status.py", "detail"])
+                ablestack.spawn(["python3", pluginpath + "/python/powerflex_status/powerflex_status.py", "detail"])
                   .then(function (data) {
                     var retVal = JSON.parse(data);
                     var sc_status = "Health Err";
@@ -1119,7 +1123,7 @@ function checkStorageClusterStatus() {
             });
         } else {
           //bootstrap.sh을 실행했는지 여부 확인
-          cockpit.spawn(["python3", pluginpath + "/python/ablestack_json/ablestackJson.py", "status"])
+          ablestack.spawn(["python3", pluginpath + "/python/ablestack_json/ablestackJson.py", "status"])
             .then(function (data) {
               var retVal = JSON.parse(data);
               if (retVal.val.bootstrap.scvm == "false") { //bootstrap.sh 실행 전
@@ -1140,7 +1144,7 @@ function checkStorageClusterStatus() {
               $("#scvm-before-bootstrap-run").html("");
             });
           //스토리지 클러스터 상태 상세조회(ceph -s => json형식)
-          cockpit.spawn(["python3", pluginpath + "/python/scc_status/scc_status_detail.py", "detail"])
+          ablestack.spawn(["python3", pluginpath + "/python/scc_status/scc_status_detail.py", "detail"])
             .then(function (data) {
               var retVal = JSON.parse(data);
               var sc_status = "Health Err";
@@ -1273,7 +1277,7 @@ function checkStorageVmStatus() {
     $("#scvm-icon").attr('class', 'fas fa-fw fa-exclamation-triangle');
 
     //scvm 상태 조회
-    cockpit.spawn(["python3", pluginpath + "/python/scvm_status/scvm_status_detail.py", "detail"])
+    ablestack.spawn(["python3", pluginpath + "/python/scvm_status/scvm_status_detail.py", "detail"])
       .then(function (data) {
         var retVal = JSON.parse(data);
         sessionStorage.setItem("scvm_status", retVal.val.scvm_status.toUpperCase());//스트리지센터 가상머신 상태값 세션스토리지에 저장
@@ -1986,7 +1990,7 @@ function showRibbon(status, description) {
  */
 function saveHostInfo() {
   //createLoggerInfo("saveHostInfo() start");
-  cockpit.spawn(['cat', '/etc/hosts'])
+  ablestack.spawn(['cat', '/etc/hosts'])
     .then(function (data) {
       var line = data.split("\n");
       for (var i = 0; i < line.length; i++) {
@@ -2014,15 +2018,8 @@ function saveHostInfo() {
  * History : 2021.04.14 최초 작성
  */
 function scanHostKey() {
-  //createLoggerInfo("scanHostKey() start");
-  cockpit.spawn(['python3', pluginpath + '/python/host/ssh-scan.py'])
-    .then(function (data) {
-      console.log("keyscan ok");
-    })
-    .catch(function (err) {
-      createLoggerInfo("keyscan err");
-      console.log("keyscan err : " + err);
-    });
+  // Compatibility for older feature callbacks; TLS enrollment replaces host-key discovery.
+  return Promise.resolve();
 }
 
 /**
@@ -2035,7 +2032,7 @@ function scanHostKey() {
  * History : 2022.09.14 최초 작성
  */
 function pcsExeHost() {
-  cockpit.spawn(['python3', pluginpath + '/python/pcs/pcsExehost.py'])
+  ablestack.spawn(['python3', pluginpath + '/python/pcs/pcsExehost.py'])
     .then(function (data) {
       let retVal = JSON.parse(data);
       pcs_exe_host = retVal.val;
@@ -2058,7 +2055,7 @@ function pcsExeHost() {
 function resetBootstrap() {
   createLoggerInfo("resetBootstrap() start");
   //scvm bootstrap 프로퍼티 초기화
-  cockpit.spawn(["python3", pluginpath + "/python/ablestack_json/ablestackJson.py", "update", "--depth1", "bootstrap", "--depth2", "scvm", "--value", "false"])
+  ablestack.spawn(["python3", pluginpath + "/python/ablestack_json/ablestackJson.py", "update", "--depth1", "bootstrap", "--depth2", "scvm", "--value", "false"])
     .then(function (data) {
       createLoggerInfo("resetBootstrap scvm ok");
       console.log("resetBootstrap scvm ok");
@@ -2068,7 +2065,7 @@ function resetBootstrap() {
       console.log("resetBootstrap scvm err : " + err);
     });
   //ccvm bootstrap 프로퍼티 초기화
-  cockpit.spawn(["python3", pluginpath + "/python/ablestack_json/ablestackJson.py", "update", "--depth1", "bootstrap", "--depth2", "ccvm", "--value", "false"])
+  ablestack.spawn(["python3", pluginpath + "/python/ablestack_json/ablestackJson.py", "update", "--depth1", "bootstrap", "--depth2", "ccvm", "--value", "false"])
     .then(function (data) {
       createLoggerInfo("resetBootstrap ccvm ok");
       console.log("resetBootstrap ccvm ok");
@@ -2078,7 +2075,7 @@ function resetBootstrap() {
       console.log("resetBootstrap ccvm err : " + err);
     });
   //wall monitoring 프로퍼티 초기화
-  cockpit.spawn(["python3", pluginpath + "/python/ablestack_json/ablestackJson.py", "update", "--depth1", "monitoring", "--depth2", "wall", "--value", "false"])
+  ablestack.spawn(["python3", pluginpath + "/python/ablestack_json/ablestackJson.py", "update", "--depth1", "monitoring", "--depth2", "wall", "--value", "false"])
     .then(function (data) {
       createLoggerInfo("resetBootstrap wall ok");
       console.log("resetBootstrap wall ok");
@@ -2164,7 +2161,7 @@ function ribbonWorker() {
  * History : 2024.09.19 최초 작성
  */
 function setPfmpStatus() {
-  cockpit.spawn(['python3', pluginpath + '/python/pfmp/pfmp_status_detail.py', 'detail'])
+  ablestack.spawn(['python3', pluginpath + '/python/pfmp/pfmp_status_detail.py', 'detail'])
     .then(function (data) {
       var retVal = JSON.parse(data);
       pfmp_status_result = retVal.val.pfmp_status;
@@ -2291,7 +2288,7 @@ function gfsDiskStatus() {
     $("#gfs-disk-css").attr('class', 'pf-v6-c-label pf-m-orange');
     $("#gfs-disk-icon").attr('class', 'fas fa-fw fa-exclamation-triangle');
 
-    cockpit.spawn(['python3', pluginpath + '/python/gfs/gfs_disk_status.py'])
+    ablestack.spawn(['python3', pluginpath + '/python/gfs/gfs_disk_status.py'])
       .then(function (data) {
         var retVal = JSON.parse(data);
 
@@ -2406,7 +2403,7 @@ function setDiskAction(type, action, extend) {
   if (type == "clvm" && action == "add") {
     var cmd = ["python3", pluginpath + "/python/disk/disk_action.py", "gfs-list"];
 
-    cockpit.spawn(cmd).then(function (data) {
+    ablestack.spawn(cmd).then(function (data) {
       // 초기화
       $('#clvm-disk-add-list').empty();
 
@@ -2490,7 +2487,7 @@ function setDiskAction(type, action, extend) {
   } else if (type == "clvm" && action == "delete") {
     var cmd = ["python3", pluginpath + "/python/clvm/disk_manage.py", "--list-clvm"];
 
-    cockpit.spawn(cmd).then(function (data) {
+    ablestack.spawn(cmd).then(function (data) {
       // 초기화
       $('#clvm-disk-delete-list').empty();
 
@@ -2536,7 +2533,7 @@ function setDiskAction(type, action, extend) {
   } else if (type == "clvm" && action == "list") {
     var cmd = ["python3", pluginpath + "/python/clvm/disk_manage.py", "--list-clvm"];
 
-    cockpit.spawn(cmd).then(function (data) {
+    ablestack.spawn(cmd).then(function (data) {
       // 초기화
       $('#clvm-disk-info-list').empty();
 
@@ -2566,7 +2563,7 @@ function setDiskAction(type, action, extend) {
   } else if (type == "gfs" && action == "add") {
     var cmd = ["python3", pluginpath + "/python/disk/disk_action.py", "gfs-list"];
 
-    cockpit.spawn(cmd).then(function (data) {
+    ablestack.spawn(cmd).then(function (data) {
       // 초기화
       if (extend == "true") {
         $('#gfs-disk-extend-add-list').empty();
@@ -2681,7 +2678,7 @@ function setDiskAction(type, action, extend) {
   } else if (type == "gfs" && action == "delete") {
     var cmd = ["python3", pluginpath + "/python/gfs/gfs_disk_status.py"];
 
-    cockpit.spawn(cmd).then(function (data) {
+    ablestack.spawn(cmd).then(function (data) {
       $('#gfs-disk-delete-list').empty();
 
       // JSON 데이터 파싱
@@ -2750,7 +2747,7 @@ function setDiskAction(type, action, extend) {
   } else if (type == "gfs" && action == "extend") {
     var cmd = ["python3", pluginpath + "/python/gfs/gfs_disk_status.py"];
 
-    cockpit.spawn(cmd).then(function (data) {
+    ablestack.spawn(cmd).then(function (data) {
       $('#gfs-disk-extend-list').empty();
 
       // JSON 데이터 파싱
@@ -2819,7 +2816,7 @@ function setDiskAction(type, action, extend) {
   } else if (type == "hba" && action == "list") {
     var cmd = ["python3", pluginpath + "/python/clvm/disk_manage.py", "--list-hba-wwn"];
 
-    cockpit.spawn(cmd).then(function (data) {
+    ablestack.spawn(cmd).then(function (data) {
       // 초기화
       $('#hba-wwn-list').empty();
 
@@ -2877,7 +2874,7 @@ function setDiskAction(type, action, extend) {
   } else if (type == "disk" && action == "detail") {
     var cmd = ["python3", pluginpath + "/python/disk/mpath_detail.py"];
 
-    cockpit.spawn(cmd).then(function (data) {
+    ablestack.spawn(cmd).then(function (data) {
       // 초기화
       $('#disk-detail-info').empty();
 
@@ -2979,7 +2976,7 @@ function setDiskAction(type, action, extend) {
   } else if (type == "hci-gfs" && action == "add") {
     var cmd = ["python3", pluginpath + "/python/disk/disk_action.py", "hci-shared-file-list"];
 
-    cockpit.spawn(cmd).then(function (data) {
+    ablestack.spawn(cmd).then(function (data) {
       // 초기화
       if (extend == "true") {
         $('#gfs-disk-extend-add-list').empty();
@@ -3094,7 +3091,7 @@ function setDiskAction(type, action, extend) {
   } else if (type == "hci-gfs" && action == "delete") {
     var cmd = ["python3", pluginpath + "/python/disk/disk_action.py", "hci-shared-file-list"];
 
-    cockpit.spawn(cmd).then(function (data) {
+    ablestack.spawn(cmd).then(function (data) {
       // 초기화
       $('#disk-image-delete-list').empty();
 
@@ -3287,7 +3284,7 @@ $('#button-execution-modal-gfs-disk-extend').on('click', function () {
     if (extend_method == "resize") {
       cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--extend', '--vg-names', vg_name, '--lv-names', lv_name, '--mount-point', mount_point, '--non-stop-check', non_stop_check];
       console.log(cmd);
-      cockpit.spawn(cmd).then(function (data) {
+      ablestack.spawn(cmd).then(function (data) {
         var retVal = JSON.parse(data);
         console.log(retVal);
         if (retVal.code == "200") {
@@ -3311,7 +3308,7 @@ $('#button-execution-modal-gfs-disk-extend').on('click', function () {
       $('#div-modal-spinner-header-txt').text("GFS 디스크 논리 볼륨을 확장 중입니다.")
       cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--add-extend', '--vg-names', vg_name, '--lv-names', lv_name, '--mount-point', mount_point, '--disks', disks, '--gfs-name', gfs_name, '--non-stop-check', non_stop_check];
       console.log(cmd);
-      cockpit.spawn(cmd).then(function (data) {
+      ablestack.spawn(cmd).then(function (data) {
         var retVal = JSON.parse(data);
         console.log(retVal);
         if (retVal.code == "200") {
@@ -3336,14 +3333,14 @@ $('#button-execution-modal-gfs-disk-extend').on('click', function () {
     if (extend_method == "resize") {
       cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--rescan', '--vg-names', vg_name, '--lv-names', lv_name, '--mount-point', mount_point];
       console.log(cmd);
-      cockpit.spawn(cmd).then(function (data) {
+      ablestack.spawn(cmd).then(function (data) {
         var retVal = JSON.parse(data);
         console.log(retVal);
         if (retVal.code == "200") {
           $('#div-modal-spinner-header-txt').text("GFS 디스크 논리 볼륨을 확장 중입니다.")
           cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--extend', '--vg-names', vg_name, '--lv-names', lv_name, '--mount-point', mount_point, '--non-stop-check', non_stop_check];
           console.log(cmd);
-          cockpit.spawn(cmd).then(function (data) {
+          ablestack.spawn(cmd).then(function (data) {
             var retVal = JSON.parse(data);
             console.log(retVal);
             if (retVal.code == "200") {
@@ -3378,14 +3375,14 @@ $('#button-execution-modal-gfs-disk-extend').on('click', function () {
     } else if (extend_method == "add-lun") {
       cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--scan'];
       console.log(cmd);
-      cockpit.spawn(cmd).then(function (data) {
+      ablestack.spawn(cmd).then(function (data) {
         var retVal = JSON.parse(data);
         console.log(retVal);
         if (retVal.code == "200") {
           $('#div-modal-spinner-header-txt').text("GFS 디스크 논리 볼륨을 확장 중입니다.")
           cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--add-extend', '--vg-names', vg_name, '--lv-names', lv_name, '--mount-point', mount_point, '--disks', disks, '--gfs-name', gfs_name, '--non-stop-check', non_stop_check];
           console.log(cmd);
-          cockpit.spawn(cmd).then(function (data) {
+          ablestack.spawn(cmd).then(function (data) {
             var retVal = JSON.parse(data);
             console.log(retVal);
             if (retVal.code == "200") {
@@ -3447,7 +3444,7 @@ $('#button-execution-modal-clvm-disk-add').on('click', function () {
     .join(','); // 쉼표로 연결
   cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--create-clvm', '--disks', clvm_disk_name];
   console.log(cmd);
-  cockpit.spawn(cmd)
+  ablestack.spawn(cmd)
     .then(function (data) {
       var retVal = JSON.parse(data);
       if (retVal.code == "200") {
@@ -3509,7 +3506,7 @@ $('#button-execution-modal-clvm-disk-delete').on('click', function () {
     .join(','); // 쉼표로 연결
   cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--delete-clvm', '--vg-names', vg_names, '--pv-names', pv_names, '--disks', disks];
   console.log(cmd);
-  cockpit.spawn(cmd)
+  ablestack.spawn(cmd)
     .then(function (data) {
       var retVal = JSON.parse(data);
       if (retVal.code == "200") {
@@ -3567,7 +3564,7 @@ $('#button-execution-modal-gfs-maintenance-setting').on('click', function () {
   if (stonith_status == "Started") {
     $('#div-modal-spinner-header-txt').text('펜스 장치 유지보수 설정 중입니다.');
     $('#div-modal-spinner').show();
-    cockpit.spawn(['python3', pluginpath + '/python/gfs/gfs_manage.py', '--check-stonith', '--control', 'disable'])
+    ablestack.spawn(['python3', pluginpath + '/python/gfs/gfs_manage.py', '--check-stonith', '--control', 'disable'])
       .then(function (data) {
         $('#div-modal-spinner').hide();
         var retVal = JSON.parse(data);
@@ -3584,7 +3581,7 @@ $('#button-execution-modal-gfs-maintenance-setting').on('click', function () {
   } else {
     $('#div-modal-spinner-header-txt').text('펜스 장치 유지보수 해제 중입니다.');
     $('#div-modal-spinner').show();
-    cockpit.spawn(['python3', pluginpath + '/python/gfs/gfs_manage.py', '--check-stonith', '--control', 'enable'])
+    ablestack.spawn(['python3', pluginpath + '/python/gfs/gfs_manage.py', '--check-stonith', '--control', 'enable'])
       .then(function (data) {
         $('#div-modal-spinner').hide();
         var retVal = JSON.parse(data);
@@ -3621,7 +3618,7 @@ $('#button-cancel-modal-gfs-maintenance-setting, #button-close-modal-cloud-vm-ma
 
 //   cmd =["python3", pluginpath + "/python/gfs/gfs_manage.py", "--init-qdevice"];
 //   console.log(cmd);
-//   cockpit.spawn(cmd)
+//   ablestack.spawn(cmd)
 //   .then(function(data){
 //     var retVal = JSON.parse(data);
 //     if(retVal.code == "200"){
@@ -3656,7 +3653,7 @@ $('#button-execution-modal-multipath-sync').on("click", function () {
 
   cmd = ["sh", pluginpath + "/shell/host/multipath_sync.sh", "sync"];
   console.log(cmd);
-  cockpit.spawn(cmd)
+  ablestack.spawn(cmd)
     .then(function () {
       $('#div-modal-spinner').hide();
       $("#modal-status-alert-title").html("외부 스토리지 동기화");
@@ -3676,7 +3673,7 @@ $('#button-execution-modal-storage-rescan').on("click", function () {
 
   cmd = ["sh", pluginpath + "/shell/host/multipath_sync.sh", "rescan"];
   console.log(cmd);
-  cockpit.spawn(cmd)
+  ablestack.spawn(cmd)
     .then(function () {
       $('#div-modal-spinner').hide();
       $("#modal-status-alert-title").html("외부 스토리지 재검색");
@@ -3737,7 +3734,7 @@ $('#button-execution-modal-gfs-disk-add').on('click', function () {
     })
     .get()
     .join(',');
-  cockpit.file(pluginpath + '/tools/properties/cluster.json').read()
+  ablestack.file(pluginpath + '/tools/properties/cluster.json').read()
     .then(function (data) {
       var retVal = JSON.parse(data);
 
@@ -3747,7 +3744,7 @@ $('#button-execution-modal-gfs-disk-add').on('click', function () {
       }).join(' ');
       cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--list-gfs'];
       console.log(cmd);
-      cockpit.spawn(cmd)
+      ablestack.spawn(cmd)
         .then(function (data) {
           var retVal = JSON.parse(data);
           var maxIndex = 0;
@@ -3776,7 +3773,7 @@ $('#button-execution-modal-gfs-disk-add').on('click', function () {
               '--cluster-name', 'cloudcenter_res', '--journal-nums', journal_nums, '--list-ip', list_ips];
             console.log(cmd);
 
-            cockpit.spawn(cmd).then(function (data) {
+            ablestack.spawn(cmd).then(function (data) {
 
               var retVal = JSON.parse(data);
               if (retVal.code == "200") {
@@ -3875,7 +3872,7 @@ $('#button-execution-modal-gfs-disk-delete').on('click', function () {
 
   cmd = ['python3', pluginpath + '/python/clvm/disk_manage.py', '--delete-gfs', '--disks', gfs_disk_name, '--gfs-name', gfs_name, '--vg-names', vg_name, '--lv-names', lv_name];
   console.log(cmd);
-  cockpit.spawn(cmd)
+  ablestack.spawn(cmd)
     .then(function (data) {
       var retVal = JSON.parse(data);
       if (retVal.code == "200") {
@@ -3920,14 +3917,14 @@ $('#button-execution-modal-gfs-host-remove').on('click', function () {
   var remove_host_ip = $('#form-select-gfs-host-remove option:selected').data('ip');
   cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--check-ccvm', '--target-ip', remove_host_ip];
   console.log(cmd);
-  cockpit.spawn(cmd).then(function (data) {
+  ablestack.spawn(cmd).then(function (data) {
     retVal = JSON.parse(data);
     console.log(retVal);
     if (retVal.code == "200" || retVal.code == "201") {
       $('#div-modal-spinner-header-txt').text('호스트 제거 중');
       cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--remove-host', '--target-ip', remove_host_ip, '--hostname', remove_host_name];
       console.log(cmd);
-      cockpit.spawn(cmd).then(function (data) {
+      ablestack.spawn(cmd).then(function (data) {
         retVal = JSON.parse(data);
         if (retVal.code == "200") {
           console.log(retVal);
@@ -3976,7 +3973,7 @@ function gfsResourceStatus() {
     $('#gfs-fence-back-color, #gfs-lock-back-color, #gfs-integration-fence-back-color, #gfs-integration-lock-back-color').attr('class', 'pf-v6-c-label pf-m-orange');
     $('#gfs-fence-icon, #gfs-lock-icon, #gfs-integration-fence-icon, #gfs-integration-lock-icon').attr('class', 'fas fa-fw fa-exclamation-triangle');
 
-    cockpit.spawn(['python3', pluginpath + '/python/gfs/gfs_resource_status.py'])
+    ablestack.spawn(['python3', pluginpath + '/python/gfs/gfs_resource_status.py'])
       .then(function (data) {
         var retVal = JSON.parse(data);
         if (retVal.code == "200") {
@@ -4251,7 +4248,7 @@ function gfsResourceStatus() {
 
         resolve();
       })
-    cockpit.spawn(['python3', pluginpath + '/python/gfs/gfs_manage.py', '--check-stonith', '--control', 'check'])
+    ablestack.spawn(['python3', pluginpath + '/python/gfs/gfs_manage.py', '--check-stonith', '--control', 'check'])
       .then(function (data) {
         var retVal = JSON.parse(data);
         sessionStorage.setItem("stonith_status", retVal.val);
@@ -4267,7 +4264,7 @@ function gfsResourceStatus() {
         resolve();
       })
 
-    // cockpit.spawn(['python3', pluginpath + '/python/gfs/gfs_manage.py', '--check-qdevice'])
+    // ablestack.spawn(['python3', pluginpath + '/python/gfs/gfs_manage.py', '--check-qdevice'])
     // .then(function(data){
     //   var retVal =JSON.parse(data);
     //   if (retVal.code == "200" || retVal.code == "204"){
@@ -4290,7 +4287,7 @@ function gfsResourceStatus() {
  * History : 2025.02.28 최초 작성
  */
 function updateGfsHostList() {
-  cockpit.spawn(['python3', pluginpath + '/python/gfs/gfs_manage.py', '--check-host']).then(function (data) {
+  ablestack.spawn(['python3', pluginpath + '/python/gfs/gfs_manage.py', '--check-host']).then(function (data) {
     var result = JSON.parse(data);
     if (result.code == "200") {
       var hostList = result.val;
@@ -4360,7 +4357,7 @@ function updateModalContent(mountPoint, multipaths, devices, physicalVolume, vol
 // 라이선스 상태 확인 및 표시
 function updateLicenseStatus() {
   // superuser 권한으로 실행
-  cockpit.spawn(['python3', '/usr/share/cockpit/ablestack/python/license/register_license.py', '--status'], { superuser: true })
+  ablestack.spawn(['python3', '/usr/share/cockpit/ablestack/python/license/register_license.py', '--status'], { superuser: true })
     .then(function (data) {
       var result = JSON.parse(data);
       var licenseDescription = '';
@@ -4477,7 +4474,7 @@ function initializeLicenseHandlers() {
       const base64Content = btoa(fileContent);
 
       // 라이선스 등록 API 호출
-      cockpit.spawn([
+      ablestack.spawn([
         'python3',
         '/usr/share/cockpit/ablestack/python/license/register_license.py',
         '--license-content',
@@ -4524,7 +4521,7 @@ function LocalDiskStatus() {
     $('#local-disk-css, #local-disk-css').attr('class', 'pf-v6-c-label pf-m-orange');
     $('#local-disk-icon, #local-disk-icon').attr('class', 'fas fa-fw fa-exclamation-triangle');
 
-    cockpit.spawn(['python3', pluginpath + '/python/local/local_manage.py', '--local-disk-status'])
+    ablestack.spawn(['python3', pluginpath + '/python/local/local_manage.py', '--local-disk-status'])
       .then(function (data) {
         var retVal = JSON.parse(data);
         if (retVal.code == "200") {
@@ -4539,7 +4536,7 @@ function LocalDiskStatus() {
           $('#local-disk-low-info').text("로컬 디스크가 생성되었습니다.");
           sessionStorage.setItem("local_configure", "true");
 
-          cockpit.spawn(['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', "update", "--depth1", "bootstrap", "--depth2", "local_configure", "--value", "true"])
+          ablestack.spawn(['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', "update", "--depth1", "bootstrap", "--depth2", "local_configure", "--value", "true"])
         } else {
           $('#local-disk-status').text(retVal.val.status);
           $('#local-disk-css').attr('class', 'pf-v6-c-label pf-m-red');
@@ -4552,7 +4549,7 @@ function LocalDiskStatus() {
           $('#local-disk-low-info').text("로컬 디스크가 생성되지 않았습니다.");
           sessionStorage.setItem("local_configure", "false");
 
-          cockpit.spawn(['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', "update", "--depth1", "bootstrap", "--depth2", "local_configure", "--value", "false"])
+          ablestack.spawn(['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', "update", "--depth1", "bootstrap", "--depth2", "local_configure", "--value", "false"])
         }
         resolve();
       }).catch(function () {
@@ -4567,7 +4564,7 @@ function LocalDiskStatus() {
         $('#local-disk-low-info').text("로컬 디스크가 생성되지 않았습니다.");
         sessionStorage.setItem("local_configure", "false");
 
-        cockpit.spawn(['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', "update", "--depth1", "bootstrap", "--depth2", "local_configure", "--value", "false"])
+        ablestack.spawn(['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', "update", "--depth1", "bootstrap", "--depth2", "local_configure", "--value", "false"])
       })
   })
 }
@@ -4765,7 +4762,7 @@ function LocalCloudVMCheck() {
       $("#button-mold-secondary-size-expansion").addClass('pf-m-disabled');
       $("#card-action-cloud-vm-db-dump").addClass('pf-m-disabled');
     }
-    cockpit.spawn(['/usr/bin/python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'status', '--depth1', 'bootstrap', '--depth2', 'ccvm'])
+    ablestack.spawn(['/usr/bin/python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'status', '--depth1', 'bootstrap', '--depth2', 'ccvm'])
       .then(function (bootstrap_data) {
         console.log("ablestackJson.py : " + bootstrap_data);
         var retVal = JSON.parse(bootstrap_data);
@@ -4787,7 +4784,7 @@ function LocalCloudVMCheck() {
         console.log('ClusterStatusInfo spawn error(ablestackJson.py');
 
       });
-    cockpit.spawn(['/usr/bin/python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'status', '--depth1', 'monitoring', '--depth2', 'wall'])
+    ablestack.spawn(['/usr/bin/python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'status', '--depth1', 'monitoring', '--depth2', 'wall'])
       .then(function (monitoring_data) {
         console.log("ablestackJson.py : " + monitoring_data);
         var retVal = JSON.parse(monitoring_data);
@@ -4958,7 +4955,7 @@ $(document).on('click', '#button-close-modal-cloud-vm-snap-rollback, #button-can
 });
 $(document).on('click', '#button-cloud-vm-snap-rollback', function () {
   $('#form-select-cloud-vm-snap option').remove();
-  cockpit.spawn(['/usr/bin/python3', pluginpath + '/python/ccvm_snap/ccvm_snap_action.py', 'list'], { host: pcs_exe_host })
+  ablestack.spawn(['/usr/bin/python3', pluginpath + '/python/ccvm_snap/ccvm_snap_action.py', 'list'], { host: pcs_exe_host })
     .then(function (data) {
       var retVal = JSON.parse(data);
       if (retVal.code == 200) {
@@ -5091,7 +5088,7 @@ function refreshSystemUpdateButton() {
   const osType = sessionStorage.getItem("os_type") || os_type;
   setSystemUpdateButtonEnabled(false, getSystemUpdateRuleText(osType));
 
-  cockpit.spawn(["cat", pluginpath + "/tools/properties/ablestack.json"])
+  ablestack.spawn(["cat", pluginpath + "/tools/properties/ablestack.json"])
     .then(function (data) {
       const config = JSON.parse(data);
       const enabled = isSystemUpdateEnabled(config, osType);
@@ -5215,14 +5212,14 @@ function loadMoldUpdateInfoFallback(mountPath) {
     return Promise.reject(new Error('ISO 마운트 경로는 절대 경로로 입력해야 합니다.'));
   }
   // 도우미가 없는 구버전 호스트에서도 스크립트를 실행하지 않고 RPM 헤더만 검사한다.
-  const rpmCommand = cockpit.spawn(['aspkg', '--version'], { superuser: true })
+  const rpmCommand = ablestack.spawn(['aspkg', '--version'], { superuser: true })
     .then(function () { return 'aspkg'; })
     .catch(function () {
-      return cockpit.spawn(['rpm', '--version'], { superuser: true })
+      return ablestack.spawn(['rpm', '--version'], { superuser: true })
         .then(function () { return 'rpm'; })
         .catch(function () { throw new Error('Mold RPM을 확인할 수 있는 rpm/aspkg 명령이 없습니다.'); });
     });
-  const rpmFiles = cockpit.spawn([
+  const rpmFiles = ablestack.spawn([
     '/bin/bash', '-c', [
       'set -e',
       'mount_path="$1"',
@@ -5242,7 +5239,7 @@ function loadMoldUpdateInfoFallback(mountPath) {
       throw new Error('Mold RPM 파일을 찾을 수 없습니다: ' + rpmDir);
     }
     return Promise.all(paths.map(function (path) {
-      return cockpit.spawn([
+      return ablestack.spawn([
         command, '-qp', '--qf', '%{NAME}\t%{VERSION}-%{RELEASE}\t%{ARCH}\n', '--', path
       ], { superuser: true }).then(function (data) {
         const record = String(data).trim();
@@ -5263,7 +5260,7 @@ function loadMoldUpdateInfoFallback(mountPath) {
         }
         return matches[0];
       });
-      return cockpit.spawn([
+      return ablestack.spawn([
         command, '-q', '--qf', '%{VERSION}-%{RELEASE}\n', '--', 'cloudstack-common'
       ], { superuser: true }).then(function (data) {
         return String(data).trim() || 'N/A';
@@ -5288,11 +5285,11 @@ function loadSystemUpdateInfoFallback(mountPath, updateType) {
   const updateScriptPath = joinSystemUpdatePath(normalizedMountPath, scriptName);
 
   return Promise.all([
-    cockpit.spawn(["test", "-d", normalizedMountPath], { superuser: true }),
-    cockpit.spawn(["test", "-f", updateScriptPath], { superuser: true }),
-    cockpit.spawn(["cat", "/etc/os-release"], { superuser: true }),
+    ablestack.spawn(["test", "-d", normalizedMountPath], { superuser: true }),
+    ablestack.spawn(["test", "-f", updateScriptPath], { superuser: true }),
+    ablestack.spawn(["cat", "/etc/os-release"], { superuser: true }),
     updateType == 'mold' ? loadMoldUpdateInfoFallback(normalizedMountPath)
-      : cockpit.spawn(["cat", ksPath], { superuser: true })
+      : ablestack.spawn(["cat", ksPath], { superuser: true })
   ]).then(function (data) {
     const currentInfo = parseSystemUpdateKeyValues(data[2]);
     const isMold = updateType == 'mold';
@@ -5321,7 +5318,7 @@ function runSystemUpdateFallback(mountPath, updateType) {
   const scriptName = getSystemUpdateScriptName(updateType);
   const validation = updateType == 'mold' ? loadSystemUpdateInfoFallback(mountPath, updateType) : Promise.resolve();
   return validation.then(function () {
-    return cockpit.spawn(
+    return ablestack.spawn(
       [
         "/bin/bash",
         "-c",
@@ -5389,7 +5386,7 @@ function loadSystemUpdateInfo() {
   $('#button-system-update-load-info').prop('disabled', true).attr('aria-disabled', 'true');
   $('#button-open-modal-system-update-confirm').prop('disabled', true).attr('aria-disabled', 'true');
 
-  cockpit.spawn(["python3", pluginpath + "/python/host/ablestack_update.py", "info", "--mount-path", mountPath, "--update-type", updateType], { superuser: true })
+  ablestack.spawn(["python3", pluginpath + "/python/host/ablestack_update.py", "info", "--mount-path", mountPath, "--update-type", updateType], { superuser: true })
     .then(function (data) {
       const retVal = JSON.parse(data);
       if (retVal.code == 200) {
@@ -5542,7 +5539,7 @@ $(document).on('click', '#button-execution-modal-system-update', function () {
     $('#div-modal-status-alert').show();
   }
 
-  cockpit.spawn(["python3", pluginpath + "/python/host/ablestack_update.py", "run", "--mount-path", systemUpdateInfo.mount_path, "--update-type", updateType], { superuser: true })
+  ablestack.spawn(["python3", pluginpath + "/python/host/ablestack_update.py", "run", "--mount-path", systemUpdateInfo.mount_path, "--update-type", updateType], { superuser: true })
     .then(function (data) {
       const retVal = JSON.parse(data);
       showSystemUpdateResult(retVal);
@@ -5585,7 +5582,7 @@ function downloadSecurityEvidencePackage(metadata) {
   if (!metadata || !metadata.path) {
     return Promise.reject(new Error('다운로드할 증적 파일 경로가 없습니다.'));
   }
-  return cockpit.spawn(
+  return ablestack.spawn(
     ['/usr/bin/cat', metadata.path],
     { superuser: true, binary: true }
   ).then(function (packageBytes) {
@@ -5622,7 +5619,7 @@ function prepareSecurityEvidenceModalDownloadLink(metadata) {
   if (!metadata || !metadata.path) {
     return Promise.reject(new Error('다운로드할 증적 파일 경로가 없습니다.'));
   }
-  return cockpit.spawn(
+  return ablestack.spawn(
     ['/usr/bin/cat', metadata.path],
     { superuser: true, binary: true }
   ).then(function (packageBytes) {
@@ -5650,7 +5647,7 @@ function refreshSecurityEvidenceDownloadLink() {
     .text('최신 생성 자료를 확인 중입니다')
     .off('click.securityEvidence');
 
-  return cockpit.spawn(
+  return ablestack.spawn(
     ['python3', SECURITY_EVIDENCE_HELPER, 'latest'],
     { superuser: true }
   ).then(function (data) {
@@ -5705,7 +5702,7 @@ $('#button-execution-modal-security-evidence').on('click', function () {
     true
   );
 
-  cockpit.spawn(
+  ablestack.spawn(
     ['python3', SECURITY_EVIDENCE_HELPER, 'generate'],
     { superuser: true }
   ).then(function (data) {
@@ -5976,25 +5973,25 @@ $('#button-execution-modal-security-update').on('click', function () {
     if (changeAddHost) {
       cmd = ['python3', '/usr/share/cockpit/ablestack/python/gfs/gfs_manage.py', '--check-stonith', '--control', 'security-disable'];
       console.log(cmd);
-      cockpit.spawn(cmd).then(function (data) {
+      ablestack.spawn(cmd).then(function (data) {
         var retVal = JSON.parse(data);
         if (retVal.code == 200) {
           $('#div-modal-spinner-header-txt').text('보안 업데이트 진행');
           cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py', '--add-host', '-P', port];
           console.log(cmd);
-          cockpit.spawn(cmd).then(function (data) {
+          ablestack.spawn(cmd).then(function (data) {
             var retVal = JSON.parse(data);
             if (retVal.code == 200) {
               $('#div-modal-spinner-header-txt').text('보안 업데이트 파일 동기화');
               cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py', '--update-json-file', '--local'];
               console.log(cmd);
-              cockpit.spawn(cmd).then(function (data) {
+              ablestack.spawn(cmd).then(function (data) {
                 var retVal = JSON.parse(data);
                 if (retVal.code == 200) {
                   $('#div-modal-spinner-header-txt').text('클러스터 유지보수 모드 비활성화');
                   cmd = ['python3', '/usr/share/cockpit/ablestack/python/gfs/gfs_manage.py', '--check-stonith', '--control', 'security-enable'];
                   console.log(cmd);
-                  cockpit.spawn(cmd).then(function (data) {
+                  ablestack.spawn(cmd).then(function (data) {
                     var retVal = JSON.parse(data);
                     if (retVal.code == 200) {
                       $('#div-modal-spinner').hide();
@@ -6053,32 +6050,32 @@ $('#button-execution-modal-security-update').on('click', function () {
     } else {
       cmd = ['python3', '/usr/share/cockpit/ablestack/python/gfs/gfs_manage.py', '--check-stonith', '--control', 'security-disable'];
       console.log(cmd);
-      cockpit.spawn(cmd).then(function (data) {
+      ablestack.spawn(cmd).then(function (data) {
         var retVal = JSON.parse(data);
         if (retVal.code == 200) {
           $('#div-modal-spinner-header-txt').text('보안 업데이트 진행');
           cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py', '-P', port];
           console.log(cmd);
-          cockpit.spawn(cmd).then(function (data) {
+          ablestack.spawn(cmd).then(function (data) {
             var retVal = JSON.parse(data);
             if (retVal.code == 200) {
               $('#div-modal-spinner-header-txt').text('보안 업데이트 파일 동기화');
               cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py', '--update-json-file'];
               console.log(cmd);
-              cockpit.spawn(cmd).then(function (data) {
+              ablestack.spawn(cmd).then(function (data) {
                 var retVal = JSON.parse(data);
                 if (retVal.code == 200) {
                   if (os_type == "ablestack-hci" || os_type == "ablestack-hci-filesystem") {
                     $('#div-modal-spinner-header-txt').text('스토리지 가상머신 포트 변경');
                     cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py', '--ceph-ssh-change', '-P', port];
                     console.log(cmd);
-                    cockpit.spawn(cmd).then(function (data) {
+                    ablestack.spawn(cmd).then(function (data) {
                       var retVal = JSON.parse(data);
                       if (retVal.code == 200) {
                         $('#div-modal-spinner-header-txt').text('클러스터 유지보수 모드 비활성화');
                         cmd = ['python3', '/usr/share/cockpit/ablestack/python/gfs/gfs_manage.py', '--check-stonith', '--control', 'security-enable'];
                         console.log(cmd);
-                        cockpit.spawn(cmd).then(function (data) {
+                        ablestack.spawn(cmd).then(function (data) {
                           var retVal = JSON.parse(data);
                           if (retVal.code == 200) {
                             $('#div-modal-spinner').hide();
@@ -6114,7 +6111,7 @@ $('#button-execution-modal-security-update').on('click', function () {
                     $('#div-modal-spinner-header-txt').text('클러스터 유지보수 모드 비활성화');
                     cmd = ['python3', '/usr/share/cockpit/ablestack/python/gfs/gfs_manage.py', '--check-stonith', '--control', 'security-enable'];
                     console.log(cmd);
-                    cockpit.spawn(cmd).then(function (data) {
+                    ablestack.spawn(cmd).then(function (data) {
                       var retVal = JSON.parse(data);
                       if (retVal.code == 200) {
                         $('#div-modal-spinner').hide();
@@ -6176,25 +6173,25 @@ $('#button-execution-modal-security-update').on('click', function () {
     if (changeAddHost) {
       cmd = ['python3', '/usr/share/cockpit/ablestack/python/gfs/gfs_manage.py', '--check-stonith', '--control', 'security-disable'];
       console.log(cmd);
-      cockpit.spawn(cmd).then(function (data) {
+      ablestack.spawn(cmd).then(function (data) {
         var retVal = JSON.parse(data);
         if (retVal.code == 200) {
           $('#div-modal-spinner-header-txt').text('보안 업데이트 진행');
           cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py', '--add-host'];
           console.log(cmd);
-          cockpit.spawn(cmd).then(function (data) {
+          ablestack.spawn(cmd).then(function (data) {
             var retVal = JSON.parse(data);
             if (retVal.code == 200) {
               $('#div-modal-spinner-header-txt').text('보안 업데이트 파일 동기화');
               cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py', '--update-json-file', '--local'];
               console.log(cmd);
-              cockpit.spawn(cmd).then(function (data) {
+              ablestack.spawn(cmd).then(function (data) {
                 var retVal = JSON.parse(data);
                 if (retVal.code == 200) {
                   $('#div-modal-spinner-header-txt').text('클러스터 유지보수 모드 비활성화');
                   cmd = ['python3', '/usr/share/cockpit/ablestack/python/gfs/gfs_manage.py', '--check-stonith', '--control', 'security-enable'];
                   console.log(cmd);
-                  cockpit.spawn(cmd).then(function (data) {
+                  ablestack.spawn(cmd).then(function (data) {
                     var retVal = JSON.parse(data);
                     if (retVal.code == 200) {
                       $('#div-modal-spinner').hide();
@@ -6260,25 +6257,25 @@ $('#button-execution-modal-security-update').on('click', function () {
     } else {
       cmd = ['python3', '/usr/share/cockpit/ablestack/python/gfs/gfs_manage.py', '--check-stonith', '--control', 'security-disable'];
       console.log(cmd);
-      cockpit.spawn(cmd).then(function (data) {
+      ablestack.spawn(cmd).then(function (data) {
         var retVal = JSON.parse(data);
         if (retVal.code == 200) {
           $('#div-modal-spinner-header-txt').text('보안 업데이트 진행');
           cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py'];
           console.log(cmd);
-          cockpit.spawn(cmd).then(function (data) {
+          ablestack.spawn(cmd).then(function (data) {
             var retVal = JSON.parse(data);
             if (retVal.code == 200) {
               $('#div-modal-spinner-header-txt').text('보안 업데이트 파일 동기화');
               cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py', '--update-json-file'];
               console.log(cmd);
-              cockpit.spawn(cmd).then(function (data) {
+              ablestack.spawn(cmd).then(function (data) {
                 var retVal = JSON.parse(data);
                 if (retVal.code == 200) {
                   $('#div-modal-spinner-header-txt').text('클러스터 유지보수 모드 비활성화');
                   cmd = ['python3', '/usr/share/cockpit/ablestack/python/gfs/gfs_manage.py', '--check-stonith', '--control', 'security-enable'];
                   console.log(cmd);
-                  cockpit.spawn(cmd).then(function (data) {
+                  ablestack.spawn(cmd).then(function (data) {
                     var retVal = JSON.parse(data);
                     if (retVal.code == 200) {
                       $('#div-modal-spinner').hide();
@@ -6354,13 +6351,13 @@ $('#button-execution-modal-ssh-port-change').on('click', function () {
 
   cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py', '--ssh-port', beforePort, '-P', afterPort, '--port-change'];
   console.log(cmd);
-  cockpit.spawn(cmd).then(function (data) {
+  ablestack.spawn(cmd).then(function (data) {
     var retVal = JSON.parse(data);
     if (retVal.code == 200) {
       if (os_type == "ablestack-hci" || os_type == "ablestack-hci-filesystem") {
         cmd = ['python3', '/usr/share/cockpit/ablestack/python/security_patch/security_patch.py', '--ceph-ssh-change', '-P', afterPort];
         console.log(cmd);
-        cockpit.spawn(cmd).then(function (data) {
+        ablestack.spawn(cmd).then(function (data) {
           var retVal = JSON.parse(data);
           if (retVal.code == 200) {
             $('#div-modal-spinner').hide();
@@ -6412,7 +6409,7 @@ $('#button-execution-modal-hci-shared-file-create').on('click', function () {
 
   var size = $('#form-input-hci-file-volume').val();
 
-  cockpit.spawn(['cat', pluginpath + '/tools/properties/cluster.json']).then(function (data) {
+  ablestack.spawn(['cat', pluginpath + '/tools/properties/cluster.json']).then(function (data) {
     var retVal = JSON.parse(data);
     var hosts = retVal.clusterConfig.hosts;
     var all_host_name = "";
@@ -6427,7 +6424,7 @@ $('#button-execution-modal-hci-shared-file-create').on('click', function () {
     }
     cmd = ["python3", "/usr/share/cockpit/ablestack/python/rbd/rbd_manage.py", "--create-rbd-image", "--size", size, "--list-ip", all_host_name];
     console.log(cmd);
-    cockpit.spawn(cmd).then(function (data) {
+    ablestack.spawn(cmd).then(function (data) {
       var retVal = JSON.parse(data);
       if (retVal.code == "200") {
         $('#div-modal-spinner').hide();
@@ -6484,7 +6481,7 @@ $('#button-execution-modal-disk-image-create').on('click', function () {
 
   var size = $('#form-input-disk-image-size').val();
 
-  cockpit.spawn(['cat', pluginpath + '/tools/properties/cluster.json']).then(function (data) {
+  ablestack.spawn(['cat', pluginpath + '/tools/properties/cluster.json']).then(function (data) {
     var retVal = JSON.parse(data);
     var hosts = retVal.clusterConfig.hosts;
     var all_host_name = "";
@@ -6499,7 +6496,7 @@ $('#button-execution-modal-disk-image-create').on('click', function () {
     }
     cmd = ["python3", pluginpath + "/python/rbd/rbd_manage.py", "--create-rbd-image", "--size", size, "--list-ip", all_host_name];
     console.log(cmd);
-    cockpit.spawn(cmd).then(function (data) {
+    ablestack.spawn(cmd).then(function (data) {
       var retVal = JSON.parse(data);
       if (retVal.code == "200") {
         $('#div-modal-spinner').hide();
@@ -6563,7 +6560,7 @@ $('#button-execution-modal-disk-image-delete').on('click', function () {
     .get()
     .join(',');
 
-  cockpit.spawn(['cat', pluginpath + '/tools/properties/cluster.json']).then(function (data) {
+  ablestack.spawn(['cat', pluginpath + '/tools/properties/cluster.json']).then(function (data) {
     var retVal = JSON.parse(data);
     var hosts = retVal.clusterConfig.hosts;
     var all_host_name = "";
@@ -6577,7 +6574,7 @@ $('#button-execution-modal-disk-image-delete').on('click', function () {
     }
     cmd = ["python3", pluginpath + "/python/rbd/rbd_manage.py", "--delete-rbd-image", "--image-name", image_name, "--list-ip", all_host_name];
     console.log(cmd);
-    cockpit.spawn(cmd).then(function (data) {
+    ablestack.spawn(cmd).then(function (data) {
       var retVal = JSON.parse(data);
       if (retVal.code == "200") {
         $('#div-modal-spinner').hide();

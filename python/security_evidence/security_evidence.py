@@ -386,7 +386,7 @@ def run_payload(
         cmd = ["/bin/bash", "-s"]
     else:
         cmd = [
-            "/usr/bin/ssh",
+            "/usr/libexec/ablestack/node-remote",
             "-o",
             "BatchMode=yes",
             "-o",
@@ -401,7 +401,7 @@ def run_payload(
         ]
 
     handle.write(
-        f"전송 방식: {'로컬' if is_local else 'SSH'} 대상={target} 포트={ssh_port if not is_local else '-'}\n"
+        f"전송 방식: {'로컬' if is_local else '상호 TLS 노드 API'} 대상={target}\n"
     )
     handle.flush()
     try:

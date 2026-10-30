@@ -16,7 +16,8 @@ import requests
 import cryptocode
 
 from ablestack import *
-from sh import ssh
+from sh import Command as _RemoteCommand
+ssh = _RemoteCommand('/usr/libexec/ablestack/node-remote')
 from subprocess import check_output
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 

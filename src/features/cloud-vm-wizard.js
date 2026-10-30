@@ -1136,7 +1136,7 @@ function deployCloudCenterVM() {
   createLoggerInfo("deployCloudCenterVM start");
   var host_ping_test_and_cluster_config_cmd = ['python3', pluginpath + '/python/cluster/cluster_config.py', 'insertScvmHost', '-t', os_type, '-js', ret_json_string, '-cmi', mgmt_ip, '-pcl', all_host_name];
   if(console_log){console.log(host_ping_test_and_cluster_config_cmd);}
-  cockpit.spawn(host_ping_test_and_cluster_config_cmd)
+  ablestack.spawn(host_ping_test_and_cluster_config_cmd)
     .then(function(data){
       //결과 값 json으로 return
       var ping_test_result = JSON.parse(data);
@@ -1147,13 +1147,13 @@ function deployCloudCenterVM() {
         setProgressStep("span-ccvm-progress-step2",1,os_type);
         var reset_cloud_center_cmd = ['python3', pluginpath + '/python/vm/reset_cloud_center.py'];
         if(console_log){console.log(reset_cloud_center_cmd);}
-        cockpit.spawn(reset_cloud_center_cmd)
+        ablestack.spawn(reset_cloud_center_cmd)
           .then(function(data){
             //결과 값 json으로 return
             var reset_cloud_center_result = JSON.parse(data);
             if(reset_cloud_center_result.code=="200") { //정상
               //=========== 3. cloudinit iso 파일 생성 ===========
-              // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/ccvm/cloudinit 경로에 hosts, ssh key 파일 저장
+              // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/ccvm/cloudinit 경로에 hosts, /usr/libexec/ablestack/node-remote key 파일 저장
               setProgressStep("span-ccvm-progress-step2",2,os_type);
               setProgressStep("span-ccvm-progress-step3",1,os_type);
               var host_name = $('#form-input-cloud-vm-hostname').val();
@@ -1164,8 +1164,8 @@ function deployCloudCenterVM() {
 
               create_ccvm_cloudinit_cmd = ['python3', pluginpath + '/python/vm/create_ccvm_cloudinit.py'
                           ,"-f1",pluginpath+"/tools/vmconfig/ccvm/hosts","-t1", local_host+$("#div-textarea-cluster-config-confirm-hosts-file-ccvm").val() // hosts 파일
-                          ,"-f2",pluginpath+"/tools/vmconfig/ccvm/id_rsa","-t2", $("#form-textarea-cloud-vm-ssh-private-key-file").val() // ssh 개인 key 파일
-                          ,"-f3",pluginpath+"/tools/vmconfig/ccvm/id_rsa.pub","-t3", $("#form-textarea-cloud-vm-ssh-public-key-file").val() // ssh 공개 key 파일
+                          ,"-f2",pluginpath+"/tools/vmconfig/ccvm/id_rsa","-t2", $("#form-textarea-cloud-vm-ssh-private-key-file").val() // /usr/libexec/ablestack/node-remote 개인 key 파일
+                          ,"-f3",pluginpath+"/tools/vmconfig/ccvm/id_rsa.pub","-t3", $("#form-textarea-cloud-vm-ssh-public-key-file").val() // /usr/libexec/ablestack/node-remote 공개 key 파일
                           ,'--hostname',host_name
                           ,'-hns', all_host_name
                           ,'--mgmt-nic','enp0s20'
@@ -1189,7 +1189,7 @@ function deployCloudCenterVM() {
                 create_ccvm_cloudinit_cmd.push('--sn-nic','enp0s21','--sn-ip',sn_ip,'--sn-prefix',sn_prefix,'--sn-gw',sn_gw,'--sn-dns',sn_dns);
               }
               if(console_log){console.log(create_ccvm_cloudinit_cmd);}
-              cockpit.spawn(create_ccvm_cloudinit_cmd)
+              ablestack.spawn(create_ccvm_cloudinit_cmd)
                 .then(function(data){
                   //결과 값 json으로 return
                   var create_ccvm_cloudinit_result = JSON.parse(data);
@@ -1199,7 +1199,7 @@ function deployCloudCenterVM() {
                     setProgressStep("span-ccvm-progress-step4",1,os_type);
                     xml_create_cmd.push("-hns",all_host_name);
                     if(console_log){console.log(xml_create_cmd);}
-                    cockpit.spawn(xml_create_cmd)
+                    ablestack.spawn(xml_create_cmd)
                       .then(function(data){
                         //결과 값 json으로 return
                         var create_ccvm_xml_result = JSON.parse(data);
@@ -1210,7 +1210,7 @@ function deployCloudCenterVM() {
                           setProgressStep("span-ccvm-progress-step5",1,os_type);
                           var pcs_config = ['python3', pluginpath + '/python/vm/setup_pcs_cluster.py', '-hns', all_host_name];
                           if(console_log){console.log(pcs_config);}
-                          cockpit.spawn(pcs_config)
+                          ablestack.spawn(pcs_config)
                             .then(function(data){
                               //결과 값 json으로 return
                               var ccvm_result = JSON.parse(data);
@@ -1288,13 +1288,13 @@ function deployCloudCenterVM() {
     createLoggerInfo("deployCloudCenterVM start");
     var host_ping_test_and_cluster_config_cmd = ['python3', pluginpath + '/python/cluster/cluster_config.py', 'check', '-js', ret_json_string, '-cmi', mgmt_ip, '-pcl', all_host_name];
     if(console_log){console.log(host_ping_test_and_cluster_config_cmd);}
-    cockpit.spawn(host_ping_test_and_cluster_config_cmd)
+    ablestack.spawn(host_ping_test_and_cluster_config_cmd)
       .then(function(data){
         //결과 값 json으로 return
         var ping_test_result = JSON.parse(data);
         if(ping_test_result.code=="200") { //정상
           //=========== 2. cloudinit iso 파일 생성 ===========
-          // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/ccvm/cloudinit 경로에 hosts, ssh key 파일 저장
+          // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/ccvm/cloudinit 경로에 hosts, /usr/libexec/ablestack/node-remote key 파일 저장
           setProgressStep("span-ccvm-progress-step1",2,os_type);
           setProgressStep("span-ccvm-progress-step3",1,os_type);
           var host_name = $('#form-input-cloud-vm-hostname').val();
@@ -1305,8 +1305,8 @@ function deployCloudCenterVM() {
 
           create_ccvm_cloudinit_cmd = ['python3', pluginpath + '/python/vm/create_ccvm_cloudinit.py'
                       ,"-f1",pluginpath+"/tools/vmconfig/ccvm/hosts","-t1", local_host+$("#div-textarea-cluster-config-confirm-hosts-file-ccvm").val() // hosts 파일
-                      ,"-f2",pluginpath+"/tools/vmconfig/ccvm/id_rsa","-t2", $("#form-textarea-cloud-vm-ssh-private-key-file").val() // ssh 개인 key 파일
-                      ,"-f3",pluginpath+"/tools/vmconfig/ccvm/id_rsa.pub","-t3", $("#form-textarea-cloud-vm-ssh-public-key-file").val() // ssh 공개 key 파일
+                      ,"-f2",pluginpath+"/tools/vmconfig/ccvm/id_rsa","-t2", $("#form-textarea-cloud-vm-ssh-private-key-file").val() // /usr/libexec/ablestack/node-remote 개인 key 파일
+                      ,"-f3",pluginpath+"/tools/vmconfig/ccvm/id_rsa.pub","-t3", $("#form-textarea-cloud-vm-ssh-public-key-file").val() // /usr/libexec/ablestack/node-remote 공개 key 파일
                       ,'--hostname',host_name
                       ,'-hns', all_host_name
                       ,'--mgmt-nic','enp0s20'
@@ -1330,7 +1330,7 @@ function deployCloudCenterVM() {
             create_ccvm_cloudinit_cmd.push('--sn-nic','enp0s21','--sn-ip',sn_ip,'--sn-prefix',sn_prefix,'--sn-gw',sn_gw,'--sn-dns',sn_dns);
           }
           if(console_log){console.log(create_ccvm_cloudinit_cmd);}
-          cockpit.spawn(create_ccvm_cloudinit_cmd)
+          ablestack.spawn(create_ccvm_cloudinit_cmd)
             .then(function(data){
               //결과 값 json으로 return
               var create_ccvm_cloudinit_result = JSON.parse(data);
@@ -1343,7 +1343,7 @@ function deployCloudCenterVM() {
                 setProgressStep("span-ccvm-progress-step4",1,os_type);
                 xml_create_cmd.push("-hns",all_host_name, "-gmp", gfs_mount_point);
                 if(console_log){console.log(xml_create_cmd);}
-                cockpit.spawn(xml_create_cmd)
+                ablestack.spawn(xml_create_cmd)
                   .then(function(data){
                     //결과 값 json으로 return
                     var create_ccvm_xml_result = JSON.parse(data);
@@ -1354,14 +1354,14 @@ function deployCloudCenterVM() {
                       setProgressStep("span-ccvm-progress-step5",1,os_type);
                       var pcs_config = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--create-ccvm-cluster', '--gfs-name', gfs_name, '--mount-point', gfs_mount_point, '--cluster-name', gfs_cluster_name, '--list-ip', all_host_name];
                       if(console_log){console.log(pcs_config);}
-                      cockpit.spawn(pcs_config)
+                      ablestack.spawn(pcs_config)
                         .then(function(data){
                           //결과 값 json으로 return
                           var ccvm_result = JSON.parse(data);
                           if(ccvm_result.code=="200"){
                             var cluster_sync_mechanism_cmd = ['python3', pluginpath + '/python/pcs/main.py', 'sync', '--time', cluster_sync_mechanism];
                             if(console_log){console.log(cluster_sync_mechanism_cmd);}
-                            cockpit.spawn(cluster_sync_mechanism_cmd)
+                            ablestack.spawn(cluster_sync_mechanism_cmd)
                             .then(function(data){
                               var cluster_sync_mechanism_result = JSON.parse(data);
                               if (cluster_sync_mechanism_result.code == "200"){
@@ -1434,7 +1434,7 @@ function deployCloudCenterVM() {
         setProgressStep("span-ccvm-progress-step2",1,os_type);
         var ccvm_copy_file_cmd = ['python3', pluginpath + '/python/vm/local_ccvm_manage.py', 'copy']
         console.log(ccvm_copy_file_cmd);
-        cockpit.spawn(ccvm_copy_file_cmd)
+        ablestack.spawn(ccvm_copy_file_cmd)
         .then(function(data){
           var retVal = JSON.parse(data);
           if (retVal.code == 200){
@@ -1443,7 +1443,7 @@ function deployCloudCenterVM() {
             var console_log = true;
             createLoggerInfo("deployCloudCenterVM start");
             //=========== 1. cloudinit iso 파일 생성 ===========
-            // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/ccvm/cloudinit 경로에 hosts, ssh key 파일 저장
+            // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/ccvm/cloudinit 경로에 hosts, /usr/libexec/ablestack/node-remote key 파일 저장
             setProgressStep("span-ccvm-progress-step3",2,os_type);
             setProgressStep("span-ccvm-progress-step4",1,os_type);
             var host_name = $('#form-input-cloud-vm-hostname').val();
@@ -1454,8 +1454,8 @@ function deployCloudCenterVM() {
 
             create_ccvm_cloudinit_cmd = ['python3', pluginpath + '/python/vm/create_ccvm_cloudinit.py'
                         ,"-f1",pluginpath+"/tools/vmconfig/ccvm/hosts","-t1", local_host+$("#div-textarea-cluster-config-confirm-hosts-file-ccvm").val() // hosts 파일
-                        ,"-f2",pluginpath+"/tools/vmconfig/ccvm/id_rsa","-t2", $("#form-textarea-cloud-vm-ssh-private-key-file").val() // ssh 개인 key 파일
-                        ,"-f3",pluginpath+"/tools/vmconfig/ccvm/id_rsa.pub","-t3", $("#form-textarea-cloud-vm-ssh-public-key-file").val() // ssh 공개 key 파일
+                        ,"-f2",pluginpath+"/tools/vmconfig/ccvm/id_rsa","-t2", $("#form-textarea-cloud-vm-ssh-private-key-file").val() // /usr/libexec/ablestack/node-remote 개인 key 파일
+                        ,"-f3",pluginpath+"/tools/vmconfig/ccvm/id_rsa.pub","-t3", $("#form-textarea-cloud-vm-ssh-public-key-file").val() // /usr/libexec/ablestack/node-remote 공개 key 파일
                         ,'--hostname',host_name
                         ,'-hns', all_host_name
                         ,'--mgmt-nic','enp0s20'
@@ -1479,7 +1479,7 @@ function deployCloudCenterVM() {
               create_ccvm_cloudinit_cmd.push('--sn-nic','enp0s21','--sn-ip',sn_ip,'--sn-prefix',sn_prefix,'--sn-gw',sn_gw,'--sn-dns',sn_dns);
             }
             if(console_log){console.log(create_ccvm_cloudinit_cmd);}
-            cockpit.spawn(create_ccvm_cloudinit_cmd)
+            ablestack.spawn(create_ccvm_cloudinit_cmd)
               .then(function(data){
                 //결과 값 json으로 return
                 var create_ccvm_cloudinit_result = JSON.parse(data);
@@ -1489,7 +1489,7 @@ function deployCloudCenterVM() {
                   setProgressStep("span-ccvm-progress-step4",1,os_type);
                   xml_create_cmd.push("-hns",all_host_name);
                   if(console_log){console.log(xml_create_cmd);}
-                  cockpit.spawn(xml_create_cmd)
+                  ablestack.spawn(xml_create_cmd)
                     .then(function(data){
                       //결과 값 json으로 return
                       var create_ccvm_xml_result = JSON.parse(data);
@@ -1500,7 +1500,7 @@ function deployCloudCenterVM() {
                         setProgressStep("span-ccvm-progress-step5",1,os_type);
                         var ccvm_config = ['python3', pluginpath + '/python/vm/local_ccvm_manage.py', 'create'];
                         if(console_log){console.log(ccvm_config);}
-                        cockpit.spawn(ccvm_config)
+                        ablestack.spawn(ccvm_config)
                           .then(function(data){
                             //결과 값 json으로 return
                             var ccvm_result = JSON.parse(data);
@@ -1562,13 +1562,13 @@ function deployCloudCenterVM() {
   createLoggerInfo("deployCloudCenterVM start");
   var host_ping_test_and_cluster_config_cmd = ['python3', pluginpath + '/python/cluster/cluster_config.py', 'insertScvmHost', '-t', os_type, '-js', ret_json_string, '-cmi', mgmt_ip, '-pcl', all_host_name];
   if(console_log){console.log(host_ping_test_and_cluster_config_cmd);}
-  cockpit.spawn(host_ping_test_and_cluster_config_cmd)
+  ablestack.spawn(host_ping_test_and_cluster_config_cmd)
     .then(function(data){
       //결과 값 json으로 return
       var ping_test_result = JSON.parse(data);
       if(ping_test_result.code=="200") { //정상
         //=========== 3. cloudinit iso 파일 생성 ===========
-        // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/ccvm/cloudinit 경로에 hosts, ssh key 파일 저장
+        // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/ccvm/cloudinit 경로에 hosts, /usr/libexec/ablestack/node-remote key 파일 저장
         setProgressStep("span-ccvm-progress-step1",2,os_type);
         setProgressStep("span-ccvm-progress-step2",2,os_type);
         setProgressStep("span-ccvm-progress-step3",1,os_type);
@@ -1580,8 +1580,8 @@ function deployCloudCenterVM() {
 
         create_ccvm_cloudinit_cmd = ['python3', pluginpath + '/python/vm/create_ccvm_cloudinit.py'
                     ,"-f1",pluginpath+"/tools/vmconfig/ccvm/hosts","-t1", local_host+$("#div-textarea-cluster-config-confirm-hosts-file-ccvm").val() // hosts 파일
-                    ,"-f2",pluginpath+"/tools/vmconfig/ccvm/id_rsa","-t2", $("#form-textarea-cloud-vm-ssh-private-key-file").val() // ssh 개인 key 파일
-                    ,"-f3",pluginpath+"/tools/vmconfig/ccvm/id_rsa.pub","-t3", $("#form-textarea-cloud-vm-ssh-public-key-file").val() // ssh 공개 key 파일
+                    ,"-f2",pluginpath+"/tools/vmconfig/ccvm/id_rsa","-t2", $("#form-textarea-cloud-vm-ssh-private-key-file").val() // /usr/libexec/ablestack/node-remote 개인 key 파일
+                    ,"-f3",pluginpath+"/tools/vmconfig/ccvm/id_rsa.pub","-t3", $("#form-textarea-cloud-vm-ssh-public-key-file").val() // /usr/libexec/ablestack/node-remote 공개 key 파일
                     ,'--hostname',host_name
                     ,'-hns', all_host_name
                     ,'--mgmt-nic','enp0s20'
@@ -1605,7 +1605,7 @@ function deployCloudCenterVM() {
           create_ccvm_cloudinit_cmd.push('--sn-nic','enp0s21','--sn-ip',sn_ip,'--sn-prefix',sn_prefix,'--sn-gw',sn_gw,'--sn-dns',sn_dns);
         }
         if(console_log){console.log(create_ccvm_cloudinit_cmd);}
-        cockpit.spawn(create_ccvm_cloudinit_cmd)
+        ablestack.spawn(create_ccvm_cloudinit_cmd)
           .then(function(data){
             //결과 값 json으로 return
             var create_ccvm_cloudinit_result = JSON.parse(data);
@@ -1615,7 +1615,7 @@ function deployCloudCenterVM() {
               setProgressStep("span-ccvm-progress-step4",1,os_type);
               xml_create_cmd.push("-hns",all_host_name);
               if(console_log){console.log(xml_create_cmd);}
-              cockpit.spawn(xml_create_cmd)
+              ablestack.spawn(xml_create_cmd)
                 .then(function(data){
                   //결과 값 json으로 return
                   var create_ccvm_xml_result = JSON.parse(data);
@@ -1626,7 +1626,7 @@ function deployCloudCenterVM() {
                     setProgressStep("span-ccvm-progress-step5",1,os_type);
                     var pcs_config = ['python3', pluginpath + '/python/vm/setup_pcs_cluster.py', '-hns', all_host_name];
                     if(console_log){console.log(pcs_config);}
-                    cockpit.spawn(pcs_config)
+                    ablestack.spawn(pcs_config)
                       .then(function(data){
                         //결과 값 json으로 return
                         var ccvm_result = JSON.parse(data);
@@ -1796,7 +1796,7 @@ function resetCcvmNetworkInfo(){
  * Meathod Name : setCcvmSshPrivateKeyInfo
  * Date Created : 2021.03.19
  * Writer : 배태주
- * Description : 클라우드센터 가상머신에 사용할 ssh private key 파일 세팅
+ * Description : 클라우드센터 가상머신에 사용할 /usr/libexec/ablestack/node-remote private key 파일 세팅
  * Parameter : String
  * Return : 없음
  * History : 2021.03.19 최초 작성
@@ -1813,7 +1813,7 @@ function setCcvmSshPrivateKeyInfo(ssh_private_key){
  * Meathod Name : setCcvmSshPublicKeyInfo
  * Date Created : 2021.03.29
  * Writer : 배태주
- * Description : 클라우드센터 가상머신에 사용할 ssh public key 파일 세팅
+ * Description : 클라우드센터 가상머신에 사용할 /usr/libexec/ablestack/node-remote public key 파일 세팅
  * Parameter : String
  * Return : 없음
  * History : 2021.03.29 최초 작성
@@ -2342,7 +2342,7 @@ function ccvmcreateAccordion(type, hostCount, opts = {}) {
 
 
 function ccvmsethostfiled(){
-  cockpit.spawn(["cat", pluginpath + "/tools/properties/cluster.json"])
+  ablestack.spawn(["cat", pluginpath + "/tools/properties/cluster.json"])
   .then(function(data){
     var clusterJsonConf = JSON.parse(data);
 

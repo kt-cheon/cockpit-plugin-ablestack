@@ -101,13 +101,13 @@ def backupCcvmSnap(args):
 
             if pcs_status == 'Started':
                 # ccvm suspend
-                os.system("ssh root@"+pcs_started_host_name+" \"virsh suspend "+ccvm_name+" > /dev/null\"")
+                os.system("/usr/libexec/ablestack/node-remote root@"+pcs_started_host_name+" \"virsh suspend "+ccvm_name+" > /dev/null\"")
 
                 # ccvm 스냅 생성
                 result = os.system("rbd snap create "+pool_name+"/"+ccvm_image_name+"@"+now)
 
                 # ccvm resume
-                os.system("ssh root@"+pcs_started_host_name+" \"virsh resume "+ccvm_name+" > /dev/null\"")
+                os.system("/usr/libexec/ablestack/node-remote root@"+pcs_started_host_name+" \"virsh resume "+ccvm_name+" > /dev/null\"")
             else:
                 # ccvm 스냅 생성
                 result = os.system("rbd snap create "+pool_name+"/"+ccvm_image_name+"@"+now)

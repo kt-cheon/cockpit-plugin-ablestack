@@ -81,7 +81,7 @@ def setupHostsAndClusterJson():
 
         for i in range(len(json_data["clusterConfig"]["hosts"])):
             host = json_data["clusterConfig"]["hosts"][i]["ablecube"]
-            os.system("scp -o StrictHostKeyChecking=no " + json_file_path + " " + host + ":" + json_file_path + " > /dev/null")
+            os.system("/usr/libexec/ablestack/node-copy -o StrictHostKeyChecking=no " + json_file_path + " " + host + ":" + json_file_path + " > /dev/null")
 
         my_hosts.remove_all_matching(name="pfmp")
 

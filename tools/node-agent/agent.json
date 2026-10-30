@@ -1,0 +1,17 @@
+{
+  "enabled": false,
+  "node_id": "",
+  "listen": "127.0.0.1",
+  "port": 9445,
+  "tls": {
+    "ca": "/etc/ablestack/node-agent/ca.crt",
+    "cert": "/etc/ablestack/node-agent/node.crt",
+    "key": "/etc/ablestack/node-agent/node.key"
+  },
+  "peers": {},
+  "nodes": {},
+  "target_aliases": {},
+  "bootstrap_bundles": {},
+  "max_command_timeout": 3600,
+  "max_file_size": 17179869184
+}

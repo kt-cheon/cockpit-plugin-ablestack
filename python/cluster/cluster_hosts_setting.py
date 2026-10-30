@@ -195,13 +195,13 @@ def hostOnly(args):
 def withScvm(args):
     ret = changeHosts(args)
     if os_type == "ablestack-hci" or os_type == "ablestack-hci-filesystem":
-        os.system("scp -q -o StrictHostKeyChecking=no " + hosts_file_path + " root@scvm-mngt:/etc/hosts")
+        os.system("/usr/libexec/ablestack/node-copy -q -o StrictHostKeyChecking=no " + hosts_file_path + " root@scvm-mngt:/etc/hosts")
     # os.system("scp -q "+ hosts_file_path +" root@scvm-mngt:/etc/hosts")
     return ret
 
 def withCcvm(args):
     ret = changeHosts(args)
-    os.system("scp -q -o StrictHostKeyChecking=no " + hosts_file_path + " root@ccvm-mngt:/etc/hosts")
+    os.system("/usr/libexec/ablestack/node-copy -q -o StrictHostKeyChecking=no " + hosts_file_path + " root@ccvm-mngt:/etc/hosts")
     # os.system("scp -q "+ hosts_file_path +" root@ccvm-mngt:/etc/hosts")
     return ret
 

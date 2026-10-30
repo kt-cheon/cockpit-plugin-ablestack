@@ -79,11 +79,11 @@ def checkTimeSever():
                 synchronization_state = "unknown error"
 
 
-            output = check_output(["/usr/bin/ssh -o StrictHostKeyChecking=no scvm df -h | grep 'root' | awk '{print $4}'"], universal_newlines=True, shell=True, env=env)
+            output = check_output(["/usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no scvm df -h | grep 'root' | awk '{print $4}'"], universal_newlines=True, shell=True, env=env)
             rootDiskAvail = output.strip();
             if rootDiskAvail == "" :
                 rootDiskAvail = "N/A"
-            output = check_output(["/usr/bin/ssh -o StrictHostKeyChecking=no scvm df -h | grep 'root' | awk '{print $5}'"], universal_newlines=True, shell=True, env=env)
+            output = check_output(["/usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no scvm df -h | grep 'root' | awk '{print $5}'"], universal_newlines=True, shell=True, env=env)
             rootDiskUsePer = output.strip();
             if rootDiskUsePer == "" :
                 rootDiskUsePer = "N/A"

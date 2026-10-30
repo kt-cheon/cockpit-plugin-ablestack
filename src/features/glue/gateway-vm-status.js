@@ -244,7 +244,7 @@ $('#button-execution-modal-gateway-vm-migration').on('click', function(){
 
 
 
-    // cockpit.spawn(['/usr/bin/python3', pluginpath + '/python/cloud_cluster_status/card-cloud-cluster-status.py', 'pcsMigration', '--target', valSelect], { host: pcs_exe_host})
+    // ablestack.spawn(['/usr/bin/python3', pluginpath + '/python/cloud_cluster_status/card-cloud-cluster-status.py', 'pcsMigration', '--target', valSelect], { host: pcs_exe_host})
     // .then(function(data){
     //   var retVal = JSON.parse(data);
     //   if(retVal.code == 200){
@@ -268,7 +268,7 @@ $('#menu-item-gateway-vm-migrate').on('click', function(){
 
 // $('#cloud-cluster-connect').on('click', function(){
 //   //클라우드센터 연결
-//   cockpit.spawn(['/usr/bin/python3', pluginpath + '/python/url/create_address.py', 'cloudCenter'])
+//   ablestack.spawn(['/usr/bin/python3', pluginpath + '/python/url/create_address.py', 'cloudCenter'])
 //   .then(function(data){
 //     var retVal = JSON.parse(data);    
 //     if(retVal.code == 200){
@@ -289,7 +289,7 @@ $('#menu-item-gateway-vm-migrate').on('click', function(){
 // function cccc_link_go(){
 //   // 클라우드센터 연결
 //   createLoggerInfo("cccc_link_go() start");
-//   cockpit.spawn(["python3", pluginpath+"/python/url/create_address.py", "cloudCenter"])
+//   ablestack.spawn(["python3", pluginpath+"/python/url/create_address.py", "cloudCenter"])
 //     .then(function(data){
 //       var retVal = JSON.parse(data);
 //       if(retVal.code == 200){

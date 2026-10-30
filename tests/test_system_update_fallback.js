@@ -63,8 +63,8 @@ async function testSystemUpdateFallback(source) {
       }
       throw new Error('Unexpected command: ' + JSON.stringify(args));
     } };
-    const api = new Function('$', 'cockpit', 'document', source + '\nreturn {' +
-      'loadSystemUpdateInfoFallback, runSystemUpdateFallback, updateSystemUpdateInfo, clearSystemUpdateLoadedInfo, resetSystemUpdateConfirmModal};')($, cockpit, {});
+    const api = new Function('$', 'cockpit', 'ablestack', 'document', source + '\nreturn {' +
+      'loadSystemUpdateInfoFallback, runSystemUpdateFallback, updateSystemUpdateInfo, clearSystemUpdateLoadedInfo, resetSystemUpdateConfirmModal};')($, cockpit, cockpit, {});
     return { api, calls, records, $, get executions() { return executions; } };
   }
   function test(name, run) { tests.push({ name, run }); }

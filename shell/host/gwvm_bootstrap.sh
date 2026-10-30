@@ -8,24 +8,27 @@
 #최초작성일 : 2023-05-19
 #########################################
 set -x
+set -o pipefail
 LOGFILE="/var/log/gwvm_install.log"
 
 # hosts=$(grep -v mngt /etc/hosts | grep -v scvm | grep -v pn | grep -v localhost | awk {'print $1'})
 
 ################# firewall setting
-firewall-cmd --permanent --zone=public --add-port=9100/tcp 2>&1 | tee -a $LOGFILE
-firewall-cmd --permanent --zone=public --add-port=9095/tcp 2>&1 | tee -a $LOGFILE
-firewall-cmd --permanent --zone=public --add-port=5050/tcp 2>&1 | tee -a $LOGFILE
-firewall-cmd --permanent --zone=public --add-port=3260/tcp 2>&1 | tee -a $LOGFILE
-
-firewall-cmd --permanent --zone=public --add-service=ceph 2>&1 | tee -a $LOGFILE
-firewall-cmd --permanent --zone=public --add-service=ceph-mon 2>&1 | tee -a $LOGFILE
-firewall-cmd --permanent --zone=public --add-service=iscsi-target 2>&1 | tee -a $LOGFILE
-firewall-cmd --reload
+allow_gateway_firewall() {
+    firewall-cmd --zone=public "$@" 2>&1 | tee -a "$LOGFILE" || return 1
+    firewall-cmd --permanent --zone=public "$@" 2>&1 | tee -a "$LOGFILE" || return 1
+}
+allow_gateway_firewall --add-port=9100/tcp || exit 1
+allow_gateway_firewall --add-port=9095/tcp || exit 1
+allow_gateway_firewall --add-port=5050/tcp || exit 1
+allow_gateway_firewall --add-port=3260/tcp || exit 1
+allow_gateway_firewall --add-service=ceph || exit 1
+allow_gateway_firewall --add-service=ceph-mon || exit 1
+allow_gateway_firewall --add-service=iscsi-target || exit 1
 firewall-cmd --list-all 2>&1 | tee -a $LOGFILE
 
 #ceph 키 복사
-scp -q -o StrictHostKeyChecking=no root@scvm-mngt:/etc/ceph/* /etc/ceph/
+/usr/libexec/ablestack/node-copy -q -o StrictHostKeyChecking=no root@scvm-mngt:/etc/ceph/* /etc/ceph/
 
 # hostname=$(hostname)
 # ip=$(hostname -i)

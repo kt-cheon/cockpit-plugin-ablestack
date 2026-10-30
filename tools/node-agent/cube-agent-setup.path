@@ -1,0 +1,10 @@
+[Unit]
+Description=Watch Cube Agent installation inputs
+
+[Path]
+PathChanged=/etc/ablestack/node-agent/install.json
+PathChanged=/var/lib/ablestack/cube-agent/enrollment
+Unit=cube-agent-setup.service
+
+[Install]
+WantedBy=multi-user.target

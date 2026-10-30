@@ -1,0 +1,18 @@
+{
+  "nodes": [
+    {"id": "cube1", "address": "192.0.2.11", "aliases": ["ablecube1"], "role": "admin",
+     "target_aliases": {"ablecube": "cube1", "scvm": "scvm1", "scvm-mngt": "scvm1", "pn-ablecube": "cube1", "pn-scvm": "scvm1", "cn-scvm": "scvm1"}},
+    {"id": "cube2", "address": "192.0.2.12", "aliases": ["ablecube2"], "role": "admin",
+     "target_aliases": {"ablecube": "cube2", "scvm": "scvm2", "scvm-mngt": "scvm2", "pn-ablecube": "cube2", "pn-scvm": "scvm2", "cn-scvm": "scvm2"}},
+    {"id": "cube3", "address": "192.0.2.13", "aliases": ["ablecube3"], "role": "admin",
+     "target_aliases": {"ablecube": "cube3", "scvm": "scvm3", "scvm-mngt": "scvm3", "pn-ablecube": "cube3", "pn-scvm": "scvm3", "cn-scvm": "scvm3"}},
+    {"id": "scvm1", "address": "192.0.2.21", "aliases": ["scvm1-mngt"], "role": "admin",
+     "target_aliases": {"ablecube": "cube1", "scvm": "scvm1", "scvm-mngt": "scvm1"}},
+    {"id": "scvm2", "address": "192.0.2.22", "aliases": ["scvm2-mngt"], "role": "admin",
+     "target_aliases": {"ablecube": "cube2", "scvm": "scvm2", "scvm-mngt": "scvm2"}},
+    {"id": "scvm3", "address": "192.0.2.23", "aliases": ["scvm3-mngt"], "role": "admin",
+     "target_aliases": {"ablecube": "cube3", "scvm": "scvm3", "scvm-mngt": "scvm3"}},
+    {"id": "ccvm", "address": "192.0.2.31", "aliases": ["ccvm-mngt"], "role": "admin",
+     "target_aliases": {"ablecube": "cube1", "scvm": "scvm1", "scvm-mngt": "scvm1"}}
+  ]
+}

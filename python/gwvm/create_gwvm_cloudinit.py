@@ -83,7 +83,7 @@ def createGwvmCloudinit(args):
 
             # pcs 클러스터 호스트에 /vmconfig/gwvm 폴더생성 명령 실패
             for i in [1,2,3]:
-                ret_num = os.system("ssh root@"+host_name+" 'mkdir -p "+pluginpath+"/tools/vmconfig/gwvm'")
+                ret_num = os.system("/usr/libexec/ablestack/node-remote root@"+host_name+" 'mkdir -p "+pluginpath+"/tools/vmconfig/gwvm'")
                 if ret_num == 0:
                     break
 
@@ -92,7 +92,7 @@ def createGwvmCloudinit(args):
 
             # /gwvm/gwvm-cloudinit.iso 복사 실패
             for i in [1,2,3]:
-                ret_num = os.system("scp -q "+pluginpath+"/tools/vmconfig/gwvm/gwvm-cloudinit.iso root@"+host_name+":/var/lib/libvirt/images/gwvm-cloudinit.iso")
+                ret_num = os.system("/usr/libexec/ablestack/node-copy -q "+pluginpath+"/tools/vmconfig/gwvm/gwvm-cloudinit.iso root@"+host_name+":/var/lib/libvirt/images/gwvm-cloudinit.iso")
                 if ret_num == 0:
                     break
 

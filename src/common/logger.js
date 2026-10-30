@@ -10,5 +10,5 @@
  */
  function createLoggerInfo(error_str){
   var cmd = ["logger", "-t", "ablecloud", error_str];
-  cockpit.spawn(cmd)
+  ablestack.spawn(cmd)
 }

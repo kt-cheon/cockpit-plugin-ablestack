@@ -7,7 +7,9 @@ import shlex
 import subprocess
 from typing import Dict, List
 
-import paramiko
+import sys
+sys.path.insert(0, "/usr/libexec/ablestack/node-agent")
+from remote_session import RemoteHost
 
 from ablestack import *  # 기존 프로젝트 의존성 유지합니다.
 
@@ -20,7 +22,7 @@ def open_cluster_json() -> Dict:
         return json.load(json_file)
 
 
-def run_command(command: str, ssh_client: paramiko.SSHClient = None) -> str:
+def run_command(command: str, ssh_client: RemoteHost = None) -> str:
     """
     로컬 또는 원격에서 명령을 실행합니다.
     원격은 exit status를 확인하여 실패 시 예외를 발생시킵니다.
@@ -43,7 +45,7 @@ def run_command(command: str, ssh_client: paramiko.SSHClient = None) -> str:
     return result.stdout
 
 
-def run_command_status(command: str, ssh_client: paramiko.SSHClient = None) -> int:
+def run_command_status(command: str, ssh_client: RemoteHost = None) -> int:
     """
     로컬 또는 원격에서 명령을 실행하고 exit code만 반환합니다.
     """
@@ -55,15 +57,9 @@ def run_command_status(command: str, ssh_client: paramiko.SSHClient = None) -> i
     return result.returncode
 
 
-def connect_to_host(ip: str) -> paramiko.SSHClient:
-    """호스트에 SSH 연결을 생성합니다."""
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-    private_key_path = os.getenv("SSH_PRIVATE_KEY_PATH", "/root/.ssh/id_rsa")
-    ssh.connect(ip, username='root', key_filename=private_key_path, timeout=10, banner_timeout=30, auth_timeout=30)
-
-    return ssh
+def connect_to_host(ip):
+    """Use the enrolled node API; interactive root login is not required."""
+    return RemoteHost(ip)
 
 
 def split_by_2000(size_gb: int, chunk_gb: int = 2000) -> List[int]:
@@ -139,7 +135,7 @@ def create_rbd_images(pool_name: str, image_prefix: str, total_size_gb: int, ip_
         start_idx = get_next_image_index(pool_name, image_prefix)
 
         # 호스트별 SSH 연결은 한 번만 만들고 재사용합니다.
-        ssh_map: Dict[str, paramiko.SSHClient] = {}
+        ssh_map: Dict[str, RemoteHost] = {}
 
         try:
             for ip in ips:
@@ -228,7 +224,7 @@ def delete_rbd_image(pool_name: str, image_names_text: str, ip_text: str) -> Non
             raise ValueError("--image-name 값이 비어 있습니다.")
 
         # 호스트별 SSH 연결은 한 번만 만들고 재사용합니다.
-        ssh_map: Dict[str, paramiko.SSHClient] = {}
+        ssh_map: Dict[str, RemoteHost] = {}
         try:
             for ip in ips:
                 ssh_map[ip] = connect_to_host(ip)

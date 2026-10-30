@@ -262,13 +262,13 @@ class CloudCenterVirtualMachine {
         ccvm_instance.runningHost = obj.val.started;
         ccvm_instance.clusterdHost = obj.val.clustered_host;
         if (os_type != "ablestack-standalone"){
-          var remotePcsStatusFull = ['/usr/bin/ssh', '-o', 'StrictHostKeyChecking=no', ccvm_instance.runningHost, '/usr/bin/python3', pluginpath +'/python/host/virshlist.py'];
-          cockpit.spawn(remotePcsStatusFull, { host: pcs_exe_host})
+          var remotePcsStatusFull = ['/usr/libexec/ablestack/node-remote', '-o', 'StrictHostKeyChecking=no', ccvm_instance.runningHost, '/usr/bin/python3', pluginpath +'/python/host/virshlist.py'];
+          ablestack.spawn(remotePcsStatusFull, { host: pcs_exe_host})
             .then(ccvm_instance.checkVIRSHOK)
             .catch(ccvm_instance.checkVIRSHERR)
         }else{
           var remotePcsStatusFull = ['/usr/bin/python3', pluginpath +'/python/host/virshlist.py'];
-          cockpit.spawn(remotePcsStatusFull)
+          ablestack.spawn(remotePcsStatusFull)
             .then(ccvm_instance.checkVIRSHOK)
             .catch(ccvm_instance.checkVIRSHERR)
         }
@@ -313,11 +313,11 @@ class CloudCenterVirtualMachine {
     let a = ccvm_instance.createDescriptionListText("span-cloud-vm-status", 'orange', "상태 체크 중 &bull;&bull;&bull;&nbsp;&nbsp;&nbsp;<svg class='pf-v6-c-spinner pf-m-md' role='progressbar' aria-valuetext='Loading...' viewBox='0 0 100 100' ><circle class='pf-v6-c-spinner__path' cx='50' cy='50' r='45' fill='none'></circle></svg>");
     status_span[0].children[0].replaceWith(a);
     if(os_type != "ablestack-standalone"){
-      cockpit.spawn(['/usr/bin/python3', pluginpath + '/python/pcs/main.py', 'status', '--resource', 'cloudcenter_res'], { host: pcs_exe_host})
+      ablestack.spawn(['/usr/bin/python3', pluginpath + '/python/pcs/main.py', 'status', '--resource', 'cloudcenter_res'], { host: pcs_exe_host})
       .then(ccvm_instance.checkPCSOK)
       .catch(ccvm_instance.checkPCSERR)
     }else{
-      cockpit.spawn(['/usr/bin/python3', pluginpath + '/python/pcs/main.py', 'ccvm-status'])
+      ablestack.spawn(['/usr/bin/python3', pluginpath + '/python/pcs/main.py', 'ccvm-status'])
       .then(ccvm_instance.checkPCSOK)
       .catch(ccvm_instance.checkPCSOK)
     }
@@ -330,7 +330,7 @@ class CloudCenterVirtualMachine {
   */
   changeOffering(cpu, memory) {
     ccvm_instance.clusterdHost.forEach(function (host){
-    cockpit.spawn(['/usr/bin/ssh', '-o', 'StrictHostKeyChecking=no', host,
+    ablestack.spawn(['/usr/libexec/ablestack/node-remote', '-o', 'StrictHostKeyChecking=no', host,
       '/usr/bin/python3', pluginpath + '/python/host/virshedit.py', 'edit', '--cpu', cpu, '--memory', memory])
       .then(ccvm_instance.createAlertModal)
       .catch(ccvm_instance.createAlertModal)

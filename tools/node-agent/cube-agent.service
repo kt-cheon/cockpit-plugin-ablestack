@@ -1,0 +1,25 @@
+[Unit]
+Description=ABLESTACK Cube Agent
+After=network-online.target cube-agent-setup.service
+Wants=network-online.target cube-agent-setup.service
+ConditionPathExists=/etc/ablestack/node-agent/node.key
+ConditionPathExists=/etc/ablestack/node-agent/node.crt
+ConditionPathExists=/etc/ablestack/node-agent/ca.crt
+
+[Service]
+Type=simple
+User=root
+Group=root
+UMask=0077
+ExecStart=/usr/bin/python3 /usr/libexec/ablestack/node-agent/agent.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+LimitNOFILE=4096
+TimeoutStopSec=30
+KillMode=control-group
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

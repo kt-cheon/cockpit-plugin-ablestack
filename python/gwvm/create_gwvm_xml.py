@@ -77,7 +77,7 @@ def generateDecToHex():
 def createSecretKey(host_names):
 
     for host_name in host_names:
-        ret_num = os.system("ssh root@"+host_name+" 'sh "+pluginpath+"/shell/host/virsh_secret_key.sh'")
+        ret_num = os.system("/usr/libexec/ablestack/node-remote root@"+host_name+" 'sh "+pluginpath+"/shell/host/virsh_secret_key.sh'")
         # 쉘 스크립트 실행 실패
         if ret_num != 0 :
             return createReturn(code=500, val=host_name+" : pcs 클러스터 secret.xm 설정 실패 ")
@@ -157,7 +157,7 @@ def createGwvmXml(args):
             ret_num = 0
             # pcs 클러스터 호스트에 gwvm.xml 복사 실패
             for i in [1,2,3]:
-                ret_num = os.system("scp -q "+pluginpath+"/tools/vmconfig/gwvm/gwvm-temp.xml root@"+host_name+":"+pluginpath+"/tools/vmconfig/gwvm/gwvm.xml")
+                ret_num = os.system("/usr/libexec/ablestack/node-copy -q "+pluginpath+"/tools/vmconfig/gwvm/gwvm-temp.xml root@"+host_name+":"+pluginpath+"/tools/vmconfig/gwvm/gwvm.xml")
                 if ret_num == 0:
                     break
 
@@ -166,7 +166,7 @@ def createGwvmXml(args):
 
             # pcs 클러스터 할 호스트 전체의 폴더 권한 수정
             for i in [1,2,3]:
-                ret_num = os.system("ssh root@"+host_name+" 'chmod 755 -R "+pluginpath+"/tools/vmconfig/gwvm'")
+                ret_num = os.system("/usr/libexec/ablestack/node-remote root@"+host_name+" 'chmod 755 -R "+pluginpath+"/tools/vmconfig/gwvm'")
                 if ret_num == 0:
                     break
 
@@ -175,7 +175,7 @@ def createGwvmXml(args):
 
             # pcs 클러스터 할 호스트 설정 백업전 폴더 생성
             for i in [1,2,3]:
-                ret_num = os.system("ssh root@"+host_name+" 'mkdir -p /usr/share/ablestack/vmconfig'")
+                ret_num = os.system("/usr/libexec/ablestack/node-remote root@"+host_name+" 'mkdir -p /usr/share/ablestack/vmconfig'")
                 if ret_num == 0:
                     break
 
@@ -185,7 +185,7 @@ def createGwvmXml(args):
 
             # pcs 클러스터 할 호스트 설정 복제
             for i in [1,2,3]:
-                ret_num = os.system("ssh root@"+host_name+" 'cp -rf "+pluginpath+"/tools/vmconfig/gwvm /usr/share/ablestack/vmconfig/'")
+                ret_num = os.system("/usr/libexec/ablestack/node-remote root@"+host_name+" 'cp -rf "+pluginpath+"/tools/vmconfig/gwvm /usr/share/ablestack/vmconfig/'")
                 if ret_num == 0:
                     break
 

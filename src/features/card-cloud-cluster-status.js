@@ -25,7 +25,7 @@ $('#button-execution-modal-cloud-vm-start').on('click', function(){
   $('#div-modal-spinner-header-txt').text('클라우드센터VM을 시작하고 있습니다.');
   $('#div-modal-spinner').show();
   if (os_type == "ablestack-standalone"){
-    cockpit.spawn(['/usr/bin/python3', pluginpath + '/python/vm/local_ccvm_manage.py', 'start'])
+    ablestack.spawn(['/usr/bin/python3', pluginpath + '/python/vm/local_ccvm_manage.py', 'start'])
     .then(function(data){
       var retVal = JSON.parse(data);
 
@@ -41,7 +41,7 @@ $('#button-execution-modal-cloud-vm-start').on('click', function(){
       console.log('button-execution-modal-cloud-vm-start');
     });
   }else{
-    cockpit.spawn(['/usr/bin/python3', pluginpath + '/python/cloud_cluster_status/card-cloud-cluster-status.py', 'pcsStart'], { host: pcs_exe_host})
+    ablestack.spawn(['/usr/bin/python3', pluginpath + '/python/cloud_cluster_status/card-cloud-cluster-status.py', 'pcsStart'], { host: pcs_exe_host})
     .then(function(data){
       var retVal = JSON.parse(data);
 
@@ -77,7 +77,7 @@ $('#button-execution-modal-cloud-vm-delete').on('click', function(){
     var purge = $('#modal-input-cloud-vm-delete').prop('checked');
     cmd = ['/usr/bin/python3', pluginpath + '/python/vm/local_ccvm_manage.py', 'delete', '--purge' , purge];
     console.log(cmd);
-    cockpit.spawn(cmd)
+    ablestack.spawn(cmd)
     .then(function(data){
       var retVal = JSON.parse(data);
 
@@ -96,7 +96,7 @@ $('#button-execution-modal-cloud-vm-delete').on('click', function(){
     var purge = $('#modal-input-cloud-vm-delete').prop('checked');
     cmd = ['/usr/bin/python3', pluginpath + '/python/cloud_cluster_status/card-cloud-cluster-status.py', 'pcsDestroy','--purge', purge];
     console.log(cmd);
-    cockpit.spawn(cmd)
+    ablestack.spawn(cmd)
     .then(function(data){
       var retVal = JSON.parse(data);
 
@@ -133,7 +133,7 @@ $('#button-execution-modal-cloud-vm-stop').on('click', function(){
   $('#div-modal-spinner').show();
   if(os_type == "ablestack-standalone"){
     var force_quit = $('#modal-input-force-quit').prop('checked');
-    cockpit.spawn(['/usr/bin/python3', pluginpath + '/python/vm/local_ccvm_manage.py', 'stop', '--destroy', force_quit])
+    ablestack.spawn(['/usr/bin/python3', pluginpath + '/python/vm/local_ccvm_manage.py', 'stop', '--destroy', force_quit])
     .then(function(data){
       var retVal = JSON.parse(data);
 
@@ -149,7 +149,7 @@ $('#button-execution-modal-cloud-vm-stop').on('click', function(){
       console.log('button-execution-modal-cloud-vm-stop spawn error');
     });
   }else{
-    cockpit.spawn(['/usr/bin/python3', pluginpath + '/python/cloud_cluster_status/card-cloud-cluster-status.py', 'pcsStop'], { host: pcs_exe_host})
+    ablestack.spawn(['/usr/bin/python3', pluginpath + '/python/cloud_cluster_status/card-cloud-cluster-status.py', 'pcsStop'], { host: pcs_exe_host})
     .then(function(data){
       var retVal = JSON.parse(data);
 
@@ -182,7 +182,7 @@ $('#button-execution-modal-cloud-vm-cleanup').on('click', function(){
   $('#div-modal-cleanup-cloud-vm').hide();
   $('#div-modal-spinner-header-txt').text('클라우드센터 클러스터를 클린업하고 있습니다.');
   $('#div-modal-spinner').show();
-  cockpit.spawn(['/usr/bin/python3', pluginpath + '/python/cloud_cluster_status/card-cloud-cluster-status.py', 'pcsCleanup'], { host: pcs_exe_host})
+  ablestack.spawn(['/usr/bin/python3', pluginpath + '/python/cloud_cluster_status/card-cloud-cluster-status.py', 'pcsCleanup'], { host: pcs_exe_host})
   .then(function(data){
     var retVal = JSON.parse(data);
     $('#div-modal-spinner').hide();
@@ -216,7 +216,7 @@ $('#button-execution-modal-cloud-vm-migration').on('click', function(){
     $('#div-modal-migration-cloud-vm').hide();
     $('#div-modal-spinner-header-txt').text('클라우드센터VM을 마이그레이션하고 있습니다.');
     $('#div-modal-spinner').show();
-    cockpit.spawn(['/usr/bin/python3', pluginpath + '/python/cloud_cluster_status/card-cloud-cluster-status.py', 'pcsMigration', '--target', valSelect], { host: pcs_exe_host})
+    ablestack.spawn(['/usr/bin/python3', pluginpath + '/python/cloud_cluster_status/card-cloud-cluster-status.py', 'pcsMigration', '--target', valSelect], { host: pcs_exe_host})
     .then(function(data){
       var retVal = JSON.parse(data);
       if(retVal.code == 200){
@@ -256,13 +256,13 @@ $('#button-execution-modal-monitoring-config-update').on('click', function(){
   $("#modal-status-alert-body").html("모니터링센터 수집 정보 업데이트를 실패하였습니다.<br/>클라우드센터 가상머신 상태를 확인해주세요.");
   createLoggerInfo("update_wall_config() start");
 
-  cockpit.spawn(["python3", pluginpath+"/python/cloudinit_status/cloudinit_status.py", "ping", "--target", "ccvm"])
+  ablestack.spawn(["python3", pluginpath+"/python/cloudinit_status/cloudinit_status.py", "ping", "--target", "ccvm"])
   .then(function(data){var retVal = JSON.parse(data);
     if(retVal.code == 200){
       $("#modal-status-alert-title").html("모니터링 수집 정보를 업데이트");
       $("#modal-status-alert-body").html("모니터링센터 수집 정보 업데이트를 실패하였습니다.<br/>cluster.json 파일을 확인해주세요.");
       // cluster.json 파일 읽어 오기
-      cockpit.spawn(["cat", pluginpath + "/tools/properties/cluster.json"])
+      ablestack.spawn(["cat", pluginpath + "/tools/properties/cluster.json"])
       .then(function(data){
         const pythonPath = '/usr/share/ablestack/ablestack-wall/python/';
         var config_json = JSON.parse(data);
@@ -281,7 +281,7 @@ $('#button-execution-modal-monitoring-config-update').on('click', function(){
         }
 
         if (console_log) { console.log(prometheus_config_cmd); }
-        cockpit.spawn(prometheus_config_cmd, { host: ccvm_ip })
+        ablestack.spawn(prometheus_config_cmd, { host: ccvm_ip })
         .then(function(data){
           var config_update_data = JSON.parse(data);
           if (console_log) { console.log(config_update_data); }
@@ -356,13 +356,13 @@ $('#button-execution-modal-cloud-vm-snap-rollback-confirm').on('click', function
 
   $("#modal-status-alert-title").html("클라우드센터VM 스냅샷 복구 실패");
   $("#modal-status-alert-body").html("스냅샷 복구를 실패하였습니다. 클라우드센터VM 상태를 점검해주세요.</br>(클라우드센터VM이 정지상태인 경우에만 복구가능합니다.)");
-  cockpit.spawn(['/usr/bin/python3', pluginpath + '/python/pcs/main.py', 'status', '--resource', 'cloudcenter_res'], { host: pcs_exe_host})
+  ablestack.spawn(['/usr/bin/python3', pluginpath + '/python/pcs/main.py', 'status', '--resource', 'cloudcenter_res'], { host: pcs_exe_host})
   .then(function(data){
     var retVal = JSON.parse(data);
     if(retVal.code == 200 && retVal.val.role == "Stopped"){
       // 스냅샷 복구
       var valSelect = $('#form-select-cloud-vm-snap option:selected').val();
-      cockpit.spawn(['/usr/bin/python3', pluginpath + '/python/ccvm_snap/ccvm_snap_action.py', 'rollback', "--snap-name", valSelect], { host: pcs_exe_host})
+      ablestack.spawn(['/usr/bin/python3', pluginpath + '/python/ccvm_snap/ccvm_snap_action.py', 'rollback', "--snap-name", valSelect], { host: pcs_exe_host})
       .then(function(data){
         $('#div-modal-spinner').hide();
 
@@ -404,7 +404,7 @@ $('#button-execution-modal-cloud-vm-snap-backup').on('click', function(){
   $("#modal-status-alert-body").html("복구용 스냅샷 생성을 실패하였습니다.");
 
   // 복구용 스냅샷 생성
-  cockpit.spawn(['/usr/bin/python3', pluginpath + '/python/ccvm_snap/ccvm_snap_action.py', 'backup'], { host: pcs_exe_host})
+  ablestack.spawn(['/usr/bin/python3', pluginpath + '/python/ccvm_snap/ccvm_snap_action.py', 'backup'], { host: pcs_exe_host})
   .then(function(data){
     $('#div-modal-spinner').hide();
 
@@ -440,7 +440,7 @@ $('#button-execution-modal-mold-service-control').on('click', function(){
   $("#modal-status-alert-body").html("Mold 서비스 "+txtSelect+"을(를) 실패하였습니다. 클라우드센터VM 상태를 점검해주세요.");
 
   // Mold 서비스 작업
-  cockpit.spawn(['/usr/bin/python3', pluginpath + '/python/ccvm_service/ccvm_service_control.py', valSelect, '-sn', 'mold.service'])
+  ablestack.spawn(['/usr/bin/python3', pluginpath + '/python/ccvm_service/ccvm_service_control.py', valSelect, '-sn', 'mold.service'])
   .then(function(data){
     $('#div-modal-spinner').hide();
     var retVal = JSON.parse(data);
@@ -474,7 +474,7 @@ $('#button-execution-modal-mold-db-control').on('click', function(){
   $("#modal-status-alert-body").html("Mold DB "+txtSelect+"을(를) 실패하였습니다. 클라우드센터VM 상태를 점검해주세요.");
 
   // Mold DB 작업
-  cockpit.spawn(['/usr/bin/python3', pluginpath + '/python/ccvm_service/ccvm_service_control.py', valSelect, '-sn', 'mysqld'])
+  ablestack.spawn(['/usr/bin/python3', pluginpath + '/python/ccvm_service/ccvm_service_control.py', valSelect, '-sn', 'mysqld'])
   .then(function(data){
     $('#div-modal-spinner').hide();
     var retVal = JSON.parse(data);
@@ -524,7 +524,7 @@ $('#button-execution-modal-mold-secondary-size-expansion').on('click', function(
       var addImageSize = $('#form-input-mold-secondary-size-expansion').val();
       cmd = ['/usr/bin/python3', pluginpath + '/python/vm/ccvm_secondary_resize.py', '--add-size', addImageSize];
       console.log(cmd);
-      cockpit.spawn(cmd, { host: pcs_exe_host})
+      ablestack.spawn(cmd, { host: pcs_exe_host})
       .then(function(data){
         $('#div-modal-spinner').hide();
         var retVal = JSON.parse(data);
@@ -578,7 +578,7 @@ $('#button-config-file-download').on('click', function(){
     window.refreshSecurityEvidenceDownloadLink();
   }
 
-  cockpit.file("/root/.ssh/id_rsa").read()
+  ablestack.file("/root/.ssh/id_rsa").read()
   .then((content, tag) => {
     let pri_ssh_key_download = 'span-modal-wizard-cluster-config-pri-sshkey-download';
     // 다운로드 링크 생성 전 유효성 검정
@@ -592,7 +592,7 @@ $('#button-config-file-download').on('click', function(){
     alert(error);
   });
 
-  cockpit.file("/root/.ssh/id_rsa.pub").read()
+  ablestack.file("/root/.ssh/id_rsa.pub").read()
   .then((content, tag) => {
     let pub_ssh_key_download = 'span-modal-wizard-cluster-config-pub-sshkey-download';
     // 다운로드 링크 생성 전 유효성 검정
@@ -606,7 +606,7 @@ $('#button-config-file-download').on('click', function(){
     alert(error);
   });
 
-  cockpit.file(pluginpath + "/tools/properties/cluster.json").read()
+  ablestack.file(pluginpath + "/tools/properties/cluster.json").read()
   .then((content, tag) => {
     let hosts_download = 'span-modal-wizard-cluster-config-hosts-file-download';
     // 다운로드 링크 생성 전 유효성 검정
@@ -641,7 +641,7 @@ function downloadAsFile(id, str, filename) {
 
 $('#cloud-cluster-connect').on('click', function(){
   //클라우드센터 연결
-  cockpit.spawn(['/usr/bin/python3', pluginpath + '/python/url/create_address.py', 'cloudCenter'])
+  ablestack.spawn(['/usr/bin/python3', pluginpath + '/python/url/create_address.py', 'cloudCenter'])
   .then(function(data){
     var retVal = JSON.parse(data);
     if(retVal.code == 200){
@@ -676,9 +676,9 @@ function CardCloudClusterStatus(){
     $("#cccs-cluster-icon").attr('class','fas fa-fw fa-exclamation-triangle');
 
     var statusAction = usesInfrastructureClusterCard ? 'infrastructureDetail' : 'pcsDetail';
-    cockpit.spawn(['/usr/bin/python3', pluginpath + '/python/cloud_cluster_status/card-cloud-cluster-status.py', statusAction ], { host: pcs_exe_host})
+    ablestack.spawn(['/usr/bin/python3', pluginpath + '/python/cloud_cluster_status/card-cloud-cluster-status.py', statusAction ], { host: pcs_exe_host})
     .then(function(data){
-      cockpit.spawn(['/usr/bin/python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'status', '--depth1', 'bootstrap', '--depth2', 'ccvm' ])
+      ablestack.spawn(['/usr/bin/python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'status', '--depth1', 'bootstrap', '--depth2', 'ccvm' ])
         .then(function (bootstrap_data){
           console.log("ablestackJson.py : "+bootstrap_data);
           var retVal = JSON.parse(bootstrap_data);
@@ -699,7 +699,7 @@ function CardCloudClusterStatus(){
         console.log('ClusterStatusInfo spawn error(ablestackJson.py');
 
       });
-      cockpit.spawn(['/usr/bin/python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'status', '--depth1', 'monitoring', '--depth2', 'wall' ])
+      ablestack.spawn(['/usr/bin/python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'status', '--depth1', 'monitoring', '--depth2', 'wall' ])
         .then(function (monitoring_data){
           console.log("ablestackJson.py : "+monitoring_data);
           var retVal = JSON.parse(monitoring_data);
@@ -907,16 +907,16 @@ function applyCardStatusTone($target, tone) {
 }
 function license_check(){
   cmd = ["curl", "-s", "-k", "https://localhost:8080/api/v1/license"];
-  cockpit.spawn(cmd).then(function(data){
+  ablestack.spawn(cmd).then(function(data){
     var retVal = JSON.parse(data);
     if(retVal.code == 500){
       var license_type = "";
       cmd = ['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update', '--depth1', 'license', '--depth2', 'status', '--value', 'false'];
-      cockpit.spawn(cmd).then(function(data){
+      ablestack.spawn(cmd).then(function(data){
         var retVal = JSON.parse(data);
         if(retVal.code == 200){
           cmd = ['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update', '--depth1', 'license', '--depth2', 'type', '--value', license_type];
-          cockpit.spawn(cmd).then(function(data){
+          ablestack.spawn(cmd).then(function(data){
             var retVal = JSON.parse(data);
             if(retVal.code == 200){
               console.log("License check result: No license found");
@@ -950,11 +950,11 @@ function license_check(){
         }
       }else{
         cmd = ['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update', '--depth1', 'license', '--depth2', 'status', '--value', 'true'];
-        cockpit.spawn(cmd).then(function(data){
+        ablestack.spawn(cmd).then(function(data){
           var retVal = JSON.parse(data);
           if(retVal.code == 200){
             cmd = ['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update', '--depth1', 'license', '--depth2', 'type', '--value', license_type];
-            cockpit.spawn(cmd).then(function(data){
+            ablestack.spawn(cmd).then(function(data){
               var retVal = JSON.parse(data);
               if(retVal.code == 200){
                 console.log("license check update success");
@@ -982,15 +982,15 @@ function license_check(){
  */
 function ccvm_bootstrap_run(){
   $("#modal-status-alert-title").html("클라우드 센터 가상머신 상태 체크");
-  $("#modal-status-alert-body").html("클라우드센터 가상머신이 구성되지 않아<br>클라우드센터를 구성할 수 없습니다.<br><br>잠시 후 다시 실행해 주세요.");
+  $("#modal-status-alert-body").text("CCVM과 통신하거나 초기 설정 상태를 확인하지 못했습니다. CCVM의 cloud-init 및 cube-agent.service 상태와 관리망 연결을 확인해 주세요.");
   createLoggerInfo("ccvm_bootstrap_run() start");
   //scvm ping 체크
-  cockpit.spawn(["python3", pluginpath+"/python/cloudinit_status/cloudinit_status.py", "ping", "--target", "ccvm"])
+  ablestack.spawn(["python3", pluginpath+"/python/cloudinit_status/cloudinit_status.py", "ping", "--target", "ccvm"])
     .then(function(data){
       var retVal = JSON.parse(data);
       if(retVal.code == 200){
         //scvm 의 cloudinit 실행이 완료되었는지 확인하기 위한 명렁
-        cockpit.spawn(["python3", pluginpath+"/python/cloudinit_status/cloudinit_status.py", "status", "--target", "ccvm"])
+        ablestack.spawn(["python3", pluginpath+"/python/cloudinit_status/cloudinit_status.py", "status", "--target", "ccvm"])
           .then(function(data){
             var retVal = JSON.parse(data);
             console.log('cloudinit-status : '+retVal.val);
@@ -1002,19 +1002,23 @@ function ccvm_bootstrap_run(){
               $('#scvm-status-update-cmd').val("bootstrap_ccvm");
               $('#div-modal-storage-vm-status-update').show();
             }else{
+              $("#modal-status-alert-body").text("CCVM 초기 설정이 완료되지 않았거나 상태 조회에 실패했습니다. " + JSON.stringify(retVal.val));
               $('#div-modal-status-alert').show();
             }
           })
           .catch(function(data){
+            $("#modal-status-alert-body").text("CCVM 초기 설정 상태 조회에 실패했습니다. " + String(data));
             createLoggerInfo(":::ccvm_bootstrap_run() Error ::: error");
             $('#div-modal-status-alert').show();
             console.log(":::ccvm_bootstrap_run() Error :::" + data);
           });
       }else{
+        $("#modal-status-alert-body").text("CCVM의 Cube Agent에 연결할 수 없습니다. " + JSON.stringify(retVal.val));
         $('#div-modal-status-alert').show();
       }
     })
     .catch(function(data){
+      $("#modal-status-alert-body").text("CCVM 연결 확인에 실패했습니다. " + String(data));
       createLoggerInfo(":::scvm_bootstrap_run() Error ::: error");
       $('#div-modal-status-alert').show();
       console.log(":::scvm_bootstrap_run() Error :::" + data);
@@ -1024,7 +1028,7 @@ function ccvm_bootstrap_run(){
 function cccc_link_go(){
   // 클라우드센터 연결
   createLoggerInfo("cccc_link_go() start");
-  cockpit.spawn(["python3", pluginpath+"/python/url/create_address.py", "cloudCenter"])
+  ablestack.spawn(["python3", pluginpath+"/python/url/create_address.py", "cloudCenter"])
     .then(function(data){
       var retVal = JSON.parse(data);
       if(retVal.code == 200){
@@ -1071,12 +1075,12 @@ function cccc_link_go(){
   $("#modal-status-alert-title").html("클라우드 센터 가상머신 상태 체크");
   $("#modal-status-alert-body").html("클라우드 센터 가상머신에 cloudinit 실행이 완료되지 않아<br>모니터링센터 구성을 실행할 수 없습니다.<br><br>잠시 후 다시 실행해 주세요.");
   //ccvm ping 체크
-  cockpit.spawn(["python3", pluginpath+"/python/cloudinit_status/cloudinit_status.py", "ping", "--target", "ccvm"])
+  ablestack.spawn(["python3", pluginpath+"/python/cloudinit_status/cloudinit_status.py", "ping", "--target", "ccvm"])
     .then(function(data){
       var retVal = JSON.parse(data);
       if(retVal.code == 200){
         //ccvm 의 cloudinit 실행이 완료되었는지 확인하기 위한 명렁
-        cockpit.spawn(["python3", pluginpath+"/python/cloudinit_status/cloudinit_status.py", "status", "--target", "ccvm"])
+        ablestack.spawn(["python3", pluginpath+"/python/cloudinit_status/cloudinit_status.py", "status", "--target", "ccvm"])
           .then(function(data){
             var retVal = JSON.parse(data);
             console.log('cloudinit-status : '+retVal.val);
@@ -1106,7 +1110,7 @@ function cccc_link_go(){
 
 function wall_link_go(){
   // 모니터링센터 대시보드 연결
-  cockpit.spawn(["python3", pluginpath+"/python/url/create_address.py", "wallCenter"])
+  ablestack.spawn(["python3", pluginpath+"/python/url/create_address.py", "wallCenter"])
     .then(function(data){
       var retVal = JSON.parse(data);
       if(retVal.code == 200){

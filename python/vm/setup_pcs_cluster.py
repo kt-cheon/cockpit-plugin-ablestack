@@ -13,6 +13,7 @@ import json
 import sys
 import os
 import time
+import subprocess
 
 from ablestack import *
 from sh import python3
@@ -59,6 +60,41 @@ def openClusterJson():
 cluster_json_data = openClusterJson()
 os_type = cluster_json_data["clusterConfig"]["type"]
 
+def ccvmIsRunning(host_names):
+    """PCS may start the one CCVM on any candidate, including a different Cube host."""
+    for host in host_names:
+        try:
+            result = subprocess.run([
+                '/usr/libexec/ablestack/node-remote', 'exec', '--target', host,
+                '--argv-json', json.dumps(['virsh', '-c', 'qemu:///system', 'domstate', 'ccvm']),
+                '--options-json', json.dumps({'environ': ['LC_ALL=C']}), '--timeout', '5'
+            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=8)
+            if result.returncode == 0 and result.stdout.strip() == 'running':
+                return True
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+    return False
+
+
+def prepareCcvmDisk():
+    """Stop before creating a PCS resource when its RBD disk could not be prepared."""
+    commands = [
+        ("CCVM Ceph 디스크 이미지 변환 실패", [
+            "qemu-img", "convert", "-f", "qcow2", "-O", "rbd",
+            "/var/lib/libvirt/images/ablestack-template-back.qcow2", "rbd:rbd/ccvm"]),
+        ("CCVM Ceph 디스크 크기 변경 실패", ["rbd", "resize", "-s", "500G", "ccvm"]),
+    ]
+    for description, command in commands:
+        try:
+            result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        except OSError as error:
+            return createReturn(code=500, val=description + ": " + str(error))
+        if result.returncode != 0:
+            detail = result.stderr.strip() or result.stdout.strip() or "exit code " + str(result.returncode)
+            return createReturn(code=500, val=description + ": " + detail[-8192:])
+    return None
+
+
 def setupPcsCluster(args):
 
     success_bool = True
@@ -67,24 +103,24 @@ def setupPcsCluster(args):
     for host in args.host_names[0].split():
         check_err = 0
 
-        check_err = os.system("ssh root@"+host+" \"rm -f /var/spool/cron/tmpfile\"")
+        check_err = os.system("/usr/libexec/ablestack/node-remote root@"+host+" \"rm -f /var/spool/cron/tmpfile\"")
         if check_err != 0 :
             return createReturn(code=500, val=host+" : /var/spool/cron/tmpfile delete failed")
 
         # /var/spool/cron/root 파일이 존재하면 실행 (file_exist 값이 0 이면 존재)
-        file_exist = os.system("ssh root@"+host+" \"ls /var/spool/cron |grep root > /dev/null\"")
+        file_exist = os.system("/usr/libexec/ablestack/node-remote root@"+host+" \"ls /var/spool/cron |grep root > /dev/null\"")
         if file_exist == 0 :
-            check_err = os.system("ssh root@"+host+" \"awk '!/create_ccvm_snap.py/' /var/spool/cron/root > /var/spool/cron/tmpfile && mv -f /var/spool/cron/tmpfile /var/spool/cron/root\"")
+            check_err = os.system("/usr/libexec/ablestack/node-remote root@"+host+" \"awk '!/create_ccvm_snap.py/' /var/spool/cron/root > /var/spool/cron/tmpfile && mv -f /var/spool/cron/tmpfile /var/spool/cron/root\"")
             if check_err != 0 :
                 return createReturn(code=500, val=host+" : awk '!/create_ccvm_snap.py/' failed")
 
         # crontab에 등록
-        check_err = os.system("ssh root@"+host+" \"echo -e \'0 1 * * * /usr/bin/python3 /usr/share/cockpit/ablestack/python/ccvm_snap/create_ccvm_snap.py\' >> /var/spool/cron/root | chmod 600 /var/spool/cron/root\"")
+        check_err = os.system("/usr/libexec/ablestack/node-remote root@"+host+" \"echo -e \'0 1 * * * /usr/bin/python3 /usr/share/cockpit/ablestack/python/ccvm_snap/create_ccvm_snap.py\' >> /var/spool/cron/root | chmod 600 /var/spool/cron/root\"")
         if check_err != 0 :
             return createReturn(code=500, val=host+" : cron registration failed")
 
         # crond 재시작
-        check_err = os.system("ssh root@"+host+" \"systemctl restart crond.service\"")
+        check_err = os.system("/usr/libexec/ablestack/node-remote root@"+host+" \"systemctl restart crond.service\"")
         if check_err != 0 :
             return createReturn(code=500, val=host+" : systemctl restart crond.service failed")
 
@@ -100,10 +136,9 @@ def setupPcsCluster(args):
             else :
                 os.system("pcs constraint order start glue-gfs-clone then cloudcenter_res")
 
-    # ceph 이미지 등록
-    os.system("qemu-img convert -f qcow2 -O rbd /var/lib/libvirt/images/ablestack-template-back.qcow2 rbd:rbd/ccvm")
-    # ccvm image resize
-    os.system("rbd resize -s 500G ccvm")
+    disk_error = prepareCcvmDisk()
+    if disk_error is not None:
+        return disk_error
 
     host_names = args.host_names[0].split()
     # 클러스터 구성
@@ -125,7 +160,7 @@ def setupPcsCluster(args):
     while True:
         time.sleep(5)
         cnt_num += 1
-        domid_check = os.system("virsh domid ccvm > /dev/null")
+        domid_check = 0 if ccvmIsRunning(host_names) else 1
         if domid_check == 0 or cnt_num > 300:
             break
 

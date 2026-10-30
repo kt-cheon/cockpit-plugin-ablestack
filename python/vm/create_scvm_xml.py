@@ -192,8 +192,8 @@ def createScvmXml(args):
                     # openvswitch 서비스가 활성화일 경우 해당 코드 추가
                     if openvswitch_service_check == 0:
                         mnb_txt += "      <virtualport type='openvswitch' />\n"
-                    else:
-                        mnb_txt += "      <filterref filter='allow-all-traffic'/>\n"
+                    # A plain bridge needs no pass-through nwfilter. Attaching one
+                    # makes VM startup depend on libvirt's iptables filter chains.
                     mnb_txt += "      <address type='pci' domain='0x0000' bus='0x00' slot='" + slot_hex_num.pop(0) + "' function='0x0'/>\n"
                     mnb_txt += "    </interface>\n"
 
@@ -202,9 +202,6 @@ def createScvmXml(args):
                 elif '<!--server_network_bridge-->' in line:
                     if 'bridge' == args.storage_traffic_network_type:
                         snb_txt = "    <interface type='bridge'>\n"
-                        # openvswitch 서비스가 활성화일 경우 해당 코드 추가
-                        if openvswitch_service_check != 0:
-                            snb_txt += "      <filterref filter='allow-all-traffic'/>\n"
                         snb_txt += "      <mac address='" + generateMacAddress() + "'/>\n"
                         snb_txt += "      <source bridge='" + args.server_network_bridge + "'/>\n"
                         snb_txt += "      <target dev='vnet" + str(br_num) + "'/>\n"
@@ -222,8 +219,6 @@ def createScvmXml(args):
                 elif '<!--replication_network_bridge-->' in line:
                     if 'bridge' == args.storage_traffic_network_type:
                         rnb_txt = "    <interface type='bridge'>\n"
-                        if openvswitch_service_check != 0:
-                            rnb_txt += "      <filterref filter='allow-all-traffic'/>\n"
                         rnb_txt += "      <mac address='" + generateMacAddress() + "'/>\n"
                         rnb_txt += "      <source bridge='" + args.replication_network_bridge + "'/>\n"
                         rnb_txt += "      <target dev='vnet" + str(br_num) + "'/>\n"

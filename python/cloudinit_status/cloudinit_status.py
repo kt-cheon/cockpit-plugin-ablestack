@@ -12,7 +12,9 @@ import argparse
 import subprocess
 from subprocess import call
 from ablestack import *
-from sh import ssh
+import sys
+sys.path.insert(0, "/usr/libexec/ablestack/node-agent")
+from client import Client
 
 from ablestack import *
 
@@ -34,25 +36,23 @@ def parseArgs():
 
 def cloudinitStatus():
     try:
-        ret_val = ssh('-o', 'StrictHostKeyChecking=no', args.target, '/usr/bin/cloud-init', 'status').splitlines()
+        result = Client().rpc(args.target, 'query', name='cloud-init')
+        if result['exit_code'] != 0:
+            return createReturn(code=500, val=result['stdout'].splitlines())
+        ret_val = result['stdout'].splitlines()
         ret = createReturn(code=200, val=ret_val)
     except Exception as e:
-        ret = createReturn(code=500, val='ERROR')
+        ret = createReturn(code=500, val=f'{args.target}: cloud-init 상태 조회 실패: {e}')
 
     return ret
 
 def guestvmPing():
     try:
-        ping_cmd = 'ping -c 1 ' + args.target
-        rc = call([ping_cmd], universal_newlines=True, shell=True, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-        if (rc == 0):
-            ret_val = {}
-            ret_val['host'] = args.target
-            ret_val['ping'] = 'OK'
-            ret = createReturn(code=200, val=ret_val)
+        Client().rpc(args.target, "health")
+        ret = createReturn(code=200, val={"host": args.target, "ping": "OK"})
 
     except Exception as e:
-        ret = createReturn(code=500, val='ERROR')
+        ret = createReturn(code=500, val=f'{args.target}: Cube Agent 연결 실패: {e}')
 
     return ret
 

@@ -17,7 +17,7 @@ $('#buttion-create-modal-nfs-construction').on('click',function(){
     $('#div-modal-spinner-header-txt').text('NFS 편집 중');
     $('#div-modal-spinner').show();
 
-    cockpit.spawn(['python3', pluginpath + '/python/glue/nfs.py', 'edit', '--access-type', access_type, '--squash', squash, '--quota', quota]).then(function(data){
+    ablestack.spawn(['python3', pluginpath + '/python/glue/nfs.py', 'edit', '--access-type', access_type, '--squash', squash, '--quota', quota]).then(function(data){
       var retVal = JSON.parse(data);
       var retVal_code = JSON.parse(retVal.code);
       $('#div-modal-spinner').hide();
@@ -42,15 +42,15 @@ $('#buttion-create-modal-nfs-construction').on('click',function(){
       $('#div-modal-spinner-header-txt').text('NFS 구성 중');
       $('#div-modal-spinner').show();
 
-      cockpit.spawn(['python3', pluginpath + '/python/glue/gluefs.py', 'config', '--type', 'nfs','--mount-path','/fs/nfs','--quota', quota]).then(function(data){
+      ablestack.spawn(['python3', pluginpath + '/python/glue/gluefs.py', 'config', '--type', 'nfs','--mount-path','/fs/nfs','--quota', quota]).then(function(data){
         var retVal = JSON.parse(data);
         var retVal_code = JSON.parse(retVal.code);
         if(retVal_code == 200){
-          cockpit.spawn(['python3', pluginpath + '/python/glue/nfs.py', 'config']).then(function(data){
+          ablestack.spawn(['python3', pluginpath + '/python/glue/nfs.py', 'config']).then(function(data){
             var retVal = JSON.parse(data);
             var retVal_code = JSON.parse(retVal.code);
             if(retVal_code == 200){
-              cockpit.spawn(['python3', pluginpath + '/python/glue/nfs.py', 'create', '--access-type', access_type, '--squash', squash, '--quota', quota]).then(function(data){
+              ablestack.spawn(['python3', pluginpath + '/python/glue/nfs.py', 'create', '--access-type', access_type, '--squash', squash, '--quota', quota]).then(function(data){
                 var retVal = JSON.parse(data);
                 var retVal_code = JSON.parse(retVal.code);
                 $('#div-modal-spinner').hide();

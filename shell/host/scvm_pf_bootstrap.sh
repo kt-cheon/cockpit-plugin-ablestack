@@ -23,7 +23,7 @@ virtual_ip_cn=$(grep scvm /etc/hosts| grep -v mngt | grep cn | awk {'print $1'} 
 ################ 모든 SCVM에 activemq,lia,sds 설치 ##################
 for scvm in $scvms
 do
-  ssh -o StrictHostKeyChecking=no $scvm <<EOF
+  /usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no $scvm <<EOF
     rpm -ivh /usr/share/ablestack/powerflex/EMC-ScaleIO-activemq-*
     rpm -ivh /usr/share/ablestack/powerflex/EMC-ScaleIO-sds-*
     TOKEN=Ablestack123! rpm -ivh /usr/share/ablestack/powerflex/EMC-ScaleIO-lia-*
@@ -35,9 +35,9 @@ for scvm in $scvms_name
 do
   if [ $scvm == "pn-scvm3" ]
   then
-     ssh -o StrictHostKeyChecking=no $scvm MDM_ROLE_IS_MANAGER=0 rpm -ivh /usr/share/ablestack/powerflex/EMC-ScaleIO-mdm-*
+     /usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no $scvm MDM_ROLE_IS_MANAGER=0 rpm -ivh /usr/share/ablestack/powerflex/EMC-ScaleIO-mdm-*
   else
-     ssh -o StrictHostKeyChecking=no $scvm MDM_ROLE_IS_MANAGER=1 rpm -ivh /usr/share/ablestack/powerflex/EMC-ScaleIO-mdm-*
+     /usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no $scvm MDM_ROLE_IS_MANAGER=1 rpm -ivh /usr/share/ablestack/powerflex/EMC-ScaleIO-mdm-*
   fi
 done
 
@@ -55,11 +55,11 @@ do
   elif [ $scvm == "pn-scvm2" ]
   then
 
-    scp /opt/emc/scaleio/mdm/cfg/sec_mdm_certificate.pem $scvm:/opt/emc/scaleio/mdm/cfg/mdm_certificate.pem
+    /usr/libexec/ablestack/node-copy /opt/emc/scaleio/mdm/cfg/sec_mdm_certificate.pem $scvm:/opt/emc/scaleio/mdm/cfg/mdm_certificate.pem
 
-    scp /opt/emc/scaleio/mdm/cfg/cli_certificate.p12 /opt/emc/scaleio/mdm/cfg/mgmt_ca.pem $scvm:/opt/emc/scaleio/mdm/cfg/
+    /usr/libexec/ablestack/node-copy /opt/emc/scaleio/mdm/cfg/cli_certificate.p12 /opt/emc/scaleio/mdm/cfg/mgmt_ca.pem $scvm:/opt/emc/scaleio/mdm/cfg/
 
-    ssh -o StrictHostKeyChecking=no $scvm scli --add_certificate --certificate_file /opt/emc/scaleio/mdm/cfg/mgmt_ca.pem
+    /usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no $scvm scli --add_certificate --certificate_file /opt/emc/scaleio/mdm/cfg/mgmt_ca.pem
 
     systemctl restart mdm.service
   fi
@@ -126,7 +126,7 @@ sleep 1
 ################ 물리 디스크 sds에  설정 (1번 scvm에서 실행) ##################
 for scvm in $scvms_name
 do
-ssd_disk_name=$(ssh -o StrictHostKeyChecking=no $scvm lsblk -d -o name,rota,type | grep disk | awk '$2 == 0 {print $1}')
+ssd_disk_name=$(/usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no $scvm lsblk -d -o name,rota,type | grep disk | awk '$2 == 0 {print $1}')
 
   if [ $scvm == "pn-scvm1" ]
   then
@@ -152,7 +152,7 @@ done
 ################ 호스트 sdc rpm 설치 및 scini 커널 버전으로 재구성 (1번 scvm에서 실행) ##################
 for host in $hosts
 do
-  ssh -o StrictHostKeyChecking=no $host <<EOF
+  /usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no $host <<EOF
       MDM_IP=$virtual_ip_pn,$virtual_ip_cn rpm -ivh /usr/share/ablestack/powerflex/EMC-ScaleIO-sdc-*
       tar -xvf /bin/emc/scaleio/scini_sync/driver_cache/RHEL9/4.5.2100.105/Dell-PowerFlex-scini_builder-*.tgz -C /bin/emc/scaleio/scini_sync/driver_cache/RHEL9/4.5.2100.105/
       sh /bin/emc/scaleio/scini_sync/driver_cache/RHEL9/4.5.2100.105/build_driver.sh
@@ -173,7 +173,7 @@ done
 
 for scvm in $scvms
 do
-  ssh -o StrictHostKeyChecking=no $scvm rm -rf /root/bootstrap.sh
+  /usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no $scvm rm -rf /root/bootstrap.sh
 done
 
 exit

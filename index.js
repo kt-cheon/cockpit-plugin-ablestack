@@ -77,26 +77,54 @@ $(document).ready(function(){
   applyThemeFromCockpit();
   observeThemeChanges();
 
-  cockpit.script(["hostname"])
-  .then(function (hostname) {
-    if (hostname.includes("scvm")) {
-      cockpit.script(["whoami"])
-      .then(function (whoami) {
-        if(whoami.includes("root")){
-          $('#index-page').load("main-glue.html");
-        }else{
-          $('#index-page').load("main-glue-no-permission.html");
-        }
-      })
-    } else {
-      $('#index-page').load("main.html");
-    }
-  })
-  .catch(function (error) {
-    $('#index-page').load("main.html");
-  });
+  const permission = cockpit.permission({ admin: true });
+  let loading = false;
+  let loaded = false;
+  let generation = 0;
 
-  checkOSType();
+  function showPage(page, current) {
+    return $.get(page).then(function (content) {
+      if (current === generation) $('#index-page').html(content);
+    });
+  }
+
+  function updateAccess() {
+    if (permission.allowed !== true) {
+      generation++;
+      if (loaded) {
+        // Clear feature timers and pending callbacks when administrator access is dropped.
+        window.location.reload();
+        return;
+      }
+      loading = false;
+      if (permission.allowed === false) {
+        showPage("main-glue-no-permission.html", generation).catch(function () {
+          if (permission.allowed !== true) $('#index-page').text("Cockpit에서 관리자 접근을 활성화해주세요.");
+        });
+      } else {
+        $('#index-page').text("관리자 권한을 확인하고 있습니다.");
+      }
+      return;
+    }
+    if (loading || loaded) return;
+    const current = ++generation;
+    loading = true;
+    Promise.all([ablestack.spawn(["hostname"]), checkOSType()])
+      .then(function (values) {
+        if (current !== generation || permission.allowed !== true) return;
+        loaded = true;
+        return showPage(values[0].trim().includes("scvm") ? "main-glue.html" : "main.html", current);
+      })
+      .catch(function (error) {
+        if (current !== generation) return;
+        loading = false;
+        loaded = false;
+        $('#index-page').text("ABLESTACK 초기 정보를 읽지 못했습니다: " + (error.message || error));
+      });
+  }
+
+  permission.addEventListener("changed", updateAccess);
+  updateAccess();
 });
 
 /**
@@ -107,14 +135,9 @@ $(document).ready(function(){
  * History : 2024.09.11 수정
  */
 function checkOSType() {
-  return new Promise(function (resolve) {
-    sessionStorage.clear();
-    cockpit.file('/usr/share/cockpit/ablestack/tools/properties/cluster.json').read().then(function(data) {
-      let retVal = JSON.parse(data);
-      sessionStorage.setItem('os_type', retVal.clusterConfig.type);
-      sessionStorage.setItem("iscsi_check", retVal.clusterConfig.iscsi_storage);
-      console.log(sessionStorage.getItem('os_type'));
-      resolve();
-    });
+  return ablestack.file('/usr/share/cockpit/ablestack/tools/properties/cluster.json').read().then(function(data) {
+    const config = JSON.parse(data).clusterConfig;
+    sessionStorage.setItem('os_type', config.type);
+    sessionStorage.setItem("iscsi_check", config.iscsi_storage);
   });
 }

@@ -15,27 +15,21 @@ var console_log = true;
 
 $(document).ready(function(){
   // glue_conf.json 읽어 오기
-  cockpit.spawn(["cat", pluginpath + "/tools/properties/glue_conf.json"])
+  ablestack.spawn(["cat", pluginpath + "/tools/properties/glue_conf.json"])
   .then(function(data){
     var glueConf = JSON.parse(data);
     glue_api_port = glueConf.apiPort;
     hypervisor = glueConf.hypervisor;
 
-    cockpit.script([`cat /etc/hosts | grep -E '(^|\\s)scvm-mngt(\\s|$)' | awk '{print $1}'`])
+    ablestack.script([`cat /etc/hosts | grep -E '(^|\\s)scvm-mngt(\\s|$)' | awk '{print $1}'`])
     .then(function (ip) {
       if(ip != ""){
         glue_api_ip = ip;
         topTabAction("button-tab-glue-vm");
-        scanHostKey();
         glueVmList();
 
         if(hypervisor == 'cell'){
-          cockpit.script(["scp -q -o StrictHostKeyChecking=no root@ablecube:/usr/share/cockpit/ablestack/tools/properties/cluster.json /usr/share/cockpit/ablestack/tools/properties/cluster.json"])
-          .then(function () {
-            gwvmInfoSet();
-          }).catch(function (error) {
-            alert("초기 cluster.json 파일 복사 실패 : "+error);
-          });
+          gwvmInfoSet();
           setInterval(() => {
             gwvmInfoSet(),glueVmList()
           }, 15000);
@@ -134,7 +128,7 @@ $('#button-glue-api-server-connect').on('click', function(){
 
 /** 스토리지 서비스 구성 관련 action start */
 $('#menu-item-gateway-vm-setup').on('click', function(){
-  cockpit.script(["scp -q -o StrictHostKeyChecking=no root@ablecube:/usr/share/cockpit/ablestack/tools/properties/cluster.json /usr/share/cockpit/ablestack/tools/properties/cluster.json"])
+  ablestack.script(["/usr/libexec/ablestack/node-copy -q -o StrictHostKeyChecking=no root@ablecube:/usr/share/cockpit/ablestack/tools/properties/cluster.json /usr/share/cockpit/ablestack/tools/properties/cluster.json"])
   .then(function () {
     $('#form-select-gateway-vm-mngt-nic-parent').val("");
     $('#form-input-gateway-vm-mngt-nic-ip').val("");
@@ -491,7 +485,7 @@ function bytesToSize(bytes) {
 $('#button-storage-dashboard-connect').on('click', function(){
   // storageCenter url 링크 주소 가져오기
   createLoggerInfo("button-storage-dashboard-connect click");
-  cockpit.spawn(["python3", pluginpath+"/python/url/create_address.py", "storageCenter"])
+  ablestack.spawn(["python3", pluginpath+"/python/url/create_address.py", "storageCenter"])
   .then(function(data){
     var retVal = JSON.parse(data);
     if(retVal.code == 200){
@@ -576,16 +570,9 @@ $('#button-iscsi-image-list-setting, #button-update-iscsi-image-list-setting').o
 });
 
 
-function scanHostKey(){
-  //createLoggerInfo("scanHostKey() start");
-  cockpit.spawn(['python3', pluginpath + '/python/host/ssh-scan.py'])
-  .then(function(data){
-    console.log("keyscan ok");
-  })
-  .catch(function(err){
-    createLoggerInfo("keyscan err");
-    console.log("keyscan err : " + err);
-  });
+function scanHostKey() {
+  // Compatibility for older feature callbacks; TLS enrollment replaces host-key discovery.
+  return Promise.resolve();
 }
 
 /**

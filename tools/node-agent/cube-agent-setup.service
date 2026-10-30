@@ -1,0 +1,16 @@
+[Unit]
+Description=Initialize Cube Agent from installer network settings
+Wants=network-online.target
+After=network-online.target firewalld.service
+Before=cube-agent.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+UMask=0077
+ExecStart=/usr/libexec/ablestack/node-setup --auto --start --nonblocking
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target

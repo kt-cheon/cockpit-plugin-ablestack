@@ -15,7 +15,8 @@ import os
 
 from ablestack import *
 from sh import python3
-from sh import ssh
+from sh import Command as _RemoteCommand
+ssh = _RemoteCommand('/usr/libexec/ablestack/node-remote')
 
 def createArgumentParser():
     '''

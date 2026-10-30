@@ -242,6 +242,11 @@
                     <div class="pf-v6-c-form__group-control">
                       <input class="pf-v6-c-form-control" style="width:60%" type="file" id="form-input-cluster-config-hosts-file" name="form-input-cluster-config-hosts-file"/>
                     </div>
+                    <div class="pf-v6-c-form__group-control" style="margin-top:12px">
+                      <label class="pf-v6-c-form__label" for="form-input-cluster-agent-registration">호스트 통신 등록 파일</label>
+                      <input class="pf-v6-c-form-control" style="width:60%" type="file" accept=".json" id="form-input-cluster-agent-registration" />
+                      <p>첫 호스트의 완료 화면에서 받은 현재 호스트용 등록 파일을 선택하십시오. 이미 통신 등록이 완료된 호스트는 다시 선택하지 않아도 됩니다.</p>
+                    </div>
                   </div>
                   <div class="pf-v6-c-form__group">
                     <div class="pf-v6-c-form__group-label">
@@ -819,6 +824,7 @@
                   - 클러스터 구성 프로파일 다운로드
                   <a class="pf-v6-c-button pf-m-link" id="span-modal-wizard-cluster-config-finish-hosts-file-download" href="#">파일을 재사용 하려면 클릭하십시오</a>
                 </span>
+                <div id="cluster-agent-registration-downloads" style="margin-top:12px"></div>
               </div>
               <!-- <div id="os-type" hidden>
               <div id="host-name" hidden> -->

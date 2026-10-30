@@ -482,17 +482,17 @@ GLUE_EOF
     >/dev/null
 
   # 5. KC 메타데이터 파일 및 인증서파일 원격 서버($SCVM_HOST_NAME)에 전송
-  scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${INSTALL_DIR}/idp_metadata.xml "$SCVM_HOST_NAME:$CERT_TARGET_PATH/"
-  scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${INSTALL_DIR}/sp.crt ${INSTALL_DIR}/sp.key "$SCVM_HOST_NAME:$CERT_TARGET_PATH/"
+  /usr/libexec/ablestack/node-copy -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${INSTALL_DIR}/idp_metadata.xml "$SCVM_HOST_NAME:$CERT_TARGET_PATH/"
+  /usr/libexec/ablestack/node-copy -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${INSTALL_DIR}/sp.crt ${INSTALL_DIR}/sp.key "$SCVM_HOST_NAME:$CERT_TARGET_PATH/"
   if [ $? -ne 0 ]; then
     echo "[ERROR] 원격 서버로 파일 전송 실패"
   fi
-  ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $SCVM_HOST_NAME "echo 'ablestack1!' > ${INSTALL_DIR}/user.txt" # 계정생성시 사용할 임시 비밀번호 파일(sso 계정생성시 필요)
+  /usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $SCVM_HOST_NAME "echo 'ablestack1!' > ${INSTALL_DIR}/user.txt" # 계정생성시 사용할 임시 비밀번호 파일(sso 계정생성시 필요)
 
   echo "✅ 원격 서버에 파일 전송 완료 ($CERT_TARGET_PATH/)"
 
   # 6. 원격 서버($SCVM_HOST_NAME)에서 MGR 컨테이너에 인증서 복사 및 saml관련 패키지 설치
-  ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$SCVM_HOST_NAME" \
+  /usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$SCVM_HOST_NAME" \
   CERT_TARGET_PATH="$CERT_TARGET_PATH" \
   KC_URL="$KC_URL" \
   ROOT_URL_GLUE="$ROOT_URL_GLUE" \

@@ -483,7 +483,7 @@ $('#form-radio-hosts-file-scvm').on('click', function () {
   $("#form-input-ccvm-mngt-ip").val("");
   $("#form-input-ccvm-mngt-ip").attr('disabled', true);
 
-  cockpit.spawn(["cat", pluginpath + "/tools/properties/cluster.json"])
+  ablestack.spawn(["cat", pluginpath + "/tools/properties/cluster.json"])
   .then(function(data){
     var clusterJsonConf = JSON.parse(data);
     settingProfile(clusterJsonConf, option_scvm);
@@ -662,13 +662,13 @@ function deployStorageCenterVM() {
   seScvmProgressStep("span-progress-step1",1);
   var reset_storage_center_cmd = ['python3', pluginpath + '/python/vm/reset_storage_center.py'];
   if(console_log){console.log(reset_storage_center_cmd);}
-  cockpit.spawn(reset_storage_center_cmd)
+  ablestack.spawn(reset_storage_center_cmd)
     .then(function(data){
       //결과 값 json으로 return
       var reset_storage_center_result = JSON.parse(data);
       if(reset_storage_center_result.code=="200") { //정상
         //=========== 2. cloudinit iso 파일 생성 ===========
-        // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/scvm/cloudinit 경로에 hosts, ssh key 파일 저장
+        // host 파일 /usr/share/cockpit/ablestack/tools/vmconfig/scvm/cloudinit 경로에 hosts, /usr/libexec/ablestack/node-remote key 파일 저장
         seScvmProgressStep("span-progress-step1",2);
         seScvmProgressStep("span-progress-step2",1);
 
@@ -686,8 +686,8 @@ function deployStorageCenterVM() {
 
         var create_scvm_cloudinit_cmd = ['python3', pluginpath + '/python/vm/create_scvm_cloudinit.py'
           ,"-f1",pluginpath+"/tools/vmconfig/scvm/hosts","-t1",local_host+$("#div-textarea-cluster-config-confirm-hosts-file-scvm").val() // hosts 파일
-          ,"-f2",pluginpath+"/tools/vmconfig/scvm/id_rsa","-t2", $("#form-textarea-storage-vm-ssh-private-key-file").val() // ssh 개인 key 파일
-          ,"-f3",pluginpath+"/tools/vmconfig/scvm/id_rsa.pub","-t3", $("#form-textarea-storage-vm-ssh-public-key-file").val() // ssh 공개 key 파일
+          ,"-f2",pluginpath+"/tools/vmconfig/scvm/id_rsa","-t2", $("#form-textarea-storage-vm-ssh-private-key-file").val() // /usr/libexec/ablestack/node-remote 개인 key 파일
+          ,"-f3",pluginpath+"/tools/vmconfig/scvm/id_rsa.pub","-t3", $("#form-textarea-storage-vm-ssh-public-key-file").val() // /usr/libexec/ablestack/node-remote 공개 key 파일
           ,"--hostname",host_name
           ,"--mgmt-ip",mgmt_ip
           ,"--mgmt-prefix",mgmt_prefix
@@ -703,7 +703,7 @@ function deployStorageCenterVM() {
           create_scvm_cloudinit_cmd.push('--dns',dns);
         }
         if(console_log){console.log(create_scvm_cloudinit_cmd);}
-        cockpit.spawn(create_scvm_cloudinit_cmd)
+        ablestack.spawn(create_scvm_cloudinit_cmd)
           .then(function(data){
             //결과 값 json으로 return
             var create_scvm_cloudinit_result = JSON.parse(data);
@@ -712,7 +712,7 @@ function deployStorageCenterVM() {
               seScvmProgressStep("span-progress-step2",2);
               seScvmProgressStep("span-progress-step3",1);
               if(console_log){console.log(xml_create_cmd);}
-              cockpit.spawn(xml_create_cmd)
+              ablestack.spawn(xml_create_cmd)
                 .then(function(data){
                   //결과 값 json으로 return
                   var create_scvm_xml_result = JSON.parse(data);
@@ -723,7 +723,7 @@ function deployStorageCenterVM() {
                     seScvmProgressStep("span-progress-step4",1);
                     var pcs_config = ['python3', pluginpath + '/python/vm/setup_storage_vm.py'];
                     if(console_log){console.log(pcs_config);}
-                    cockpit.spawn(pcs_config)
+                    ablestack.spawn(pcs_config)
                       .then(function(data){
                         //결과 값 json으로 return
                         var result = JSON.parse(data);
@@ -818,7 +818,7 @@ function setDiskInfo(){
 
   createLoggerInfo("setDiskInfo() start");
 
-  cockpit.spawn(cmd).then(function(data){
+  ablestack.spawn(cmd).then(function(data){
 
     // 초기화
     $('#disk-pci-list').empty();
@@ -925,7 +925,7 @@ $('input[name="form-radio-storage-vm-nic-type"]').change(function() {
  function setNicPassthrough(select_box_id){
   var cmd = ["python3",pluginpath + "/python/nic/network_action.py","list"];
   createLoggerInfo("setNicPassthrough() start");
-  cockpit.spawn(cmd).then(function(data){
+  ablestack.spawn(cmd).then(function(data){
 
     // 초기화
     $('#'+select_box_id).empty();
@@ -1407,7 +1407,7 @@ function validateStorageVm(){
  * Meathod Name : setScvmSshPrivateKeyInfo
  * Date Created : 2021.03.29
  * Writer : 배태주
- * Description : 스토리지센터 가상머신에 사용할 ssh private key 파일 세팅
+ * Description : 스토리지센터 가상머신에 사용할 /usr/libexec/ablestack/node-remote private key 파일 세팅
  * Parameter : String
  * Return : 없음
  * History : 2021.03.29 최초 작성
@@ -1424,7 +1424,7 @@ function validateStorageVm(){
  * Meathod Name : setScvmSshPublicKeyInfo
  * Date Created : 2021.03.29
  * Writer : 배태주
- * Description : 스토리지센터 가상머신에 사용할 ssh public key 파일 세팅
+ * Description : 스토리지센터 가상머신에 사용할 /usr/libexec/ablestack/node-remote public key 파일 세팅
  * Parameter : String
  * Return : 없음
  * History : 2021.03.29 최초 작성

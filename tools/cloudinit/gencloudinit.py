@@ -125,6 +125,7 @@ def genCloudInit(filename: str):
 
     genisoimage("-output", filename, "-volid", "cidata", "-joliet", "-input-charset", "utf-8", "-rock",
                         f'{tmpdir}/user-data', f'{tmpdir}/meta-data''', f'{tmpdir}/network-config')
+    os.chmod(filename, 0o600)
     item = {
         "ctime": str(datetime.datetime.fromtimestamp(os.path.getctime(filename))),
         # 수정시간을 타임 스탬프로 출력
@@ -480,6 +481,11 @@ def ccvmGen(sn_nic:str, sn_ip:str, sn_prefix: int, sn_gw:str, sn_dns:str):
                 'permissions': '0600'
             }
         )
+    # CCVM is managed through Cube Agent; do not expose a Cockpit listener.
+    yam2['runcmd'] = [
+        ['/usr/bin/systemctl', 'disable', '--now', 'cockpit.socket'],
+        ['/usr/bin/systemctl', 'stop', 'cockpit.service'],
+    ] + yam2.get('runcmd', [])
     with open(f'{tmpdir}/user-data', 'wt') as f:
         f.write('#cloud-config\n')
         f.write(yaml.dump(yam2).replace("\n\n", "\n"))
@@ -517,9 +523,6 @@ def scvmGen(pn_nic=None, pn_ip=None, pn_prefix=24, cn_nic=None, cn_ip=None, cn_p
     #         [f'/usr/bin/script', '-c', '/root/bootstrap.sh', 'bootstrap.log']
     #     )
     if os_type == "ablestack-hci" or os_type == "ablestack-hci-filesystem":
-        yam2['bootcmd'] = [
-        ['/usr/bin/systemctl', 'enable', '--now', 'cockpit.socket'],
-        ]
         with open(f'{pluginpath}/shell/host/scvm_bootstrap.sh', 'rt') as bootstrapfile:
             bootstrap = bootstrapfile.read()
             yam2['write_files'].append(
@@ -550,7 +553,7 @@ def scvmGen(pn_nic=None, pn_ip=None, pn_prefix=24, cn_nic=None, cn_ip=None, cn_p
                     'content': base64.encodebytes(cluster_json.encode()),
                     'owner': 'root:root',
                     'path': f'{pluginpath}/tools/properties/cluster.json',
-                    'permissions': '0777'
+                    'permissions': '0600'
                 }
             )
         with open(f'{pluginpath}/shell/host/security_patch.sh', 'rt') as security_patch_file:
@@ -589,9 +592,11 @@ def scvmGen(pn_nic=None, pn_ip=None, pn_prefix=24, cn_nic=None, cn_ip=None, cn_p
         }
     )
     # 인터페이스 이름이 동일 하지 않을 경우, scvm에 np0, np1이 붙을 수 있기에 고정으로 사용
+    # Enable the socket before sortEth can reboot the VM. Cockpit starts its
+    # service on demand; cube-agent activation is handled by bootstrap-vm.sh.
     yam2['runcmd'] = [
-    ['/usr/bin/bash', '/usr/local/sbin/sortEth.sh'],
-    ['/usr/bin/systemctl', 'enable', '--now', 'cockpit.service']
+        ['/usr/bin/systemctl', 'enable', '--now', 'cockpit.socket'],
+        ['/usr/bin/bash', '/usr/local/sbin/sortEth.sh'],
     ]
 
     with open(f'{tmpdir}/user-data', 'wt') as f:
@@ -687,6 +692,62 @@ ex)
 
 :return yaml 파일
 """
+def attachNodeAgent(hostname, management_ip, management_interface=None):
+    """Seed the unique, pre-enrolled VM identity before any remote bootstrap workflow."""
+    from pathlib import Path
+    sys.path.insert(0, "/usr/libexec/ablestack/node-agent")
+    from config import load_config
+    import cluster_enrollment
+
+    config = load_config()
+    bundle_path = config.get("bootstrap_bundles", {}).get(
+        hostname, "/var/lib/ablestack/cube-agent/bundles/" + hostname)
+    bundle = Path(bundle_path)
+    if not (bundle / "agent.json").is_file():
+        raise ValueError("Prepare a unique node-agent bootstrap bundle for VM " + hostname)
+    bundle_config = json.loads((bundle / "agent.json").read_text())
+    if bundle_config.get("listen") != management_ip:
+        raise ValueError("VM management IP does not match its node-agent identity")
+    profile_path = Path(pluginpath) / "tools/properties/cluster.json"
+    profile_contents = profile_path.read_text()
+    registration = cluster_enrollment.vm_registration_document(hostname, json.loads(profile_contents), bundle)
+    bootstrap = Path(cluster_enrollment.__file__).with_name("bootstrap-vm.sh").read_bytes()
+    with open(f'{tmpdir}/user-data', 'rt') as stream:
+        data = yaml.safe_load(stream)
+    files = ["agent.json", "ca.crt", "node.crt", "node.key"]
+    # A cluster may have been prepared before the host RPM was upgraded. Keep its
+    # certificates, but seed the current packaged agent rather than a stale bundle RPM.
+    rpm_path = Path(cluster_enrollment.VM_RPM)
+    if not rpm_path.is_file():
+        rpm_path = bundle / "ablecube-agent.rpm"
+    staging = "/var/lib/ablestack/cube-agent/enrollment/" + hostname
+    data["bootcmd"] = [["install", "-d", "-m", "0700", "/var/lib/ablestack/cube-agent",
+                        "/var/lib/ablestack/cube-agent/enrollment", staging]] + data.get("bootcmd", [])
+    def add_file(path, content, permissions="0600"):
+        # Replace a template's earlier entry so a writable legacy cluster.json cannot
+        # override the trusted profile later in cc_write_files.
+        data["write_files"] = [item for item in data.get("write_files", []) if item["path"] != path]
+        data["write_files"].append({"path": path, "owner": "root:root", "permissions": permissions,
+                                    "encoding": "base64", "content": base64.b64encode(content).decode("ascii")})
+    for name in files:
+        add_file(staging + "/" + name, (bundle / name).read_bytes())
+    add_file(staging + "/ablecube-agent.rpm", rpm_path.read_bytes())
+    policy = {"mode": "member", "node_id": hostname, "management_ip": management_ip,
+              "management_interface": None, "enrollment_dir": staging, "manage_firewall": True}
+    # The selected IP remains valid if sortEth renames the configured interface.
+    add_file(staging + "/install.json", (json.dumps(policy, indent=2) + "\n").encode())
+    add_file(staging + "/bootstrap-vm.sh", bootstrap, "0700")
+    properties = "/usr/share/cockpit/ablestack/tools/properties"
+    add_file(properties + "/cluster.json", profile_contents.encode())
+    add_file(properties + "/" + hostname + ".cube-agent.json", (json.dumps(registration, indent=2) + "\n").encode())
+    # Fail the cloud-init run on package/certificate failures instead of letting a
+    # later successful command hide the failure. Pending NIC setup is retried by systemd.
+    data["runcmd"] = ["set -eu", ["/bin/sh", staging + "/bootstrap-vm.sh", staging]] + data.get("runcmd", [])
+    with open(f'{tmpdir}/user-data', 'wt') as stream:
+        stream.write('#cloud-config\n')
+        stream.write(yaml.safe_dump(data))
+
+
 def main(args):
     genMeta(hostname=args.hostname)
     genUserFromFile(pubkeyfile=args.pubkey, privkeyfile=args.privkey, hostsfile=args.hosts)
@@ -708,6 +769,7 @@ def main(args):
     elif args.type == 'pfmp':
         ret = pfmpGen()
 
+    attachNodeAgent(args.hostname, args.mgmt_ip, args.mgmt_nic)
     ret = genCloudInit(filename=args.iso_path)
     return ret
 

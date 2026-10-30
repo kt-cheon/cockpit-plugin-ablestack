@@ -14,21 +14,15 @@ import sh
 import json
 from concurrent.futures import ThreadPoolExecutor
 from ablestack import *
+import sys
+sys.path.insert(0, "/usr/libexec/ablestack/node-agent")
+from query_helpers import legacy_vm_output
 
 env = os.environ.copy()
 env['LANG'] = "en_US.utf-8"
 env['LANGUAGE'] = "en"
 
 virsh_cmd = sh.Command('/usr/bin/virsh')
-ssh_cmd = sh.Command('/usr/bin/ssh')
-
-SSH_OPTS = [
-    '-o', 'BatchMode=yes',
-    '-o', 'StrictHostKeyChecking=no',
-    '-o', 'ConnectTimeout=2',
-    '-o', 'ConnectionAttempts=1'
-]
-
 cluster_json_file_path = pluginpath + "/tools/properties/cluster.json"
 def openClusterJson():
     try:
@@ -111,21 +105,9 @@ def collect_vm_info(vm):
             except Exception:
                 pass
 
-            # Run SSH commands in one go
-            command = '''
-            /usr/bin/df -h;
-            echo "__END_DF__";
-            output=$(/usr/sbin/route -n | grep -P "^0.0.0.0|UG" | awk '{print $2}');
-            echo "${output:-""}";
-            output=$(/usr/bin/awk '/^nameserver/ {print $2}' /etc/resolv.conf | head -n 1);
-            echo "${output:-""}";
-            output=$(systemctl is-active mold.service);
-            echo "${output:-"inactive"}";
-            output=$(systemctl is-active mysqld);
-            echo "${output:-"inactive"}"
-            '''
+            # The agent exposes a fixed read-only snapshot for VM details.
             try:
-                ret = ssh_cmd(*SSH_OPTS, 'ccvm-mngt', command, _timeout=5).splitlines()
+                ret = legacy_vm_output('ccvm-mngt').splitlines()
 
                 # Split SSH output by marker
                 marker = "__END_DF__"

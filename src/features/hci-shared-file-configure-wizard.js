@@ -32,7 +32,7 @@ $(document).ready(function(){
   // 첫번째 스텝에서 시작
   cur_step_wizard_hci_shared_file_config = "1";
 
-  cockpit.spawn(['cat', pluginpath + '/tools/properties/cluster.json']).then(function(data){
+  ablestack.spawn(['cat', pluginpath + '/tools/properties/cluster.json']).then(function(data){
     var retVal = JSON.parse(data);
     var hosts = retVal.clusterConfig.hosts;
     updateHciSharedFIleIPMIcredentials(hosts.length,$('input[name="radio-hci-shared-file-ipmi"]:checked').val())
@@ -404,7 +404,7 @@ function deployHciSharedFileStorage() {
   //=========== 1. 스토리지센터 가상머신 초기화 작업 ===========
   // 설정 초기화 ( 필요시 python까지 종료 )
 
-  cockpit.spawn(['cat', pluginpath + '/tools/properties/cluster.json']).then(function(data){
+  ablestack.spawn(['cat', pluginpath + '/tools/properties/cluster.json']).then(function(data){
     var retVal = JSON.parse(data);
     var hosts = retVal.clusterConfig.hosts;
     var all_host_name = "";
@@ -466,7 +466,7 @@ function deployHciSharedFileStorage() {
     createLoggerInfo("deployHciSharedFileStorage start");
     var host_ping_test_and_cluster_config_cmd = ['python3', pluginpath + '/python/cluster/cluster_config.py', 'check', '-js', ret_json_string, '-cmi', mgmt_ip, '-pcl', all_host_name];
     if(console_log){console.log(host_ping_test_and_cluster_config_cmd);}
-    cockpit.spawn(host_ping_test_and_cluster_config_cmd)
+    ablestack.spawn(host_ping_test_and_cluster_config_cmd)
       .then(function(data){
         //결과 값 json으로 return
         var ping_test_result = JSON.parse(data);
@@ -482,7 +482,7 @@ function deployHciSharedFileStorage() {
           setHciSharedFileProgressStep("span-hci-shared-file-progress-step2",1);
           var reset_cloud_center_cmd = ['python3', pluginpath + '/python/vm/reset_cloud_center.py'];
           if(console_log){console.log(reset_cloud_center_cmd);}
-          cockpit.spawn(reset_cloud_center_cmd)
+          ablestack.spawn(reset_cloud_center_cmd)
             .then(function(data){
               //결과 값 json으로 return
               var reset_cloud_center_result = JSON.parse(data);
@@ -493,42 +493,42 @@ function deployHciSharedFileStorage() {
                 // 설정 초기화 ( 필요시 python까지 종료 )
                 var set_lvm_conf_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--modify-lvm-conf', '--list-ip', all_host_name];
                 console.log(set_lvm_conf_cmd);
-                cockpit.spawn(set_lvm_conf_cmd)
+                ablestack.spawn(set_lvm_conf_cmd)
                 .then(function(data){
                   var set_lvm_conf_result = JSON.parse(data);
                   console.log(set_lvm_conf_result);
                   if (set_lvm_conf_result.code == "200"){
                     var set_password_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--set-password', 'password', '--list-ip', all_host_name];
                     console.log(set_password_cmd);
-                    cockpit.spawn(set_password_cmd)
+                    ablestack.spawn(set_password_cmd)
                     .then(function(data){
                       var set_password_result = JSON.parse(data);
                       console.log(set_password_result)
                       if (set_password_result.code == "200"){
                         var auth_hosts_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--auth-hosts', 'password', '--list-ip', all_host_name];
                         console.log(auth_hosts_cmd);
-                        cockpit.spawn(auth_hosts_cmd)
+                        ablestack.spawn(auth_hosts_cmd)
                         .then(function(data){
                           var auth_hosts_result = JSON.parse(data);
                           console.log(auth_hosts_result)
                           if (auth_hosts_result.code == "200"){
                             var setup_cluster_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--setup-cluster', hci_shared_file_cluster_name, '--list-ip', all_host_name];
                             console.log(setup_cluster_cmd);
-                            cockpit.spawn(setup_cluster_cmd)
+                            ablestack.spawn(setup_cluster_cmd)
                             .then(function(data){
                               var setup_cluster_result = JSON.parse(data);
                               console.log(setup_cluster_result)
                               if (setup_cluster_result.code == "200"){
                                 var set_configure_stonith_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--configure-stonith',ipmi_config, '--list-ip', all_host_name];
                                 console.log(set_configure_stonith_cmd);
-                                cockpit.spawn(set_configure_stonith_cmd)
+                                ablestack.spawn(set_configure_stonith_cmd)
                                 .then(function(data){
                                   var set_configure_stonith_result = JSON.parse(data);
                                   console.log(set_configure_stonith_result);
                                   if (set_configure_stonith_result.code == "200"){
                                     var set_alert_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--set-alert', '--list-ip', all_host_name];
                                     console.log(set_alert_cmd);
-                                    cockpit.spawn(set_alert_cmd)
+                                    ablestack.spawn(set_alert_cmd)
                                     .then(function(data){
                                       var set_alert_result = JSON.parse(data);
                                       console.log(set_alert_result);
@@ -539,14 +539,14 @@ function deployHciSharedFileStorage() {
                                                     '--gfs-name', hci_shared_file_name, '--mount-point', hci_shared_file_mount_point, '--cluster-name', hci_shared_file_cluster_name,
                                                     '--journal-nums', journal_nums, '--list-ip', all_host_name]
                                         console.log(create_hci_shared_file_cmd);
-                                        cockpit.spawn(create_hci_shared_file_cmd)
+                                        ablestack.spawn(create_hci_shared_file_cmd)
                                         .then(function(data){
                                           var create_hci_shared_file_result = JSON.parse(data);
                                           console.log(create_hci_shared_file_result);
                                           if (create_hci_shared_file_result.code == "200"){
                                             var hci_shared_file_boostrap_cmd = ['python3', pluginpath + '/python/ablestack_json/ablestackJson.py','update', '--depth1', 'bootstrap', '--depth2', 'gfs_configure', '--value', 'true', '--all-hosts']
                                             console.log(hci_shared_file_boostrap_cmd);
-                                            cockpit.spawn(hci_shared_file_boostrap_cmd)
+                                            ablestack.spawn(hci_shared_file_boostrap_cmd)
                                             .then(function(data){
                                               var hci_shared_file_bootstrap_result = JSON.parse(data);
                                               if (hci_shared_file_bootstrap_result.code == "200"){
@@ -661,7 +661,7 @@ function deployHciSharedFileStorage() {
 
 }
 $('[name="radio-hci-shared-file-ipmi"]').on('change', function () {
-  cockpit.spawn(['cat', pluginpath + '/tools/properties/cluster.json']).then(function(data){
+  ablestack.spawn(['cat', pluginpath + '/tools/properties/cluster.json']).then(function(data){
     var retVal = JSON.parse(data);
     var hosts = retVal.clusterConfig.hosts;
     updateHciSharedFIleIPMIcredentials(hosts.length,$('input[name="radio-hci-shared-file-ipmi"]:checked').val())
@@ -750,7 +750,7 @@ function setHciSharedFileReviewInfo(){
   var ipmi_check_val = $('input[name="radio-hci-shared-file-ipmi"]:checked').val();
   $('#span-hci-shared-file-disk').text(hci_shared_file_disk);
 
-  cockpit.spawn(['cat', pluginpath + '/tools/properties/cluster.json']).then(function(data){
+  ablestack.spawn(['cat', pluginpath + '/tools/properties/cluster.json']).then(function(data){
     var retVal = JSON.parse(data);
     var hosts = retVal.clusterConfig.hosts;
     HciSharedFilecreateAccordion("ipmi",hosts.length, ipmi_check_val);
@@ -767,7 +767,7 @@ function setHciSharedFileReviewInfo(){
  * History : 2026.01.14 최초 작성
  */
 function validateHciSharedFileStorage() {
-  return cockpit.spawn(['cat', pluginpath + '/tools/properties/cluster.json']).then(function(data){
+  return ablestack.spawn(['cat', pluginpath + '/tools/properties/cluster.json']).then(function(data){
     var retVal = JSON.parse(data);
     var hosts = retVal.clusterConfig.hosts;
     var validate_check = true;
@@ -1114,7 +1114,7 @@ function setHciSharedFileDiskInfo(){
 
   createLoggerInfo("setDiskInfo() start");
 
-  cockpit.spawn(cmd).then(function(data) {
+  ablestack.spawn(cmd).then(function(data) {
     // 초기화
     $('#disk-hci-shared-file-pci-list').empty();
 
@@ -1169,7 +1169,7 @@ function setHciSharedFileDiskInfo(){
 }
 
 function HciSharedFileIpmiCheck(){
-  return cockpit.spawn(['cat', pluginpath + '/tools/properties/cluster.json']).then(function(data){
+  return ablestack.spawn(['cat', pluginpath + '/tools/properties/cluster.json']).then(function(data){
     var retVal = JSON.parse(data);
     var hosts = retVal.clusterConfig.hosts;
     var ipmi_port = "623";
@@ -1201,7 +1201,7 @@ function HciSharedFileIpmiCheck(){
 
     var check_ipmi_cmd = ['python3', pluginpath + '/python/gfs/gfs_manage.py', '--check-ipmi', '--stonith', ipmi_config];
     console.log(check_ipmi_cmd)
-    return cockpit.spawn(check_ipmi_cmd).then(function(data){
+    return ablestack.spawn(check_ipmi_cmd).then(function(data){
       var retVal = JSON.parse(data);
       if (retVal.code == "200") {
         $('#button-next-step-modal-hci-shared-file-wizard-config').attr('disabled', false);

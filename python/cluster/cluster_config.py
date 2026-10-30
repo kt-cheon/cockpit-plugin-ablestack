@@ -17,7 +17,8 @@ import subprocess
 
 from ablestack import *
 from sh import python3
-from sh import ssh
+from sh import Command as _RemoteCommand
+ssh = _RemoteCommand('/usr/libexec/ablestack/node-remote')
 from python_hosts import Hosts, HostsEntry
 from pyfstab import Fstab, Entry
 
@@ -334,8 +335,8 @@ def insertAllHost(args):
                     os.system("touch /var/lib/libvirt/images/ccvm-cloudinit.iso")
                     os.system("chmod 777 /var/lib/libvirt/images/ccvm-cloudinit.iso")
                     # 추가 호스트인 경우 tpm.properties, uefi.properties 파일도 복사
-                    os.system("scp /etc/cloudstack/agent/tpm.properties "+p_val2["ablecube"]+":/etc/cloudstack/agent/tpm.properties")
-                    os.system("scp /etc/cloudstack/agent/uefi.properties "+p_val2["ablecube"]+":/etc/cloudstack/agent/uefi.properties")
+                    os.system("/usr/libexec/ablestack/node-copy /etc/cloudstack/agent/tpm.properties "+p_val2["ablecube"]+":/etc/cloudstack/agent/tpm.properties")
+                    os.system("/usr/libexec/ablestack/node-copy /etc/cloudstack/agent/uefi.properties "+p_val2["ablecube"]+":/etc/cloudstack/agent/uefi.properties")
                     # 호스트 추가시 클러스터 구성단계에서는 scvm이 배포되기 전이므로 해당 scvm에 echo 테스트 명령을 수행할 수 없음
                     if args.type == "ablestack-hci":
                         if args.exclude_hostname != p_val2["hostname"]:

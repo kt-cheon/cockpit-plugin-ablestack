@@ -9,6 +9,7 @@
 #########################################
 
 set -x
+set -o pipefail
 LOGFILE="/var/log/cloud_install.log"
 
 os_type=$(cat /etc/cluster.json | grep '"type"' | awk -F'"' '{print $4}')
@@ -18,8 +19,8 @@ systemctl enable --now mysqld
 DATABASE_PASSWD="Ablecloud1!"
 ################# firewall setting
 
-firewall-cmd --permanent --zone=public --add-service=mysql 2>&1 | tee -a $LOGFILE
-firewall-cmd --reload
+firewall-cmd --zone=public --add-service=mysql 2>&1 | tee -a "$LOGFILE" || exit 1
+firewall-cmd --permanent --zone=public --add-service=mysql 2>&1 | tee -a "$LOGFILE" || exit 1
 firewall-cmd --list-all 2>&1 | tee -a $LOGFILE
 
 # 라이선스 종류에 따라 설정 $1="hv" or "ablestack" or "clostack"
@@ -42,7 +43,7 @@ if [ "${os_type}" = "ablestack-hci" ]; then
 
   echo "[INFO] ${scvm}에서 CRUSH map 설정을 실행합니다."
 
-  ssh \
+  /usr/libexec/ablestack/node-remote \
     -o BatchMode=yes \
     -o ConnectTimeout=10 \
     -o StrictHostKeyChecking=no \
@@ -109,7 +110,7 @@ rm -f /usr/share/cockpit/ablestack/shell/host/mold-alias-links.sh
 
 #for host in $hosts
 #do
-#  scp -o StrictHostKeyChecking=no /root/uefi.properties $host:/etc/cloudstack/agent/
+#  /usr/libexec/ablestack/node-copy -o StrictHostKeyChecking=no /root/uefi.properties $host:/etc/cloudstack/agent/
 #done
 
 #rm -rf /root/uefi.properties
@@ -120,7 +121,7 @@ echo -e "host.tpm.enable=true" > /root/tpm.properties
 
 for host in $hosts
 do
-  scp -o StrictHostKeyChecking=no /root/tpm.properties $host:/etc/cloudstack/agent/
+  /usr/libexec/ablestack/node-copy -o StrictHostKeyChecking=no /root/tpm.properties $host:/etc/cloudstack/agent/
 done
 
 rm -rf /root/tpm.properties
@@ -135,8 +136,8 @@ if [ "${os_type}" != "ablestack-standalone" ]
 then
   for host in $hosts
   do
-    ssh -o StrictHostKeyChecking=no $host /usr/bin/systemctl enable --now pacemaker
-    ssh -o StrictHostKeyChecking=no $host /usr/bin/systemctl enable --now corosync
+    /usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no $host /usr/bin/systemctl enable --now pacemaker
+    /usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no $host /usr/bin/systemctl enable --now corosync
   done
 fi
 

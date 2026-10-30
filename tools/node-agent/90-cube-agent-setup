@@ -1,0 +1,9 @@
+#!/bin/sh
+# Defer setup to systemd instead of delaying NetworkManager's network event.
+case "${2:-}" in
+    up|dhcp4-change|dhcp6-change|reapply|hostname)
+        if [ -d /run/systemd/system ]; then
+            systemctl --no-block start cube-agent-setup.service >/dev/null 2>&1 || :
+        fi
+        ;;
+esac

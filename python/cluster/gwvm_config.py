@@ -82,8 +82,8 @@ def create(args):
         python3(pluginpath+'/python/host/ssh-scan.py')
 
         result = 0
-        result += os.system("scp -q -o StrictHostKeyChecking=no " + hosts_file_path + " root@scvm-mngt:"+hosts_file_path)
-        result += os.system("scp -q -o StrictHostKeyChecking=no " + json_file_path + " root@scvm-mngt:"+json_file_path)
+        result += os.system("/usr/libexec/ablestack/node-copy -q -o StrictHostKeyChecking=no " + hosts_file_path + " root@scvm-mngt:"+hosts_file_path)
+        result += os.system("/usr/libexec/ablestack/node-copy -q -o StrictHostKeyChecking=no " + json_file_path + " root@scvm-mngt:"+json_file_path)
 
         if result == 0: # 성공일 경우
             return createReturn(code=200, val="hosts and cluster.json file copy success.")
@@ -112,10 +112,10 @@ def remove(args):
 
         python3(pluginpath+'/python/host/ssh-scan.py')
 
-        os.system("scp -q -o StrictHostKeyChecking=no " + hosts_file_path + " root@scvm-mngt:/etc/hosts")
+        os.system("/usr/libexec/ablestack/node-copy -q -o StrictHostKeyChecking=no " + hosts_file_path + " root@scvm-mngt:/etc/hosts")
         result = 0
-        result += os.system("scp -q -o StrictHostKeyChecking=no " + hosts_file_path + " root@scvm-mngt:"+hosts_file_path)
-        result += os.system("scp -q -o StrictHostKeyChecking=no " + json_file_path + " root@scvm-mngt:"+json_file_path)
+        result += os.system("/usr/libexec/ablestack/node-copy -q -o StrictHostKeyChecking=no " + hosts_file_path + " root@scvm-mngt:"+hosts_file_path)
+        result += os.system("/usr/libexec/ablestack/node-copy -q -o StrictHostKeyChecking=no " + json_file_path + " root@scvm-mngt:"+json_file_path)
 
         # cloudinit iso 삭제
         os.system("rm -f /var/lib/libvirt/images/gwvm-cloudinit.iso")

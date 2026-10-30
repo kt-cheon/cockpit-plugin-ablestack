@@ -53,14 +53,14 @@ def checkMount():
         for host in hosts:
             if hostname[0] != host:
                 # 명령을 내린 호스트를 제외한 호스트의 마운트 해제
-                mount_path_list = subprocess.check_output("ssh root@"+host+" grep -v ^# /etc/fstab | grep ^UUID | awk '{print $1}'", universal_newlines=True, shell=True, env=env)
+                mount_path_list = subprocess.check_output("/usr/libexec/ablestack/node-remote root@"+host+" grep -v ^# /etc/fstab | grep ^UUID | awk '{print $1}'", universal_newlines=True, shell=True, env=env)
                 mount_path_list = mount_path_list[:-1]
                 # UUID로 시작되는 마운트 경로가 존재할 경우 마운트 해제
                 if "UUID" in mount_path_list:
                     mount_path_list = mount_path_list.splitlines()
                     for mount_path in mount_path_list:
                         # rc = call(['ssh root@'+host+' umount ' +mount_path], universal_newlines=True, shell=True, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-                        rc = call(['ssh root@'+host+' echo ' +mount_path+ '\">>\" /root/test.txt'], universal_newlines=True, shell=True, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+                        rc = call(['/usr/libexec/ablestack/node-remote root@'+host+' echo ' +mount_path+ '\">>\" /root/test.txt'], universal_newlines=True, shell=True, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
                     if rc == 0:
                         retVal = True
                         retCode = 200
@@ -71,13 +71,13 @@ def checkMount():
                     retVal = True
                     retCode = 200
         # 명령을 내린 호스트를 가장 마지막에 실행
-        mount_path_list = subprocess.check_output("ssh root@"+hostname[0]+" grep -v ^# /etc/fstab | grep ^UUID | awk '{print $1}'", universal_newlines=True, shell=True, env=env)
+        mount_path_list = subprocess.check_output("/usr/libexec/ablestack/node-remote root@"+hostname[0]+" grep -v ^# /etc/fstab | grep ^UUID | awk '{print $1}'", universal_newlines=True, shell=True, env=env)
         mount_path_list = mount_path_list[:-1]
         if "UUID" in mount_path_list:
             mount_path_list = mount_path_list.splitlines()
             for mount_path in mount_path_list:
                 # rc = call(['ssh root@'+hostname[0]+' umount ' +mount_path], universal_newlines=True, shell=True, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-                rc = call(['ssh root@'+hostname[0]+' echo ' +mount_path+ '\">>\" /root/test.txt'], universal_newlines=True, shell=True, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+                rc = call(['/usr/libexec/ablestack/node-remote root@'+hostname[0]+' echo ' +mount_path+ '\">>\" /root/test.txt'], universal_newlines=True, shell=True, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
             if rc == 0:
                 retVal = True
                 retCode = 200
@@ -114,11 +114,11 @@ def stopStorageVMs():
         for host in hosts:
             if hostname[0] != host:
                 # 명령을 내린 호스트를 제외한 스토리지센터 가상머신 종료
-                result = check_output(["ssh root@" + host + " python3 "+pluginpath+"/python/scvm_status/scvm_status_update.py stop"], universal_newlines=True, shell=True, env=env)
+                result = check_output(["/usr/libexec/ablestack/node-remote root@" + host + " python3 "+pluginpath+"/python/scvm_status/scvm_status_update.py stop"], universal_newlines=True, shell=True, env=env)
                 json_data = json.loads(result)
                 result_code_list.append(json_data["code"])
         # 명령을 내린 호스트를 가장 마지막에 실행
-        result = check_output(["ssh root@" + hostname[0] + " python3 "+pluginpath+"/python/scvm_status/scvm_status_update.py stop"], universal_newlines=True, shell=True, env=env)
+        result = check_output(["/usr/libexec/ablestack/node-remote root@" + hostname[0] + " python3 "+pluginpath+"/python/scvm_status/scvm_status_update.py stop"], universal_newlines=True, shell=True, env=env)
         '''스토리지 가상머신 정지 명령 후 리턴값 0은 정상, 아닐경우 비정상'''
         json_data = json.loads(result)
         result_code_list.append(json_data["code"])
@@ -155,7 +155,7 @@ def shutdownHosts():
         for host in hosts:
             if hostname[0] != host:
                 # 명령을 내린 호스트를 제외한 호스트의 시스템 종료
-                rc = call(['ssh root@'+host +' shutdown -h -t 5'], universal_newlines=True, shell=True, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+                rc = call(['/usr/libexec/ablestack/node-remote root@'+host +' shutdown -h -t 5'], universal_newlines=True, shell=True, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
                 if rc == 0:
                     retVal = True
                     retCode = 200
@@ -163,7 +163,7 @@ def shutdownHosts():
                     retVal = False
                     retCode = 500
         # 명령을 내린 호스트를 가장 마지막에 실행
-        rc = call(['ssh root@'+hostname[0] +' shutdown -h -t 5'], universal_newlines=True, shell=True, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+        rc = call(['/usr/libexec/ablestack/node-remote root@'+hostname[0] +' shutdown -h -t 5'], universal_newlines=True, shell=True, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
         if rc == 0:
             retVal = True
             retCode = 200

@@ -14,24 +14,24 @@ then
   hosts=$(grep ablecube /etc/hosts |grep -v pn |  awk '{print $1}')
   for host in $hosts
   do
-    /usr/bin/ssh -o StrictHostKeyChecking=no $host python3 /usr/share/cockpit/ablestack/python/ablestack_json/ablestackJson.py update --depth1 bootstrap --depth2 scvm --value true
+    /usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no $host python3 /usr/share/cockpit/ablestack/python/ablestack_json/ablestackJson.py update --depth1 bootstrap --depth2 scvm --value true
   done
 
-  /usr/bin/ssh -o StrictHostKeyChecking=no scvm sh /root/bootstrap.sh > /var/log/scvm_bootstrap.log
+  /usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no scvm sh /root/bootstrap.sh > /var/log/scvm_bootstrap.log
 
 elif [ $1 = "wall" ]
 then
   hosts=$(grep ablecube /etc/hosts |grep -v pn |  awk '{print $1}')
   for host in $hosts
   do
-    /usr/bin/ssh -o StrictHostKeyChecking=no $host python3 /usr/share/cockpit/ablestack/python/ablestack_json/ablestackJson.py update --depth1 monitoring --depth2 wall --value true
+    /usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no $host python3 /usr/share/cockpit/ablestack/python/ablestack_json/ablestackJson.py update --depth1 monitoring --depth2 wall --value true
   done
 
 else
   hosts=$(grep ablecube /etc/hosts |grep -v pn |  awk '{print $1}')
   for host in $hosts
   do
-    /usr/bin/ssh -o StrictHostKeyChecking=no $host python3 /usr/share/cockpit/ablestack/python/ablestack_json/ablestackJson.py update --depth1 bootstrap --depth2 ccvm --value true
+    /usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no $host python3 /usr/share/cockpit/ablestack/python/ablestack_json/ablestackJson.py update --depth1 bootstrap --depth2 ccvm --value true
   done
-    /usr/bin/ssh -o StrictHostKeyChecking=no ccvm "sh /root/bootstrap.sh \"$2\""
+    /usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no ccvm "sh /root/bootstrap.sh \"$2\""
 fi

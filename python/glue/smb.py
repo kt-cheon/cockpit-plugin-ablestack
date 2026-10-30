@@ -14,7 +14,8 @@ import argparse
 import subprocess
 from subprocess import check_output
 from subprocess import call
-from sh import ssh
+from sh import Command as _RemoteCommand
+ssh = _RemoteCommand('/usr/libexec/ablestack/node-remote')
 
 from ablestack import *
 
@@ -46,11 +47,11 @@ def createArgumentParser():
 
 def createSamba():
 
-    rc = call(["ssh gwvm ls -al /usr/local/samba/sbin/ | grep -w 'smb_construction.sh'"],universal_newlines=True, shell=True, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    rc = call(["/usr/libexec/ablestack/node-remote gwvm ls -al /usr/local/samba/sbin/ | grep -w 'smb_construction.sh'"],universal_newlines=True, shell=True, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
     if rc != 0:
-        copy = os.system("scp /usr/share/cockpit/ablestack/shell/host/smb_construction.sh gwvm:/usr/local/samba/sbin/")
+        copy = os.system("/usr/libexec/ablestack/node-copy /usr/share/cockpit/ablestack/shell/host/smb_construction.sh gwvm:/usr/local/samba/sbin/")
         if copy == 0:
-            result = os.system('ssh gwvm sh ' + smb_construction + " -u " + args.user_name +  " -p " + args.user_pw)
+            result = os.system('/usr/libexec/ablestack/node-remote gwvm sh ' + smb_construction + " -u " + args.user_name +  " -p " + args.user_pw)
 
             if result == 0:  # 서비스 제어가 성공일 경우
                 ret = createReturn(code=200,val='smb service construction success')
@@ -59,7 +60,7 @@ def createSamba():
                 ret = createReturn(code=500,val='smb service construction fail')
                 return print(json.dumps(json.loads(ret), indent=4))
     else:
-        result = os.system('ssh gwvm sh ' + smb_construction + " -u " + args.user_name +  " -p " + args.user_pw)
+        result = os.system('/usr/libexec/ablestack/node-remote gwvm sh ' + smb_construction + " -u " + args.user_name +  " -p " + args.user_pw)
 
         if result == 0:  # 서비스 제어가 성공일 경우
             ret = createReturn(code=200,val='smb service construction success')
@@ -71,23 +72,23 @@ def createSamba():
 # 삭제할 경로가 고정이 되면 그 경로로 삭제만 해주면 됨.
 def deleteSamba():
 
-    output_smb_user = subprocess.check_output("ssh gwvm /usr/local/samba/bin/pdbedit -L | cut -d ':' -f1", shell=True)
+    output_smb_user = subprocess.check_output("/usr/libexec/ablestack/node-remote gwvm /usr/local/samba/bin/pdbedit -L | cut -d ':' -f1", shell=True)
     data_smb_user_list = output_smb_user.decode('utf8')
     smb_users = data_smb_user_list.splitlines()
 
-    output_home_user = subprocess.check_output("ssh gwvm grep /home /etc/passwd | cut -f1 -d: | grep -v cloud-user", shell=True)
+    output_home_user = subprocess.check_output("/usr/libexec/ablestack/node-remote gwvm grep /home /etc/passwd | cut -f1 -d: | grep -v cloud-user", shell=True)
     data_home_user_list = output_home_user.decode('utf8')
     home_users = data_home_user_list.splitlines()
 
     for i in range(len(smb_users)):
 
-        smb_result = os.system('ssh gwvm /usr/local/samba/bin/smbpasswd -x ' + smb_users[i] + ' > /dev/null')
+        smb_result = os.system('/usr/libexec/ablestack/node-remote gwvm /usr/local/samba/bin/smbpasswd -x ' + smb_users[i] + ' > /dev/null')
 
         if i == len(smb_users)-1:
             if smb_result == 0:
                 for j in range(len(home_users)):
 
-                    home_result = os.system('ssh gwvm userdel -r '+ home_users[j] + ' > /dev/null')
+                    home_result = os.system('/usr/libexec/ablestack/node-remote gwvm userdel -r '+ home_users[j] + ' > /dev/null')
 
                     if j == len(home_users)-1:
                         if home_result == 0:
@@ -95,8 +96,8 @@ def deleteSamba():
                             ssh('-o', 'StrictHostKeyChecking=no', 'gwvm', "sed -i '$d' /usr/local/samba/etc/smb.conf").splitlines()
                             ssh('-o', 'StrictHostKeyChecking=no', 'gwvm', "systemctl stop smb").splitlines()
                             ssh('-o', 'StrictHostKeyChecking=no', 'gwvm', "systemctl disable smb").splitlines()
+                            ssh('-o', 'StrictHostKeyChecking=no', 'gwvm', "firewall-cmd --remove-service=samba").splitlines()
                             ssh('-o', 'StrictHostKeyChecking=no', 'gwvm', "firewall-cmd --permanent --remove-service=samba").splitlines()
-                            ssh('-o', 'StrictHostKeyChecking=no', 'gwvm', "firewall-cmd --reload").splitlines()
 
                             ret = createReturn(code=200,val='smb service smb_user && home_user delete success && service delete success')
                             return print(json.dumps(json.loads(ret), indent=4))
@@ -112,7 +113,7 @@ def deleteSamba():
 def serviceControl():
 
     # 서비스 제어 명령
-    result = os.system("ssh gwvm systemctl "+args.action+" "+args.service_name + " > /dev/null")
+    result = os.system("/usr/libexec/ablestack/node-remote gwvm systemctl "+args.action+" "+args.service_name + " > /dev/null")
 
     if result == 0: #서비스 제어가 성공일 경우
         ret = createReturn(code=200, val=args.service_name+" service "+args.action+" control success")
@@ -155,9 +156,9 @@ def sambaDetail():
         #     user_count = output.strip()
         # else :
         #     user_count = "N/A"
-        rc = call(["ssh gwvm cat /etc/hosts | grep 'gwvm-mngt' | awk '{print $1}'"],universal_newlines=True, shell=True, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+        rc = call(["/usr/libexec/ablestack/node-remote gwvm cat /etc/hosts | grep 'gwvm-mngt' | awk '{print $1}'"],universal_newlines=True, shell=True, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
         if rc == 0:
-            output = check_output(["ssh gwvm cat /etc/hosts | grep 'gwvm-mngt'| awk '{print $1}'"],universal_newlines=True, shell=True,env=env)
+            output = check_output(["/usr/libexec/ablestack/node-remote gwvm cat /etc/hosts | grep 'gwvm-mngt'| awk '{print $1}'"],universal_newlines=True, shell=True,env=env)
             ip_address = output.strip()
         else :
             ip_address = "N/A"

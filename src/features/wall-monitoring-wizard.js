@@ -397,7 +397,7 @@ function resetWallMonitoringWizard() {
   }
 
   if (console_log) { console.log(host_ping_test_cmd); }
-  cockpit.spawn(host_ping_test_cmd, { host: ccvm_ip })
+  ablestack.spawn(host_ping_test_cmd, { host: ccvm_ip })
   .then(function (data) {
     var host_ping_test_result = JSON.parse(data);
     if(host_ping_test_result.code=="200") { //정상
@@ -410,14 +410,14 @@ function resetWallMonitoringWizard() {
       }
 
       if (console_log) { console.log(netdive_config_cmd); }
-      cockpit.spawn(netdive_config_cmd, { host: ccvm_ip })
+      ablestack.spawn(netdive_config_cmd, { host: ccvm_ip })
       .then(function (data) {
         var netdive_config_result = JSON.parse(data);
         if(netdive_config_result.code=="200") { //정상
           //=========== 1-3. 모니터링 서비스 전체 종료 ===========
           var wall_service_stop_cmd = ['python3', pythonPath + 'start_services.py', 'stop', '--service', 'blackbox-exporter', 'node-exporter', 'grafana-server', 'process-exporter', 'prometheus'];
           if (console_log) { console.log(wall_service_stop_cmd); }
-          cockpit.spawn(wall_service_stop_cmd, { host: ccvm_ip })
+          ablestack.spawn(wall_service_stop_cmd, { host: ccvm_ip })
           .then(function (data) {
             var wall_service_stop_result = JSON.parse(data);
             if(wall_service_stop_result.code=="200") { //정상
@@ -439,14 +439,14 @@ function resetWallMonitoringWizard() {
                 }
               }
               if (console_log) { console.log(prometheus_config_cmd); }
-              cockpit.spawn(prometheus_config_cmd, { host: ccvm_ip })
+              ablestack.spawn(prometheus_config_cmd, { host: ccvm_ip })
               .then(function (data) {
                 var prometheus_config_result = JSON.parse(data);
                 if(prometheus_config_result.code=="200") { //정상
                   //=========== 2-2. Wall Monitoring 구성 서비스 실행 ===========
                   var wall_service_start_cmd = ['python3', pythonPath + 'start_services.py', 'start', '--service', 'blackbox-exporter', 'node-exporter', 'grafana-server', 'process-exporter', 'prometheus', 'netdive-analyzer'];
                   if (console_log) { console.log(wall_service_start_cmd); }
-                  cockpit.spawn(wall_service_start_cmd, { host: ccvm_ip })
+                  ablestack.spawn(wall_service_start_cmd, { host: ccvm_ip })
                   .then(function (data) {
                     var wall_service_start_result = JSON.parse(data);
                     if(wall_service_start_result.code=="200") { //정상
@@ -456,12 +456,12 @@ function resetWallMonitoringWizard() {
                         setWallProgressStep("span-wall-progress-step3",1);
                         var smtp_conf_cmd = ['python3', pythonPath + 'config_smtp.py', 'config', '--host', smtp_server_ip+':'+smtp_server_port, '--user', email_addr, '--password', email_pw];
                         if (console_log) { console.log(smtp_conf_cmd); }
-                        cockpit.spawn(smtp_conf_cmd, { host: ccvm_ip })
+                        ablestack.spawn(smtp_conf_cmd, { host: ccvm_ip })
                         .then(function (data) {
                           var smtp_conf_result = JSON.parse(data);
                           if(smtp_conf_result.code=="200") { //정상
                             // /root/bootstrap.sh 파일을 실행함.
-                            cockpit.spawn(["sh", pluginpath+"/shell/host/bootstrap_run.sh","wall"])
+                            ablestack.spawn(["sh", pluginpath+"/shell/host/bootstrap_run.sh","wall"])
                             .then(function(data){
                               console.log(data);
                               setWallProgressStep("span-wall-progress-step3",2);
@@ -483,7 +483,7 @@ function resetWallMonitoringWizard() {
                       }else{ // smtp 설정을 생략하고 실행 완료
                         // /root/bootstrap.sh 파일을 실행함.
                         cmd = ["sh", pluginpath+"/shell/host/bootstrap_run.sh","wall"];
-                        cockpit.spawn(cmd)
+                        ablestack.spawn(cmd)
                         .then(function(data){
                           console.log(data);
                           setWallProgressStep("span-wall-progress-step2",2);
@@ -979,7 +979,7 @@ function setWallIpInput(host_count){
 
 function autoConfigWallIP(){
   // cluster.json 읽어 오기
-  cockpit.spawn(["cat", pluginpath + "/tools/properties/cluster.json"])
+  ablestack.spawn(["cat", pluginpath + "/tools/properties/cluster.json"])
   .then(function(data){
     var clusterJsonConf = JSON.parse(data);
     // node 수를 확인하여 입력 박스 만들기
