@@ -11,6 +11,7 @@
   <hugepages/>
 </memoryBacking>
   <vcpu placement='static'><!--cpu--></vcpu>
+  <!--disk_passthrough_iothreads-->
   <os>
     <type arch='x86_64' machine='q35'>hvm</type>
     <loader readonly='yes'  type='pflash'>/usr/share/edk2/ovmf/OVMF_CODE.fd</loader>
@@ -109,6 +110,7 @@
       <address type='pci' domain='0x0000' bus='0x03' slot='0x00' function='0x0'/>
     </controller>
     <controller type='scsi' index='0' model='virtio-scsi'>
+      <!--disk_passthrough_scsi_driver-->
       <address type='pci' domain='0x0000' bus='0x07' slot='0x00' function='0x0'/>
     </controller>
     <!--management_network_bridge-->

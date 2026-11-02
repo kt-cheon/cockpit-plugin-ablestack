@@ -198,12 +198,12 @@
                         <label class="pf-v6-c-radio__label" for="raid-passthrough">PCI Passthrough</label>
                       </div>
                       <div class="pf-v6-c-radio">
-                        <input class="pf-v6-c-radio__input" type="radio" id="lun-passthrough" value="lp" name="form-radio-storage-vm-disk-type" />
-                        <label class="pf-v6-c-radio__label" for="lun-passthrough">LUN Passthrough</label>
-                      </div>
-                      <div class="pf-v6-c-radio">
                         <input class="pf-v6-c-radio__input" type="radio" id="disk-passthrough" value="dp" name="form-radio-storage-vm-disk-type" />
                         <label class="pf-v6-c-radio__label" for="disk-passthrough">Disk Passthrough</label>
+                      </div>
+                      <div class="pf-v6-c-radio" id="div-storage-vm-lun-passthrough" hidden style="display:none">
+                        <input class="pf-v6-c-radio__input" type="radio" id="lun-passthrough" value="lp" name="form-radio-storage-vm-disk-type" disabled/>
+                        <label class="pf-v6-c-radio__label" for="lun-passthrough">LUN Passthrough</label>
                       </div>
                     </div>
                   </div>
@@ -234,7 +234,10 @@
                     (예, RAID 카드가 2개 이상인 경우 또는 PCI 카드 방식의 별도의 OS용 디스크가 장착되어 있는 경우)
                   </p>
                   <p>
-                    RAID Passthrough를 사용할 수 없는 경우에는 디스크 전체를 가상머신에 할당하는 LUN Passthrough 방식을 선택하십시오.
+                    PCI Passthrough를 사용할 수 없는 경우에는 디스크 전체를 가상머신에 할당하는 Disk Passthrough 방식을 선택하십시오.
+                  </p>
+                  <p id="p-storage-vm-lun-passthrough-help" hidden style="display:none">
+                    LUN Passthrough가 필요한 환경에서는 LUN Passthrough 방식을 선택할 수 있습니다.
                   </p>
                 </div>
               </div>

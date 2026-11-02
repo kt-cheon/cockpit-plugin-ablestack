@@ -12,6 +12,35 @@ var completed = false;
 var option_scvm = "-scvm";
 var os_type = sessionStorage.getItem("os_type");
 
+function setScvmLunPassthroughVisibility(enabled) {
+  var lun = $('#lun-passthrough');
+  if (!enabled && lun.prop('checked')) {
+    lun.prop('checked', false);
+    $('#raid-passthrough').prop('checked', true);
+    setDiskInfo();
+  }
+  lun.prop('disabled', !enabled);
+  $('#div-storage-vm-lun-passthrough').prop('hidden', !enabled).toggle(enabled);
+  $('#p-storage-vm-lun-passthrough-help').prop('hidden', !enabled).toggle(enabled);
+}
+
+function loadScvmLunPassthroughOption() {
+  setScvmLunPassthroughVisibility(false);
+  return Promise.resolve().then(function () {
+    return ablestack.file(pluginpath + '/tools/properties/ablestack.json').read();
+  })
+    .then(function (contents) {
+      var settings = JSON.parse(contents || '{}');
+      var enabled = settings && settings.ui && settings.ui.scvm_lun_passthrough;
+      // The existing JSON update CLI writes strings; accept its explicit "true" too.
+      setScvmLunPassthroughVisibility(enabled === true || enabled === 'true');
+    })
+    .catch(function () {
+      setScvmLunPassthroughVisibility(false);
+      createLoggerInfo('SCVM LUN UI 설정을 읽을 수 없어 기본 숨김 상태를 적용합니다.');
+    });
+}
+
 // Document.ready 시작
 $(document).ready(function(){
   // 스토리지센터 가상머신 배포 마법사 페이지 준비
@@ -42,6 +71,7 @@ $(document).ready(function(){
   cur_step_wizard_vm_config = "1";
 
   //디스크 구성방식 초기 세팅
+  loadScvmLunPassthroughOption();
   setDiskInfo();
 
   //os type에 대한 마법사 변경 처리

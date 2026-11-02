@@ -24,6 +24,8 @@ class VmBridgeXmlTests(unittest.TestCase):
             (self.root / "tools/vmconfig" / name).mkdir(parents=True)
             shutil.copyfile(REPO / "tools/xml-template" / (name + "-xml-template.xml"),
                             self.root / "tools/xml-template" / (name + "-xml-template.xml"))
+        shutil.copyfile(REPO / "tools/xml-template/powerflex-scvm-xml-template.xml",
+                        self.root / "tools/xml-template/powerflex-scvm-xml-template.xml")
         self.ovs = False
         self.commands = []
 
@@ -44,13 +46,13 @@ class VmBridgeXmlTests(unittest.TestCase):
         # recorded only. These tests never invoke a host command or another node.
         return 0
 
-    def render(self, name, **changes):
+    def render(self, name, cluster_type="ablestack-hci", **changes):
         tree = ast.parse((REPO / "python/vm" / ("create_" + name + "_xml.py")).read_text())
         create = "createCcvmXml" if name == "ccvm" else "createScvmXml"
         functions = [node for node in tree.body if isinstance(node, ast.FunctionDef)
                      and node.name in (create, "generateMacAddress", "generateDecToHex")]
         namespace = {"os": SimpleNamespace(system=self.system), "fileinput": fileinput, "sys": sys,
-                     "random": random, "pluginpath": str(self.root), "os_type": "ablestack-hci",
+                     "random": random, "pluginpath": str(self.root), "os_type": cluster_type,
                      "createReturn": lambda **kwargs: kwargs}
         exec(compile(ast.Module(body=functions, type_ignores=[]), name + "-xml.py", "exec"), namespace)
         options = dict(cpu=8, memory=16, management_network_bridge="bridge0", service_network_bridge="bridge1",
@@ -83,6 +85,45 @@ class VmBridgeXmlTests(unittest.TestCase):
         self.assertEqual(root.find("./devices/disk[@device='lun']/source").get("dev"), "/dev/fixture-lun")
         self.assertEqual(root.find("./devices/disk[@device='cdrom']/source").get("file"),
                          "/var/lib/libvirt/images/scvm-cloudinit.iso")
+
+    def test_disk_passthrough_maps_each_disk_to_the_configured_scsi_iothread(self):
+        paths = ["/dev/disk/by-id/wwn-0x5000000000000001", "/dev/disk/by-id/wwn-0x5000000000000002"]
+        for cluster_type in ("ablestack-hci", "powerflex"):
+            with self.subTest(cluster_type=cluster_type):
+                root = self.render("scvm", cluster_type=cluster_type,
+                                   disk_type="disk_passthrough", disk_passthrough_list=paths)
+                self.assertEqual([item.text for item in root.findall("iothreads")], ["1"])
+                controller = root.find("./devices/controller[@type='scsi'][@index='0']")
+                self.assertEqual(controller.get("model"), "virtio-scsi")
+                self.assertEqual(controller.find("driver").attrib, {"iothread": "1"})
+                disks = root.findall("./devices/disk[@type='block'][@device='disk']")
+                self.assertEqual(len(disks), 2)
+                for index, disk in enumerate(disks):
+                    self.assertEqual(disk.find("driver").attrib, {"name": "qemu", "type": "raw", "cache": "none",
+                                                                 "io": "io_uring", "discard": "unmap"})
+                    self.assertEqual(disk.find("source").get("dev"), paths[index])
+                    self.assertEqual(disk.find("target").attrib,
+                                     {"dev": ["sda", "sdb"][index], "bus": "scsi", "rotation_rate": "1"})
+                    self.assertEqual(disk.find("blockio").attrib,
+                                     {"logical_block_size": "512", "physical_block_size": "4096"})
+                    self.assertEqual(disk.find("address").get("controller"), "0")
+                    self.assertEqual(disk.find("address").get("unit"), str(index))
+                boot_disk = root.find("./devices/disk[@type='file'][@device='disk']")
+                self.assertEqual(boot_disk.find("driver").attrib, {"name": "qemu", "type": "qcow2"})
+
+    def test_pci_and_lun_passthrough_do_not_add_disk_iothread_or_sector_overrides(self):
+        for disk_type in ("lun_passthrough", "raid_passthrough"):
+            with self.subTest(disk_type=disk_type):
+                root = self.render("scvm", disk_type=disk_type, raid_passthrough_list=["43:00.0"])
+                self.assertIsNone(root.find("iothreads"))
+                self.assertIsNone(root.find("./devices/controller[@type='scsi']/driver"))
+                self.assertFalse(root.findall("./devices/disk/blockio"))
+                if disk_type == "lun_passthrough":
+                    lun = root.find("./devices/disk[@type='block'][@device='lun']")
+                    self.assertEqual(lun.find("driver").attrib, {"name": "qemu", "type": "raw"})
+                    self.assertIsNone(lun.find("target").get("rotation_rate"))
+                else:
+                    self.assertEqual(len(root.findall("./devices/hostdev")), 1)
 
     def test_scvm_pci_passthrough_does_not_turn_into_bridge_interfaces(self):
         root = self.render("scvm", storage_traffic_network_type="nic_passthrough")

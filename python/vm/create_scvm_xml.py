@@ -35,8 +35,8 @@ def createArgumentParser():
     parser.add_argument('-c', '--cpu', metavar='[cpu cores]', type=int, help='input Value to cpu cores', required=True)
     parser.add_argument('-m', '--memory', metavar='[memory gb]', type=int, help='input Value to memory GB', required=True)
 
-    #--disk-type { raid_passthrough or lun_passthrough or disk_passthrough }            | 1택, 선택, 필수
-    parser.add_argument('-dt', '--disk-type', metavar='[raid_passthrough or lun_passthrough or disk_passthrough]', choices=['raid_passthrough', 'lun_passthrough', 'disk_passthrough'], type=str, help='storage center VM disk type choice', required=True)
+    #--disk-type { raid_passthrough or disk_passthrough or lun_passthrough }            | 1택, 선택, 필수
+    parser.add_argument('-dt', '--disk-type', metavar='[raid_passthrough or disk_passthrough or lun_passthrough]', choices=['raid_passthrough', 'disk_passthrough', 'lun_passthrough'], type=str, help='storage center VM disk type choice', required=True)
 
     #--raid-passthrough-list raid1 raid2                                    | 다중선택, 조건부 필수 (disk-type가 raid_passthrough 일 경우)
     parser.add_argument('-rpl', '--raid-passthrough-list', metavar='[raid pci]', type=str, nargs='+', help='input Value to raid pic list')
@@ -140,6 +140,12 @@ def createScvmXml(args):
                     line = line.replace('<!--memory-->', str(args.memory))
                 elif '<!--cpu-->' in line:
                     line = line.replace('<!--cpu-->', str(args.cpu))
+                elif '<!--disk_passthrough_iothreads-->' in line:
+                    line = line.replace('<!--disk_passthrough_iothreads-->',
+                                        "<iothreads>1</iothreads>" if args.disk_type == 'disk_passthrough' else '')
+                elif '<!--disk_passthrough_scsi_driver-->' in line:
+                    line = line.replace('<!--disk_passthrough_scsi_driver-->',
+                                        "<driver iothread='1'/>" if args.disk_type == 'disk_passthrough' else '')
                 elif '<!--scvm_cloudinit-->' in line:
                     sci_txt = "    <disk type='file' device='cdrom'>\n"
                     sci_txt += "      <driver name='qemu' type='raw'/>\n"
@@ -171,9 +177,10 @@ def createScvmXml(args):
                         num = 0
                         for disk in args.disk_passthrough_list:
                             dpl_txt += "    <disk type='block' device='disk'>\n"
-                            dpl_txt += "      <driver name='qemu' type='raw'/>\n"
+                            dpl_txt += "      <driver name='qemu' type='raw' cache='none' io='io_uring' discard='unmap'/>\n"
                             dpl_txt += "      <source dev='" + disk + "'/>\n"
-                            dpl_txt += "      <target dev='sd"+ alphabet[num] +"' bus='scsi'/>\n"
+                            dpl_txt += "      <target dev='sd"+ alphabet[num] +"' bus='scsi' rotation_rate='1'/>\n"
+                            dpl_txt += "      <blockio logical_block_size='512' physical_block_size='4096'/>\n"
                             dpl_txt += "      <alias name='scsi0-0-0-"+ str(num) +"'/>\n"
                             dpl_txt += "      <address type='drive' controller='0' bus='0' target='0' unit='"+ str(num) +"'/>\n"
                             dpl_txt += "    </disk>\n"
