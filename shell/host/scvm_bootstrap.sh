@@ -57,7 +57,7 @@ cephadm --image "$image" bootstrap \
         ceph config set osd bluestore_prefer_deferred_size_ssd 65536 && \
         ceph config set osd bluestore_deferred_batch_ops 0 && \
         ceph config set osd bluestore_deferred_batch_ops_ssd 16 && \
-        ceph config set osd osd_memory_target 2147483648 && \
+        ceph config set osd osd_memory_target 2684354560 && \
         ceph config set osd osd_memory_target_autotune false && \
         ceph config set osd bluestore_throttle_bytes 67108864 && \
         ceph config set osd bluestore_throttle_deferred_bytes 134217728 && \
