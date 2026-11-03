@@ -51,15 +51,31 @@ cephadm --image "$image" bootstrap \
         ceph config set client rbd_cache_max_dirty 3221225472 && \
         ceph config set client rbd_cache_target_dirty 2147483648 && \
         ceph config set client rbd_cache_max_dirty_age 5.0 && \
+        ceph config set osd bluefs_sync_write true && \
+        ceph config set osd bluefs_buffered_io true && \
+        ceph config set osd bluestore_prefer_deferred_size 0 && \
+        ceph config set osd bluestore_prefer_deferred_size_ssd 65536 && \
+        ceph config set osd bluestore_deferred_batch_ops 0 && \
+        ceph config set osd bluestore_deferred_batch_ops_ssd 16 && \
+        ceph config set osd osd_memory_target 2147483648 && \
+        ceph config set osd osd_memory_target_autotune false && \
+        ceph config set osd bluestore_throttle_bytes 67108864 && \
+        ceph config set osd bluestore_throttle_deferred_bytes 134217728 && \
+        ceph config set osd osd_client_message_cap 256 && \
+        ceph config set osd bluestore_sync_submit_transaction false && \
+        ceph config set osd ms_dispatch_throttle_bytes 104857600 && \
+        ceph config set osd bluestore_cache_autotune true && \
+        ceph config set osd osd_memory_base 805306368 && \
+        ceph config set osd osd_memory_cache_min 134217728 && \
         ceph config set mgr mgr/cephadm/container_image_alertmanager localhost:15000/prom/alertmanager:Europa && \
         ceph config set mgr mgr/cephadm/container_image_grafana localhost:15000/grafana/grafana:Europa && \
         ceph config set mgr mgr/cephadm/container_image_node_exporter localhost:15000/prom/node-exporter:Europa && \
-        ceph config set mgr mgr/cephadm/container_image_prometheus localhost:15000/prom/prometheus:Europa
-        ceph config set mgr mgr/cephadm/container_image_loki localhost:15000/grafana/loki:Europa
-        ceph config set mgr mgr/cephadm/container_image_promtail localhost:15000/grafana/promtail:Europa
-        ceph config set mgr mgr/cephadm/container_image_nvmeof-cli localhost:15000/glue/nvmeof-cli:Europa
-        ceph config set mgr mgr/cephadm/container_image_nvmeof localhost:15000/glue/nvmeof:Europa
-        ceph config set mgr mgr/cephadm/container_image_keepalived localhost:15000/glue/keepalived:2.2.4
+        ceph config set mgr mgr/cephadm/container_image_prometheus localhost:15000/prom/prometheus:Europa && \
+        ceph config set mgr mgr/cephadm/container_image_loki localhost:15000/grafana/loki:Europa && \
+        ceph config set mgr mgr/cephadm/container_image_promtail localhost:15000/grafana/promtail:Europa && \
+        ceph config set mgr mgr/cephadm/container_image_nvmeof-cli localhost:15000/glue/nvmeof-cli:Europa && \
+        ceph config set mgr mgr/cephadm/container_image_nvmeof localhost:15000/glue/nvmeof:Europa && \
+        ceph config set mgr mgr/cephadm/container_image_keepalived localhost:15000/glue/keepalived:2.2.4 && \
         ceph config set mgr mgr/cephadm/container_image_haproxy localhost:15000/glue/haproxy:2.3
 
 
