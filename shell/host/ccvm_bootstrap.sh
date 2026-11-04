@@ -1,20 +1,26 @@
 #!/usr/bin/env bash
 #########################################
-#Copyright (c) 2021 ABLECLOUD Co. Ltd.
+#Copyright (c) 2026 ABLECLOUD Co. Ltd.
 #
-#ccvm 초기화(bootstrap)하는 스크립트
-#
-#최초작성자 : 윤여천 책임(ycyun@ablecloud.io)
-#최초작성일 : 2021-04-12
+#클라우드센터 구성 스크립트
 #########################################
 
-set -x
+set -Ee
 set -o pipefail
 LOGFILE="/var/log/cloud_install.log"
-
+bootstrap_stage='클라우드센터 구성을 준비합니다.'
+progress() {
+  bootstrap_stage="$*"
+  printf '[ABLESTACK-PROGRESS] %s\n' "$bootstrap_stage"
+}
+trap 'code=$?; printf "[ABLESTACK-PROGRESS] 오류: %s (종료 코드 %s)\n" "$bootstrap_stage" "$code"; exit "$code"' ERR
+cluster_host_lines() {
+  awk '{sub(/#.*/, "")} NF >= 2 {print}' /etc/hosts
+}
 os_type=$(cat /etc/cluster.json | grep '"type"' | awk -F'"' '{print $4}')
-hosts=$(grep -v mngt /etc/hosts | grep -v scvm | grep -v pn | grep -v localhost | awk {'print $1'})
+hosts=$(cluster_host_lines | grep -v mngt | grep -v scvm | grep -v pn | grep -v localhost | awk '!seen[$1]++ {print $1}')
 
+progress '데이터베이스 서비스를 시작하고 방화벽을 설정합니다.'
 systemctl enable --now mysqld
 DATABASE_PASSWD="Ablecloud1!"
 ################# firewall setting
@@ -24,6 +30,7 @@ firewall-cmd --permanent --zone=public --add-service=mysql 2>&1 | tee -a "$LOGFI
 firewall-cmd --list-all 2>&1 | tee -a $LOGFILE
 
 # 라이선스 종류에 따라 설정 $1="hv" or "ablestack" or "clostack"
+progress '라이선스에 맞는 클라우드센터 화면을 설정합니다.'
 sh /usr/share/cloudstack-common/scripts/util/update-mold-theme-from-license.sh "$1"
 
 # setCrushmap
@@ -41,7 +48,7 @@ if [ "${os_type}" = "ablestack-hci" ]; then
     exit 1
   fi
 
-  echo "[INFO] ${scvm}에서 CRUSH map 설정을 실행합니다."
+  progress "${scvm}에서 스토리지 CRUSH map을 설정합니다."
 
   /usr/libexec/ablestack/node-remote \
     -o BatchMode=yes \
@@ -57,26 +64,28 @@ if [ "${os_type}" = "ablestack-hci" ]; then
 fi
 
 # resize partition
+progress '디스크 용량을 확장하고 NFS 스토리지를 구성합니다.'
 sgdisk -e /dev/vda
 parted --script /dev/vda resizepart 3 100%
 pvresize /dev/vda3
 lvcreate rl -n nfs --extents 100%FREE
 mkfs.xfs /dev/rl/nfs
-mkdir /nfs
+mkdir -p /nfs
 echo  '/dev/mapper/rl-nfs /nfs                    xfs    defaults        0 0' >> /etc/fstab
 echo '/nfs *(rw,no_root_squash,async)' >> /etc/exports
 systemctl enable --now nfs-server.service
 
-mkdir /nfs/primary
-mkdir /nfs/secondary
+mkdir -p /nfs/primary
+mkdir -p /nfs/secondary
 
 
-################# Setting Database
+# 데이터베이스 초기화 및 구성
+progress '클라우드센터 데이터베이스를 초기화합니다.'
 mysqladmin -uroot password $DATABASE_PASSWD
-systemctl enable --now mold-usage.service
 cloudstack-setup-databases cloud:$DATABASE_PASSWD --deploy-as=root:$DATABASE_PASSWD  2>&1 | tee -a $LOGFILE
 
 # 글로벌설정 DB 업데이트
+progress '클라우드센터 기본 정책을 적용합니다.'
 global_settings=(
   "enable.vm.network.filter.allow.all.traffic=true"
 )
@@ -93,6 +102,15 @@ for i in "${global_settings[@]}"; do
   fi
 done
 
+# Management 암호화 키 파일 권한 보정
+KEY_FILE="/etc/cloudstack/management/key"
+
+if [[ -f "$KEY_FILE" ]]; then
+    chown root:cloud "$KEY_FILE"
+    chmod 640 "$KEY_FILE"
+fi
+
+progress '클라우드 관리 서버를 구성하고 서비스를 시작합니다.'
 cloudstack-setup-management  2>&1 | tee -a $LOGFILE
 
 systemctl enable --now mold.service
@@ -117,6 +135,7 @@ rm -f /usr/share/cockpit/ablestack/shell/host/mold-alias-links.sh
 
 
 #tpm 설정 파일 생성
+progress '각 호스트에 가상머신 TPM 설정을 전달합니다.'
 echo -e "host.tpm.enable=true" > /root/tpm.properties
 
 for host in $hosts
@@ -127,6 +146,7 @@ done
 rm -rf /root/tpm.properties
 
 #systemvm template 등록
+progress '시스템 가상머신 템플릿을 등록합니다. 잠시 기다려 주십시오.'
 /usr/share/cloudstack-common/scripts/storage/secondary/cloud-install-sys-tmplt \
 -m /nfs/secondary \
 -f /usr/share/ablestack/systemvmtemplate-* \
@@ -134,6 +154,7 @@ rm -rf /root/tpm.properties
 
 if [ "${os_type}" != "ablestack-standalone" ]
 then
+  progress '호스트의 고가용성 클러스터 서비스를 시작합니다.'
   for host in $hosts
   do
     /usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no $host /usr/bin/systemctl enable --now pacemaker
@@ -145,11 +166,16 @@ fi
 #(crontab -l 2>/dev/null; echo "0 6 * * * /usr/bin/systemctl restart mold.service") | crontab -
 
 # ccvm 로그 정리 스크립트 등록
-(crontab -l 2>/dev/null; echo "0 0 * * 7 /usr/local/sbin/ccvm_log_maintainer.sh") | crontab -
+progress '로그 정리와 데이터베이스 백업 일정을 등록합니다.'
+(crontab -l 2>/dev/null || true; echo "0 0 * * 7 /usr/local/sbin/ccvm_log_maintainer.sh") | crontab -
 
 # ccvm mold db 백업
-(crontab -l 2>/dev/null; echo "0 1 * * * /usr/bin/python3 /usr/share/ablestack/backup_mysql.py") | crontab -
+(crontab -l 2>/dev/null || true; echo "0 1 * * * /usr/bin/python3 /usr/share/ablestack/backup_mysql.py") | crontab -
+
+# mold-usage 서비스 시작
+systemctl enable --now mold-usage.service
 
 # Delete bootstrap script file
 rm -rf /root/bootstrap.sh
+progress '클라우드센터 내부 구성이 완료되었습니다.'
 

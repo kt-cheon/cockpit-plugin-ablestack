@@ -8,6 +8,10 @@
 ```
 
 ##출력
+Ethernet NIC의 `STATE`는 `LC_ALL=C /usr/sbin/ethtool <인터페이스>`의 `Link detected`로 판단합니다.
+`yes`이면 `connected`, `no`이면 `disconnected`, 조회 실패 또는 결과가 없으면 `unknown`입니다.
+브릿지와 기타 인터페이스의 `STATE`는 기존처럼 NetworkManager 상태를 사용합니다.
+
 ```json
 {
   "code": 200,

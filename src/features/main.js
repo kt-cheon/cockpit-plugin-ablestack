@@ -593,7 +593,7 @@ function scvm_bootstrap_run() {
             //cloudinit status: done 일때
             if (retVal.code == 200 && retVal.val == "status: done") {
               $('#modal-title-scvm-status').text("스토리지센터 구성하기");
-              $('#modal-description-scvm-status').html("<p>스토리지센터를 구성하시겠습니까?</p>");
+              $('#modal-description-scvm-status').html("<p>스토리지센터를 구성하시겠습니까?</p><p>구성 전 현재 호스트의 SCVM에서 스토리지망 점보 프레임 통신을 검사합니다. 모든 대상에서 3회씩 정상 응답이 있어야 구성을 진행합니다.</p>");
               $('#button-storage-vm-status-update').html("실행");
               $('#scvm-status-update-cmd').val("bootstrap");
               $('#div-modal-storage-vm-status-update').show();
@@ -4771,14 +4771,11 @@ function LocalCloudVMCheck() {
         if (ccvmStatus.ccvm == 'false') {
           sessionStorage.setItem("ccvm_bootstrap_status", "false");
           console.log('ccvm false in')
-          $('#cloud-center-after-bootstrap-run').html('');
-          $('#cloud-center-before-bootstrap-run').html('<a class="pf-v6-c-menu__item" href="#" id="menu-item-bootstrap-run-ccvm" onclick="ccvm_bootstrap_run()">클라우드센터 구성하기</a>');
         } else if (ccvmStatus.ccvm == 'true') {
           sessionStorage.setItem("ccvm_bootstrap_status", "true");
           console.log('ccvm true in')
-          $('#cloud-center-after-bootstrap-run').html('<a class="pf-v6-c-menu__item" href="#" id="menu-item-linkto-storage-center-ccvm" onclick="cccc_link_go()">클라우드센터 연결</a>');
-          $('#cloud-center-before-bootstrap-run').html('');
         }
+        renderCcvmBootstrapActions();
         resolve();
       }).catch(function (data) {
         console.log('ClusterStatusInfo spawn error(ablestackJson.py');

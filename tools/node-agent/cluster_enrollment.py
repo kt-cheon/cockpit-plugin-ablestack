@@ -208,6 +208,21 @@ def apply_local(layout, node, bundles, config_dir, state_dir, rpm):
     setup.atomic_write(config_dir / "install.json", (json.dumps(policy, indent=2) + "\n").encode())
 
 
+def registration_exports(state_dir=setup.STATE_DIR):
+    """List host registrations available locally without reading their private keys."""
+    state_dir = Path(state_dir)
+    manifest = setup.read_json(state_dir / "cluster-enrollment.json")
+    if not manifest:
+        return []
+    layout = manifest["layout"]
+    bundles = state_dir / "issuer-bundles"
+    if not bundles.is_dir():
+        bundles = state_dir / "bundles"
+    return [host for host in layout["hosts"]
+            if all((bundles / name / filename).is_file()
+                   for name in owned_bundles(layout, host) for filename in FILES)]
+
+
 def prepare_cluster(profile, registration=None, allow_create=False, config_dir=setup.CONFIG_DIR,
                     state_dir=setup.STATE_DIR, hostname=None, addresses=None, rpm=VM_RPM,
                     properties_dir=PROPERTIES_DIR):
@@ -265,9 +280,9 @@ def prepare_cluster(profile, registration=None, allow_create=False, config_dir=s
     setup.atomic_write(manifest, json.dumps({"digest": layout_digest(layout), "layout": layout}).encode())
     saved_manifest = {"digest": layout_digest(layout), "layout": layout}
     issuer = state_dir / "issuer-bundles"
-    export_hosts = layout["hosts"] if issuer.is_dir() else []
-    for host in export_hosts or [node["id"]]:
-        save_registration(registration_document(host, saved_manifest, issuer if export_hosts else state_dir / "bundles"),
+    export_hosts = registration_exports(state_dir)
+    for host in export_hosts:
+        save_registration(registration_document(host, saved_manifest, issuer if issuer.is_dir() else state_dir / "bundles"),
                           properties_dir)
     status = {"status": "ready", "node_id": node["id"], "management_ip": node["address"]}
     setup.atomic_write(state_dir / "setup-status.json", json.dumps(status).encode())
@@ -300,12 +315,15 @@ def main():
     if os.geteuid() != 0:
         raise PermissionError("Cockpit administrator access is required")
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("prepare", "export"))
+    parser.add_argument("action", choices=("prepare", "export", "list-exports"))
     parser.add_argument("--source", choices=("new", "existing"), default="existing")
     parser.add_argument("--host")
     args = parser.parse_args()
     if args.action == "export":
         print(json.dumps(export_registration(args.host)))
+        return
+    if args.action == "list-exports":
+        print(json.dumps({"exports": registration_exports()}))
         return
     incoming = sys.stdin.buffer.read(MAX_INPUT + 1)
     if len(incoming) > MAX_INPUT:

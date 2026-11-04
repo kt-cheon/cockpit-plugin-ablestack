@@ -6,6 +6,34 @@
 **/
 var role = '';
 var os_type = sessionStorage.getItem('os_type');
+var ccvmBootstrapLicense = {
+  allowed: false,
+  label: '라이선스 확인 중',
+  reason: '라이선스 상태를 확인하고 있습니다.'
+};
+
+function renderCcvmBootstrapActions() {
+  const local = os_type === 'ablestack-standalone';
+  const before = $(local ? '#cloud-center-before-bootstrap-run' : '#ccvm-before-bootstrap-run');
+  const after = $(local ? '#cloud-center-after-bootstrap-run' : '#ccvm-after-bootstrap-run');
+  const state = sessionStorage.getItem('ccvm_bootstrap_status');
+  before.empty().hide();
+  after.empty().hide();
+  if (state === 'false') {
+    const license = ccvmBootstrapLicense;
+    $('<button>', {
+      id: 'menu-item-bootstrap-run-ccvm', type: 'button',
+      class: 'pf-v6-c-menu__item' + (license.allowed ? '' : ' pf-m-disabled'),
+      title: license.allowed ? '클라우드센터를 구성합니다.' : license.reason,
+      'aria-disabled': String(!license.allowed)
+    }).prop('disabled', !license.allowed)
+      .text('클라우드센터 구성하기' + (license.allowed ? '' : ' (' + license.label + ')'))
+      .on('click', ccvm_bootstrap_run).appendTo(before);
+    before.show();
+  } else if (state === 'true') {
+    after.html('<a class="pf-v6-c-menu__item" href="#" id="menu-item-linkto-storage-center-ccvm" onclick="cccc_link_go()">클라우드센터 연결</a>').show();
+  }
+}
 /** cloud vm start 관련 action start */
 $('#button-cloud-cluster-start').on('click', function(){
   $('#div-modal-start-cloud-vm').show();
@@ -574,6 +602,7 @@ function secondarySizeExpansionCheck(){
 /** 설정파일 다운로드 modal 관련 action start */
 $('#button-config-file-download').on('click', function(){
   $('#div-modal-config-file-download').show();
+  refreshClusterAgentRegistrationDownloads('#modal-cluster-agent-registration-downloads');
   if (typeof window.refreshSecurityEvidenceDownloadLink === 'function') {
     window.refreshSecurityEvidenceDownloadLink();
   }
@@ -687,14 +716,11 @@ function CardCloudClusterStatus(){
           if(ccvmStatus.ccvm == 'false'){
             sessionStorage.setItem("ccvm_bootstrap_status","false");
             console.log('ccvm false in')
-            $('#ccvm-after-bootstrap-run').html('');
-            $('#ccvm-before-bootstrap-run').html('<a class="pf-v6-c-menu__item pf-m-disabled" href="#" id="menu-item-bootstrap-run-ccvm" onclick="ccvm_bootstrap_run()">클라우드센터 구성하기</a>');
           }else if (ccvmStatus.ccvm == 'true'){
             sessionStorage.setItem("ccvm_bootstrap_status","true");
             console.log('ccvm true in')
-            $('#ccvm-after-bootstrap-run').html('<a class="pf-v6-c-menu__item" href="#" id="menu-item-linkto-storage-center-ccvm" onclick="cccc_link_go()">클라우드센터 연결</a>');
-            $('#ccvm-before-bootstrap-run').html('');
           }
+          renderCcvmBootstrapActions();
         }).catch(function(data){
         console.log('ClusterStatusInfo spawn error(ablestackJson.py');
 
@@ -906,69 +932,58 @@ function applyCardStatusTone($target, tone) {
   $target.removeAttr("style");
 }
 function license_check(){
-  cmd = ["curl", "-s", "-k", "https://localhost:8080/api/v1/license"];
-  ablestack.spawn(cmd).then(function(data){
-    var retVal = JSON.parse(data);
-    if(retVal.code == 500){
-      var license_type = "";
-      cmd = ['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update', '--depth1', 'license', '--depth2', 'status', '--value', 'false'];
-      ablestack.spawn(cmd).then(function(data){
-        var retVal = JSON.parse(data);
-        if(retVal.code == 200){
-          cmd = ['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update', '--depth1', 'license', '--depth2', 'type', '--value', license_type];
-          ablestack.spawn(cmd).then(function(data){
-            var retVal = JSON.parse(data);
-            if(retVal.code == 200){
-              console.log("License check result: No license found");
-            }
-          })
-        }
-      })
-      sessionStorage.setItem("license_type", license_type);
-      $('#ccvm-before-bootstrap-run').show();
-      $('#menu-item-bootstrap-run-ccvm').removeClass('pf-m-disabled');
-      $('#ccvm-before-bootstrap-run').hide();
-      if (!$('#menu-item-bootstrap-run-ccvm').hasClass('pf-m-disabled')) {
-        $('#menu-item-bootstrap-run-ccvm').addClass('pf-m-disabled');
+  ccvmBootstrapLicense = {allowed: false, label: '라이선스 확인 중', reason: '라이선스 상태를 확인하고 있습니다.'};
+  renderCcvmBootstrapActions();
+  return ablestack.spawn(['curl', '-s', '-k', '--connect-timeout', '5', '--max-time', '10',
+    'https://localhost:8080/api/v1/license']).then(function (data) {
+    let result = JSON.parse(data);
+    // The license API can return an object or a JSON-encoded string.
+    if (typeof result === 'string') result = JSON.parse(result);
+    if (!result || typeof result !== 'object') throw new Error('Invalid license response');
+    if (result.code !== undefined && result.code != 200 && result.code != 404 && result.code != 500) {
+      throw new Error('License lookup failed');
+    }
+    const info = result.val && typeof result.val === 'object' ? result.val : result;
+    let allowed = false;
+    let label = '라이선스 등록 필요';
+    let reason = '라이선스 관리에서 유효한 라이선스를 등록한 후 클라우드센터를 구성해 주십시오.';
+    if (result.code != 500 && result.code != 404) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(info.expired) || typeof info.oem !== 'string' || !info.oem) {
+        throw new Error('Invalid license information');
       }
-    }else{
-      var date = new Date();
-      var local_date = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-      var retVal = JSON.parse(retVal);
-      var license_type = retVal.oem;
-      var expired_date_str = retVal.expired;
-      var expired_date_parts = expired_date_str.split("-");
-      var expired_date = new Date(
-        parseInt(expired_date_parts[0]),
-        parseInt(expired_date_parts[1]) - 1,
-        parseInt(expired_date_parts[2])
-      );
-      if (local_date > expired_date){
-        $('#ccvm-before-bootstrap-run').hide();
-        if (!$('#menu-item-bootstrap-run-ccvm').hasClass('pf-m-disabled')) {
-          $('#menu-item-bootstrap-run-ccvm').addClass('pf-m-disabled');
-        }
-      }else{
-        cmd = ['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update', '--depth1', 'license', '--depth2', 'status', '--value', 'true'];
-        ablestack.spawn(cmd).then(function(data){
-          var retVal = JSON.parse(data);
-          if(retVal.code == 200){
-            cmd = ['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update', '--depth1', 'license', '--depth2', 'type', '--value', license_type];
-            ablestack.spawn(cmd).then(function(data){
-              var retVal = JSON.parse(data);
-              if(retVal.code == 200){
-                console.log("license check update success");
-              }else{
-                console.log("license check update error");
-              }
-            })
-          }
-        })
-        sessionStorage.setItem("license_type", license_type);
-        $('#ccvm-before-bootstrap-run').show();
-        $('#menu-item-bootstrap-run-ccvm').removeClass('pf-m-disabled');
+      const parts = info.expired.split('-').map(Number);
+      const expiry = new Date(parts[0], parts[1] - 1, parts[2]);
+      if (expiry.getFullYear() !== parts[0] || expiry.getMonth() !== parts[1] - 1 || expiry.getDate() !== parts[2]) {
+        throw new Error('Invalid license expiry date');
+      }
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      allowed = today <= expiry && (!info.status || info.status === 'active');
+      if (!allowed) {
+        label = '라이선스 만료·비활성';
+        reason = '라이선스가 만료되었거나 비활성 상태입니다. 라이선스 관리에서 확인해 주십시오.';
       }
     }
+    ccvmBootstrapLicense = {allowed: allowed, label: label, reason: reason};
+    const licenseType = allowed ? info.oem : '';
+    sessionStorage.setItem('license_type', licenseType);
+    renderCcvmBootstrapActions();
+    // Serialize updates because both commands write the same JSON file.
+    return ablestack.spawn(['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update',
+      '--depth1', 'license', '--depth2', 'status', '--value', String(allowed)]).then(function (response) {
+      if (JSON.parse(response).code != 200) return;
+      return ablestack.spawn(['python3', pluginpath + '/python/ablestack_json/ablestackJson.py', 'update',
+        '--depth1', 'license', '--depth2', 'type', '--value', licenseType]);
+    }).catch(function () {
+      createLoggerInfo('라이선스 확인 결과 저장에 실패했습니다.');
+    });
+  }).catch(function () {
+    ccvmBootstrapLicense = {
+      allowed: false, label: '라이선스 확인 실패',
+      reason: '라이선스 상태를 확인하지 못했습니다. 잠시 후 다시 시도하거나 라이선스 관리를 확인해 주십시오.'
+    };
+    sessionStorage.setItem('license_type', '');
+    renderCcvmBootstrapActions();
   });
 }
 /**

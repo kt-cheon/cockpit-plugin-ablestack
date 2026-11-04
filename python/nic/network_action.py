@@ -47,6 +47,22 @@ def createArgumentParser():
     return tmp_parser
 
 
+def getNicLinkState(device):
+    """Report Ethernet carrier state independently of NetworkManager activation."""
+    try:
+        output = ethtool(device, _env=dict(env, LC_ALL='C'), _timeout=3)
+    except (sh.ErrorReturnCode, sh.TimeoutException, OSError) as error:
+        logger.warning('Unable to read link state for %s: %s', device, error)
+        return 'unknown'
+    for line in output.splitlines():
+        field, separator, value = line.partition(':')
+        if separator and field.strip() == 'Link detected':
+            link = value.split()
+            if link:
+                return {'yes': 'connected', 'no': 'disconnected'}.get(link[0], 'unknown')
+    return 'unknown'
+
+
 def listNetworkInterface(H=False):
     # output = nmcli_cmd('-c', 'no', '-f', 'TYPE,ACTIVE,DEVICE,STATE,SLAVE', 'con', 'show')
     # output = nmcli_cmd('-c', 'no', '-f', 'ALL', 'con', 'show')
@@ -70,6 +86,7 @@ def listNetworkInterface(H=False):
         if 'bridge' in item['TYPE']:
             bridges.append(item)
         elif 'ether' in item['TYPE']:
+            item['STATE'] = getNicLinkState(item['DEVICE'])
             fin = ethtool(i=item['DEVICE']).splitlines()
             for line in fin:
                 if "bus-info" in line:

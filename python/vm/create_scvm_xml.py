@@ -14,6 +14,7 @@ import sys
 import fileinput
 import random
 import os
+from pathlib import Path
 import sh
 
 from ablestack import *
@@ -117,6 +118,16 @@ def generateDecToHex():
 json_data = openClusterJson()
 os_type = json_data["clusterConfig"]["type"]
 
+def isNonRotationalDisk(disk, sysfs_root='/sys/class/block'):
+    """Only advertise SSD media when the selected device reports itself as non-rotational."""
+    try:
+        device = Path(disk).resolve(strict=True).name
+        rotational = Path(sysfs_root) / device / 'queue' / 'rotational'
+        return rotational.read_text(encoding='ascii').strip() == '0'
+    except (OSError, RuntimeError, UnicodeError):
+        return False
+
+
 def createScvmXml(args):
     try:
         alphabet = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z',]
@@ -176,10 +187,11 @@ def createScvmXml(args):
                         dpl_txt = ""
                         num = 0
                         for disk in args.disk_passthrough_list:
+                            rotation_rate = " rotation_rate='1'" if isNonRotationalDisk(disk) else ''
                             dpl_txt += "    <disk type='block' device='disk'>\n"
                             dpl_txt += "      <driver name='qemu' type='raw' cache='none' io='io_uring' discard='unmap'/>\n"
                             dpl_txt += "      <source dev='" + disk + "'/>\n"
-                            dpl_txt += "      <target dev='sd"+ alphabet[num] +"' bus='scsi' rotation_rate='1'/>\n"
+                            dpl_txt += "      <target dev='sd"+ alphabet[num] +"' bus='scsi'" + rotation_rate + "/>\n"
                             dpl_txt += "      <blockio logical_block_size='512' physical_block_size='4096'/>\n"
                             dpl_txt += "      <alias name='scsi0-0-0-"+ str(num) +"'/>\n"
                             dpl_txt += "      <address type='drive' controller='0' bus='0' target='0' unit='"+ str(num) +"'/>\n"

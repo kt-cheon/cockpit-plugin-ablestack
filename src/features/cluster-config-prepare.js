@@ -48,32 +48,7 @@ async function prepareClusterAgent(hostFileType, osType, hostsJson, ccvmIp, pcsH
     process.then(resolve, function (error, message) { reject(new Error(message || error.message)); });
   });
   const result = JSON.parse(response);
-  const downloads = $('#cluster-agent-registration-downloads').empty();
-  if (result.exports.length) {
-    $('<p>').text('다른 호스트의 클러스터 구성 준비에서 해당 호스트용 통신 등록 파일을 사용하십시오.').appendTo(downloads);
-  }
-  result.exports.forEach(function (host) {
-    $('<button>', {type: 'button', class: 'pf-v6-c-button pf-m-link'}).text(host + ' 통신 등록 파일 다운로드')
-      .on('click', async function () {
-        this.disabled = true;
-        try {
-          const content = await ablestack.spawn(['python3', '/usr/libexec/ablestack/node-agent/cluster_enrollment.py',
-            'export', '--host', host], {err: 'message'});
-          const url = URL.createObjectURL(new Blob([content], {type: 'application/json'}));
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = host + '.cube-agent.json';
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-        } catch (error) {
-          alert('통신 등록 파일 다운로드에 실패했습니다: ' + error.message);
-        } finally {
-          this.disabled = false;
-        }
-      }).appendTo(downloads);
-  });
+  renderClusterAgentRegistrationDownloads('#cluster-agent-registration-downloads', result.exports);
   clusterAgentRegistration = null;
   $('#form-input-cluster-agent-registration').val('');
   return result;

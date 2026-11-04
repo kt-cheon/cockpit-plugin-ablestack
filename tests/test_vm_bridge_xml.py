@@ -1,6 +1,7 @@
 """Render real VM templates without libvirt, host firewall or remote execution."""
 import ast
 import fileinput
+from functools import partial
 from pathlib import Path
 import random
 import shlex
@@ -28,6 +29,20 @@ class VmBridgeXmlTests(unittest.TestCase):
                         self.root / "tools/xml-template/powerflex-scvm-xml-template.xml")
         self.ovs = False
         self.commands = []
+        self.sysfs = self.root / 'sys/class/block'
+
+    def disk(self, name, rotational, alias_type='by-id'):
+        device = self.root / 'dev' / name
+        device.parent.mkdir(parents=True, exist_ok=True)
+        device.touch()
+        if rotational is not None:
+            queue = self.sysfs / name / 'queue'
+            queue.mkdir(parents=True, exist_ok=True)
+            (queue / 'rotational').write_text(rotational)
+        alias = self.root / 'dev/disk' / alias_type / ('fixture-' + name)
+        alias.parent.mkdir(parents=True, exist_ok=True)
+        alias.symlink_to(device)
+        return str(alias)
 
     def system(self, command):
         self.commands.append(command)
@@ -50,11 +65,13 @@ class VmBridgeXmlTests(unittest.TestCase):
         tree = ast.parse((REPO / "python/vm" / ("create_" + name + "_xml.py")).read_text())
         create = "createCcvmXml" if name == "ccvm" else "createScvmXml"
         functions = [node for node in tree.body if isinstance(node, ast.FunctionDef)
-                     and node.name in (create, "generateMacAddress", "generateDecToHex")]
+                     and node.name in (create, "generateMacAddress", "generateDecToHex", "isNonRotationalDisk")]
         namespace = {"os": SimpleNamespace(system=self.system), "fileinput": fileinput, "sys": sys,
-                     "random": random, "pluginpath": str(self.root), "os_type": cluster_type,
+                     "random": random, "Path": Path, "pluginpath": str(self.root), "os_type": cluster_type,
                      "createReturn": lambda **kwargs: kwargs}
         exec(compile(ast.Module(body=functions, type_ignores=[]), name + "-xml.py", "exec"), namespace)
+        if name == 'scvm':
+            namespace['isNonRotationalDisk'] = partial(namespace['isNonRotationalDisk'], sysfs_root=self.sysfs)
         options = dict(cpu=8, memory=16, management_network_bridge="bridge0", service_network_bridge="bridge1",
                        host_names=["cube1 cube2 cube3"], storage_traffic_network_type="bridge",
                        server_network_bridge="storage0", replication_network_bridge="replication0",
@@ -87,7 +104,7 @@ class VmBridgeXmlTests(unittest.TestCase):
                          "/var/lib/libvirt/images/scvm-cloudinit.iso")
 
     def test_disk_passthrough_maps_each_disk_to_the_configured_scsi_iothread(self):
-        paths = ["/dev/disk/by-id/wwn-0x5000000000000001", "/dev/disk/by-id/wwn-0x5000000000000002"]
+        paths = [self.disk('sdb', '0\n'), self.disk('sdc', '1\n', 'by-path'), self.disk('nvme0n1', '0\n', 'by-path')]
         for cluster_type in ("ablestack-hci", "powerflex"):
             with self.subTest(cluster_type=cluster_type):
                 root = self.render("scvm", cluster_type=cluster_type,
@@ -97,19 +114,31 @@ class VmBridgeXmlTests(unittest.TestCase):
                 self.assertEqual(controller.get("model"), "virtio-scsi")
                 self.assertEqual(controller.find("driver").attrib, {"iothread": "1"})
                 disks = root.findall("./devices/disk[@type='block'][@device='disk']")
-                self.assertEqual(len(disks), 2)
+                self.assertEqual(len(disks), 3)
                 for index, disk in enumerate(disks):
                     self.assertEqual(disk.find("driver").attrib, {"name": "qemu", "type": "raw", "cache": "none",
                                                                  "io": "io_uring", "discard": "unmap"})
                     self.assertEqual(disk.find("source").get("dev"), paths[index])
-                    self.assertEqual(disk.find("target").attrib,
-                                     {"dev": ["sda", "sdb"][index], "bus": "scsi", "rotation_rate": "1"})
+                    expected_target = {"dev": ["sda", "sdb", "sdc"][index], "bus": "scsi"}
+                    if index != 1:
+                        expected_target['rotation_rate'] = '1'
+                    self.assertEqual(disk.find("target").attrib, expected_target)
                     self.assertEqual(disk.find("blockio").attrib,
                                      {"logical_block_size": "512", "physical_block_size": "4096"})
                     self.assertEqual(disk.find("address").get("controller"), "0")
                     self.assertEqual(disk.find("address").get("unit"), str(index))
                 boot_disk = root.find("./devices/disk[@type='file'][@device='disk']")
                 self.assertEqual(boot_disk.find("driver").attrib, {"name": "qemu", "type": "qcow2"})
+
+    def test_unknown_disk_media_does_not_set_rotation_rate(self):
+        paths = [self.disk('sdb', None), self.disk('sdc', 'unknown\n'), str(self.root / 'missing-disk')]
+        for cluster_type in ('ablestack-hci', 'powerflex'):
+            with self.subTest(cluster_type=cluster_type):
+                root = self.render('scvm', cluster_type=cluster_type,
+                                   disk_type='disk_passthrough', disk_passthrough_list=paths)
+                disks = root.findall("./devices/disk[@type='block'][@device='disk']")
+                self.assertEqual(len(disks), len(paths))
+                self.assertTrue(all('rotation_rate' not in disk.find('target').attrib for disk in disks))
 
     def test_pci_and_lun_passthrough_do_not_add_disk_iothread_or_sector_overrides(self):
         for disk_type in ("lun_passthrough", "raid_passthrough"):

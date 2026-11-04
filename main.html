@@ -1221,6 +1221,28 @@
     </div>
 </div>
 
+<!-- 센터 구성 진행 로그 : Modal 영역 시작 -->
+<div id="div-modal-center-bootstrap" class="pf-v6-c-backdrop" style="display:none">
+    <div class="pf-v6-l-bullseye">
+        <div class="pf-v6-c-modal-box pf-m-lg" role="dialog" aria-modal="true" aria-labelledby="center-bootstrap-title">
+            <header class="pf-v6-c-modal-box__header">
+                <h1 class="pf-v6-c-modal-box__title" id="center-bootstrap-title">센터 구성 진행</h1>
+            </header>
+            <div class="pf-v6-c-modal-box__body">
+                <p id="center-bootstrap-status" role="status"></p>
+                <pre id="center-bootstrap-log" class="ablestack-bootstrap-log" role="log" aria-live="polite" tabindex="0"></pre>
+                <p id="center-bootstrap-log-path"></p>
+            </div>
+            <footer class="pf-v6-c-modal-box__footer">
+                <svg id="center-bootstrap-spinner" class="pf-v6-c-spinner pf-m-sm" role="progressbar" viewBox="0 0 100 100" aria-label="구성 진행 중">
+                    <circle class="pf-v6-c-spinner__path" cx="50" cy="50" r="45" fill="none" />
+                </svg>
+                <button id="button-close-center-bootstrap" class="pf-v6-c-button pf-m-primary" type="button" disabled>닫기</button>
+            </footer>
+        </div>
+    </div>
+</div>
+
 <!-- 실행중 : PFMP Modal 영역 시작 -->
 <div id="div-modal-spinner-pfmp" class="pf-v6-c-backdrop" style="display: none;">
     <div class="pf-v6-l-bullseye">
@@ -1523,6 +1545,10 @@
                                 href="#">파일을 다운로드 하시려면 클릭하십시오</a>
                         </span>
                         <br />
+                        <div>
+                            - 호스트 통신 등록 파일 다운로드 :
+                            <div id="modal-cluster-agent-registration-downloads" aria-live="polite"></div>
+                        </div>
                         <span>
                             - ABLESTACK 보안 취약점 증적 자료 :
                             <a class="pf-v6-c-button pf-m-link pf-m-disabled" id="span-modal-security-evidence-download"
@@ -2288,6 +2314,7 @@
 <div class="pf-v6-c-backdrop" id="div-change-alert-cloud-vm"></div>
 <!-- 해당 페이지에 필요한 javascript 파일 추가 영역 시작 -->
 <!-- <script src="./src/features/card-cloud-center-status.js"></script> -->
+<script src="./src/common/cluster-agent-registration.js"></script>
 <script src="./src/features/cloud-center-virtual-machine.js"></script>
 <script src="./src/features/main.js"></script>
 <script src="./src/features/card-cloud-cluster-status.js"></script>

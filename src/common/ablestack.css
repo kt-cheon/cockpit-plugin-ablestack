@@ -758,6 +758,20 @@ html.pf-v6-theme-dark #div-modal-disk-image-create .pf-v6-c-form-control {
   overflow: hidden;
 }
 
+.ablestack-bootstrap-log {
+  min-height: 16rem;
+  max-height: 50vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid var(--pf-t--global--border--color--default);
+  border-radius: 0.5rem;
+  background: var(--pf-t--global--background--color--secondary--default);
+  font-size: 0.875rem;
+}
+
 .ablestack-spinner-wrap {
   display: flex;
   justify-content: center;

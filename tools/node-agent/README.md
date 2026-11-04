@@ -114,6 +114,8 @@ RPM은 첫 부팅/네트워크 연결 후 설치 자료를 확인하는 초기�
 3. 두 번째·세 번째 호스트도 브리지 구성 후 기존 마법사의 프로파일 **기존 파일 사용**을
    선택합니다. 같은 `cluster.json`과 해당 호스트용 통신 등록 파일을 선택하고 완료합니다.
    자기 호스트명, 실제 관리 IP, 프로파일 일치, 인증서와 키를 검증한 후 등록합니다.
+   완료 화면과 메인 화면의 **설정파일 다운로드**에서 현재 호스트용 통신 등록 파일을
+   다시 다운로드할 수 있습니다. 첫 발급 호스트에서는 모든 호스트용 파일을 제공합니다.
    기존 SSH 키 입력·다운로드는 Cephadm 등 별도 SSH 사용 구성 요소를 위해 유지됩니다.
 4. HCI에서는 호스트별 SCVM 번들을 배치합니다. ABLESTACK-VM/Standalone에서는 SCVM을
    발급하거나 배포하지 않습니다. CCVM은 클러스터의 단일 VM이며 PCS 후보 호스트에
@@ -122,6 +124,23 @@ RPM은 첫 부팅/네트워크 연결 후 설치 자료를 확인하는 초기�
 5. 각 VM 생성 시 cloud-init에 그 VM의 번들과 일치하는 에이전트 RPM을 넣습니다.
    CCVM seed ISO는 기존 배포 코드가 PCS 후보에 복사하므로 실제 시작 호스트를
    특정하지 않습니다. PCS 배포 완료 확인도 후보 호스트 모두의 실행 상태를 확인합니다.
+
+**스토리지센터 구성하기**는 클릭한 호스트의 `scvm` 별칭에 해당하는 SCVM 한 대에서
+점보 프레임 통신을 먼저 검사합니다. 클릭한 호스트의 `/etc/hosts`에서 `pn*`, `scvm*`,
+`cn-scvm*` 별칭의 IPv4 주소를 중복 없이 추출하며 관리망 별칭(`scvm*-mngt`)은 제외합니다.
+별칭에 `ccvm`이 포함된 IP는 다른 스토리지 별칭이 함께 있어도 검사에서 제외합니다.
+각 IP로 `ping -n -M do -s 8972 -c 1 -W 2 IP`를 3회 실행하고 모두 응답해야 구성을 시작합니다.
+일부 패킷이 유실되거나 검사할 주소가 없으면 구성 스크립트와 완료 상태 변경을 실행하지 않습니다.
+통신 검사 실패 시 스토리지 네트워크 설정 문제, SCVM 배포·초기 설정 진행 중,
+케이블·스위치 연결 문제 등의 가능한 원인을 안내합니다. 잠시 후 재시도하고 계속 실패하면
+스토리지 네트워크와 스위치의 VLAN·MTU 설정을 확인하도록 표시합니다.
+
+스토리지센터·클라우드센터 구성은 진행 창에서 주요 단계를 한국어로 표시합니다.
+현재 호스트의 최신 bootstrap 스크립트를 해당 VM에 전달하므로 이미 배포한 VM에서도
+진행 로그를 볼 수 있습니다. 상세 명령 출력은 실행 호스트의 `/var/log/scvm_bootstrap.log`,
+`/var/log/ccvm_bootstrap.log`에 관리자 전용으로 저장하고 화면에는 진행 메시지만 표시합니다.
+완료·실패 후에도 창을 유지하며 성공 후 닫기를 누르면 상태를 갱신합니다.
+모든 구성 작업에 성공한 뒤에만 각 호스트의 구성 완료 상태를 저장합니다.
 
 HCI의 CCVM 배포는 Ceph 디스크 이미지 변환과 크기 변경에 성공한 뒤 PCS 리소스를
 생성합니다. 디스크 준비 실패 시 명령의 오류를 화면에 반환하고 리소스 생성으로
@@ -501,6 +520,7 @@ python3 -m unittest discover -s tests -p 'test_node_agent.py' -v
 python3 -m unittest discover -s tests -p 'test_node_setup.py' -v
 python3 -m unittest discover -s tests -p 'test_management_firewall.py' -v
 python3 -m unittest discover -s tests -p 'test_firewall_updates.py' -v
+python3 -m unittest discover -s tests -p 'test_center_bootstrap.py' -v
 python3 -m unittest discover -s tests -p 'test_cluster_enrollment.py' -v
 python3 -m unittest discover -s tests -p 'test_ccvm_pcs_owner.py' -v
 python3 -m unittest discover -s tests -p 'test_ccvm_disk_preparation.py' -v
@@ -512,6 +532,8 @@ python3 -m unittest discover -s tests -p 'test_vm_readiness.py' -v
 node tests/test_privileged.js
 node tests/test_cluster_enrollment.js
 node tests/test_vm_readiness.js
+node tests/test_ccvm_bootstrap_visibility.js
+node tests/test_center_bootstrap.js
 node tests/test_system_update_fallback.js
 ```
 

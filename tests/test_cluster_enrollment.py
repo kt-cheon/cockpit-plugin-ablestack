@@ -122,12 +122,26 @@ class ClusterEnrollmentTests(unittest.TestCase):
         result = self.prepare("cube2", registration=registration)
         self.assertEqual(result["node_id"], "cube2")
         self.assertFalse((self.root / "cube2/var/authority").exists())
-        self.assertEqual(result["exports"], [])
+        self.assertEqual(result["exports"], ["cube2"])
         self.assertEqual(provision.fingerprint(self.root / "cube1/etc/ca.crt"), provision.fingerprint(self.root / "cube2/etc/ca.crt"))
         self.assertNotEqual((self.root / "cube1/etc/node.key").read_bytes(), (self.root / "cube2/etc/node.key").read_bytes())
         saved = self.root / "cube2/properties/cube2.cube-agent.json"
         self.assertEqual(json.loads(saved.read_text()), registration)
         self.assertEqual(stat.S_IMODE(saved.stat().st_mode), 0o600)
+
+    def test_saved_download_list_includes_all_issuer_hosts_and_only_the_joined_host_on_members(self):
+        self.assertEqual(enrollment.registration_exports(self.root / "unprepared"), [])
+        self.prepare(allow_create=True)
+        self.assertEqual(enrollment.registration_exports(self.root / "cube1/var"), ["cube1", "cube2", "cube3"])
+        for host in ("cube2", "cube3"):
+            with self.subTest(host=host):
+                registration = self.export(host)
+                result = self.prepare(host, registration=registration)
+                self.assertEqual(result["exports"], [host])
+                self.assertEqual(enrollment.registration_exports(self.root / host / "var"), [host])
+                self.assertEqual(enrollment.export_registration(host, self.root / host / "var",
+                                                              self.root / host / "properties"), registration)
+                self.assertEqual(self.prepare(host)["exports"], [host])
 
     def test_ccvm_identity_stays_the_same_on_all_pcs_candidates(self):
         self.prepare(allow_create=True)

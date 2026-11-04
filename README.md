@@ -21,3 +21,7 @@ SCVM 배포 마법사는 기본적으로 PCI·Disk Passthrough만 표시합니�
 `false` 또는 설정 누락 시에는 LUN 선택과 안내 문구를 숨깁니다. 이 값은 마법사의
 표시만 제어하며 LUN XML 생성 및 배포 기능은 유지합니다. 설정에는 RPM의
 `%config(noreplace)`를 적용하므로 업데이트 시 기존 값을 보존합니다.
+
+Disk Passthrough는 선택한 각 디스크의 실제 장치 경로와 커널의 `queue/rotational` 값을
+확인합니다. 비회전 디스크(SSD·NVMe)로 확인되는 경우에만 VM XML에 `rotation_rate='1'`을
+추가하며 HDD 또는 종류를 확인할 수 없는 디스크에는 해당 속성을 생략합니다.
