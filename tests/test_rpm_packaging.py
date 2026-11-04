@@ -141,8 +141,12 @@ esac
         self.assertIn("ablecube-agent-1.0-1.noarch.rpm", result.stdout)
         self.assertIn("BUILD_LAYOUT = ablecube-and-agent-v1", result.stdout)
         self.assertIn(str(self.source / "tools/makerpm/ablestack.spec"), result.stdout)
-        for filename in ("noarch/ablecube-agent-1.0-1.noarch.rpm", "x86_64/ablecube-1.0-1.x86_64.rpm"):
-            self.assertTrue((self.source / "rpmbuild/RPMS" / filename).is_file())
+        packages = self.source / "rpmbuild/RPMS"
+        self.assertEqual({path.name for path in packages.iterdir()},
+                         {"ablecube-agent-1.0-1.noarch.rpm", "ablecube-1.0-1.x86_64.rpm"})
+        self.assertTrue(all(path.is_file() for path in packages.iterdir()))
+        self.assertIn(str(packages / "ablecube-1.0-1.x86_64.rpm"), result.stdout)
+        self.assertIn(str(packages / "ablecube-agent-1.0-1.noarch.rpm"), result.stdout)
         self.assertTrue((self.source / "rpmbuild/SRPMS/ablecube-1.0-1.src.rpm").is_file())
         self.assertEqual(len((self.root / "rpmbuild.log").read_text().splitlines()), 2)
 
@@ -166,7 +170,7 @@ esac
             self.assertIn(b"%package agent", archive.extractfile("ablecube-1.0/tools/makerpm/ablestack.spec").read())
 
     def test_previous_agent_rpm_cannot_mask_missing_new_output(self):
-        old = self.source / "rpmbuild/RPMS/noarch/ablecube-agent-1.0-1.noarch.rpm"
+        old = self.source / "rpmbuild/RPMS/ablecube-agent-1.0-1.noarch.rpm"
         old.parent.mkdir(parents=True)
         old.write_text("previous build")
         self.env["TEST_SKIP_AGENT_MODE"] = "-bb"
@@ -178,7 +182,7 @@ esac
         self.env["TEST_SKIP_MAIN_MODE"] = "-ba"
         with self.assertRaisesRegex(AssertionError, "Required RPM was not produced"):
             self.build_source()
-        self.assertFalse((self.source / "rpmbuild/RPMS/x86_64/ablecube-1.0-1.x86_64.rpm").exists())
+        self.assertFalse((self.source / "rpmbuild/RPMS/ablecube-1.0-1.x86_64.rpm").exists())
 
     def test_missing_final_agent_is_not_accepted_from_bootstrap_pass(self):
         self.env["TEST_SKIP_AGENT_MODE"] = "-ba"
@@ -326,10 +330,10 @@ class RpmUpgradeTests(unittest.TestCase):
 
             def build(version):
                 run(["bash", str(source / "tools/makerpm/rpmbuild.sh"), version, "1"])
-                agent_rpm = source / f"rpmbuild/RPMS/noarch/ablecube-agent-{version}-1.noarch.rpm"
+                agent_rpm = source / f"rpmbuild/RPMS/ablecube-agent-{version}-1.noarch.rpm"
                 self.assertEqual(run(["rpm", "-qp", "--qf", "%{NAME}", str(agent_rpm)]).stdout,
                                  "ablecube-agent")
-                return source / f"rpmbuild/RPMS/x86_64/ablecube-{version}-1.x86_64.rpm"
+                return source / f"rpmbuild/RPMS/ablecube-{version}-1.x86_64.rpm"
 
             legacy = build("1.0")
             install_root = root / "installed"

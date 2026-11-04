@@ -180,9 +180,8 @@ if ! printf '%s\n' "$AGENT_FILES" | grep -Fxq /usr/lib/systemd/system/cube-agent
   echo "The generated ablecube-agent RPM does not contain cube-agent.service." >&2
   exit 1
 fi
-mkdir -p "$TOP_DIR/RPMS/x86_64" "$TOP_DIR/RPMS/noarch"
-install -m 0644 "$MAIN_RPM" "$TOP_DIR/RPMS/x86_64/"
-install -m 0644 "$AGENT_RPM" "$TOP_DIR/RPMS/noarch/"
+# Publish both verified packages in one directory, regardless of architecture.
+install -m 0644 "$MAIN_RPM" "$AGENT_RPM" "$TOP_DIR/RPMS/"
 for source_rpm in "$SOURCE_STAGE/SRPMS/"*.src.rpm; do
   if [ -f "$source_rpm" ]; then
     install -m 0644 "$source_rpm" "$TOP_DIR/SRPMS/"
@@ -192,6 +191,6 @@ done
 echo
 echo "빌드 완료!"
 echo "검증한 RPM 2개:"
-echo "  $TOP_DIR/RPMS/x86_64/${NAME}-${VER}-${REL}.x86_64.rpm"
-echo "  $TOP_DIR/RPMS/noarch/${NAME}-agent-${VER}-${REL}.noarch.rpm"
+echo "  $TOP_DIR/RPMS/${NAME}-${VER}-${REL}.x86_64.rpm"
+echo "  $TOP_DIR/RPMS/${NAME}-agent-${VER}-${REL}.noarch.rpm"
 

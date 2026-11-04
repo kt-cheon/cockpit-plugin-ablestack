@@ -9,11 +9,11 @@
 ./tools/makerpm/rpmbuild.sh v4.5.1 261028 /path/to/cockpit-plugin-ablestack
 ```
 
-결과는 두 디렉터리에 나뉘어 생성됩니다.
+검증한 두 RPM은 아키텍처별 하위 디렉터리 없이 `rpmbuild/RPMS/` 한 곳에 생성됩니다.
 
 ```text
-rpmbuild/RPMS/x86_64/ablecube-<version>-<release>.x86_64.rpm
-rpmbuild/RPMS/noarch/ablecube-agent-<version>-<release>.noarch.rpm
+rpmbuild/RPMS/ablecube-<version>-<release>.x86_64.rpm
+rpmbuild/RPMS/ablecube-agent-<version>-<release>.noarch.rpm
 ```
 
 업데이트할 때는 설치된 패키지보다 높은 Version/Release를 사용하고 두 패키지를
@@ -23,7 +23,7 @@ rpmbuild/RPMS/noarch/ablecube-agent-<version>-<release>.noarch.rpm
 rpm -Uvh ./ablecube-agent-v4.5.1-261028.noarch.rpm ./ablecube-v4.5.1-261028.x86_64.rpm
 ```
 
-노드 에이전트 RPM은 `rpmbuild/RPMS/noarch/`에 생성됩니다. 일반 sudo 계정 지원과
+노드 에이전트 RPM도 `rpmbuild/RPMS/`에 함께 생성됩니다. 일반 sudo 계정 지원과
 SSH 전송 대체를 사용하려면 먼저 [노드 에이전트 배포 절차](../node-agent/README.md)에
 따라 호스트·관리 VM의 인증서와 연결을 준비합니다.
 공통 Kickstart에는 두 패키지와 기본 `member` 설정을 동일하게 설치합니다.
