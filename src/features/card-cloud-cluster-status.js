@@ -11,6 +11,7 @@ var ccvmBootstrapLicense = {
   label: '라이선스 확인 중',
   reason: '라이선스 상태를 확인하고 있습니다.'
 };
+var ccvmBootstrapLicenseRequest = null;
 
 function renderCcvmBootstrapActions() {
   const local = os_type === 'ablestack-standalone';
@@ -932,23 +933,28 @@ function applyCardStatusTone($target, tone) {
   $target.removeAttr("style");
 }
 function license_check(){
-  ccvmBootstrapLicense = {allowed: false, label: '라이선스 확인 중', reason: '라이선스 상태를 확인하고 있습니다.'};
+  if (ccvmBootstrapLicenseRequest) return ccvmBootstrapLicenseRequest;
+  // Keep the last verified result until the refresh returns a new license state.
   renderCcvmBootstrapActions();
-  return ablestack.spawn(['curl', '-s', '-k', '--connect-timeout', '5', '--max-time', '10',
-    'https://localhost:8080/api/v1/license']).then(function (data) {
+  ccvmBootstrapLicenseRequest = Promise.resolve().then(function () {
+    // Use the same local license validation as the license management screen.
+    return ablestack.spawn(['python3', pluginpath + '/python/license/register_license.py', '--status']);
+  }).then(function (data) {
     let result = JSON.parse(data);
-    // The license API can return an object or a JSON-encoded string.
+    // Normalize the response before reading its license fields.
     if (typeof result === 'string') result = JSON.parse(result);
     if (!result || typeof result !== 'object') throw new Error('Invalid license response');
-    if (result.code !== undefined && result.code != 200 && result.code != 404 && result.code != 500) {
+    if (result.code !== undefined && result.code != 200 && result.code != 404) {
       throw new Error('License lookup failed');
     }
     const info = result.val && typeof result.val === 'object' ? result.val : result;
     let allowed = false;
     let label = '라이선스 등록 필요';
     let reason = '라이선스 관리에서 유효한 라이선스를 등록한 후 클라우드센터를 구성해 주십시오.';
-    if (result.code != 500 && result.code != 404) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(info.expired) || typeof info.oem !== 'string' || !info.oem) {
+    if (result.code != 404) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(info.expired)
+        || !['active', 'inactive'].includes(info.status)
+        || (info.oem != null && typeof info.oem !== 'string')) {
         throw new Error('Invalid license information');
       }
       const parts = info.expired.split('-').map(Number);
@@ -958,14 +964,14 @@ function license_check(){
       }
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      allowed = today <= expiry && (!info.status || info.status === 'active');
+      allowed = today <= expiry && info.status === 'active';
       if (!allowed) {
         label = '라이선스 만료·비활성';
         reason = '라이선스가 만료되었거나 비활성 상태입니다. 라이선스 관리에서 확인해 주십시오.';
       }
     }
     ccvmBootstrapLicense = {allowed: allowed, label: label, reason: reason};
-    const licenseType = allowed ? info.oem : '';
+    const licenseType = allowed ? ((info.oem || '').trim() || 'ablestack') : '';
     sessionStorage.setItem('license_type', licenseType);
     renderCcvmBootstrapActions();
     // Serialize updates because both commands write the same JSON file.
@@ -984,7 +990,10 @@ function license_check(){
     };
     sessionStorage.setItem('license_type', '');
     renderCcvmBootstrapActions();
+  }).finally(function () {
+    ccvmBootstrapLicenseRequest = null;
   });
+  return ccvmBootstrapLicenseRequest;
 }
 /**
  * Meathod Name : scvm_bootstrap_run

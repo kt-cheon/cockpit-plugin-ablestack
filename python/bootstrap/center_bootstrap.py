@@ -56,7 +56,7 @@ def configure_center(kind, license_type, client, plugin_root, logfile, hosts_fil
     if kind == 'scvm':
         contents = hosts_file.read_text()
         targets = storage_targets(contents)
-        progress('구성 전 점보 프레임 통신 검사를 시작합니다.')
+        progress('스토리지 네트워크 통신을 확인합니다.')
         # The contextual "scvm" alias selects only this host's SCVM. All pings run there.
         probe = (Path(__file__).with_name('jumbo_precheck.py')).read_text()
         try:

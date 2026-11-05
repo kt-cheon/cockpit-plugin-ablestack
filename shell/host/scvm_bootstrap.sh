@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #########################################
-#Copyright (c) 2021 ABLECLOUD Co. Ltd.
+#Copyright (c) 2026 ABLECLOUD Co. Ltd.
 #########################################
 set -Ee -o pipefail
 bootstrap_stage='스토리지센터 구성을 준비합니다.'
@@ -12,7 +12,7 @@ trap 'code=$?; printf "[ABLESTACK-PROGRESS] 오류: %s (종료 코드 %s)\n" "$b
 cluster_host_lines() {
   awk '{sub(/#.*/, "")} NF >= 2 {print}' /etc/hosts
 }
-progress 'Ceph 클러스터 설정 파일을 생성합니다.'
+progress 'Glue 클러스터 설정 파일을 생성합니다.'
 #scvm의 PN-ip를 갖는 host목록 생성
 conffile=/root/ceph.conf
 imagename="localhost:15000/glue/daemon:Europa"
@@ -44,7 +44,7 @@ podman start registry
 
 #container image id추출
 image=$(/bin/podman inspect --format {{.ID}},{{.RepoDigests}} $imagename | cut -d "," -f 2 | sed 's/\[//' | sed 's/]//' )
-progress 'Ceph 클러스터를 초기화합니다. 모니터·관리자·대시보드 서비스를 배포합니다.'
+progress 'Glue 클러스터를 초기화합니다. 모니터·관리자·대시보드 서비스를 배포합니다.'
 cephadm --image "$image" bootstrap \
         --initial-dashboard-user admin \
         --initial-dashboard-password password \
@@ -68,8 +68,10 @@ progress '스토리지 성능 및 모니터링 컨테이너 설정을 적용합�
         ceph config set osd bluefs_buffered_io true
         ceph config set osd bluestore_prefer_deferred_size 0
         ceph config set osd bluestore_prefer_deferred_size_ssd 65536
+        ceph config set osd bluestore_prefer_deferred_size_hdd 65536
         ceph config set osd bluestore_deferred_batch_ops 0
         ceph config set osd bluestore_deferred_batch_ops_ssd 16
+        ceph config set osd bluestore_deferred_batch_ops_hdd 16
         ceph config set osd osd_memory_target 2684354560
         ceph config set osd osd_memory_target_autotune false
         ceph config set osd bluestore_throttle_bytes 67108864
@@ -86,7 +88,6 @@ progress '스토리지 성능 및 모니터링 컨테이너 설정을 적용합�
         ceph config set mgr mgr/cephadm/container_image_prometheus localhost:15000/prom/prometheus:Europa
         ceph config set mgr mgr/cephadm/container_image_loki localhost:15000/grafana/loki:Europa
         ceph config set mgr mgr/cephadm/container_image_promtail localhost:15000/grafana/promtail:Europa
-        ceph config set mgr mgr/cephadm/container_image_nvmeof-cli localhost:15000/glue/nvmeof-cli:Europa
         ceph config set mgr mgr/cephadm/container_image_nvmeof localhost:15000/glue/nvmeof:Europa
         ceph config set mgr mgr/cephadm/container_image_keepalived localhost:15000/glue/keepalived:2.2.4
         ceph config set mgr mgr/cephadm/container_image_haproxy localhost:15000/glue/haproxy:2.3
@@ -96,7 +97,7 @@ progress '스토리지 성능 및 모니터링 컨테이너 설정을 적용합�
 #* * * * * /usr/local/bin/ipcorrector
 #EOF
 #sed -e '/mon host/d' /etc/ceph/ceph.conf | sed -e 's/mon_host/mon host/' > /etc/ceph/ceph.conf_
-progress 'Ceph 설정 파일과 인증 정보를 클러스터 노드에 전달합니다.'
+progress 'Glue 설정 파일과 인증 정보를 클러스터 노드에 전달합니다.'
 grep fsid /etc/ceph/ceph.conf >> /root/ceph.conf
 sed -e '/mon_host/d' /root/ceph.conf > /etc/ceph/ceph.conf_
 cp /etc/ceph/ceph.conf_ /etc/ceph/ceph.conf
@@ -114,7 +115,7 @@ do
   /usr/libexec/ablestack/node-remote $host "(crontab -l 2>/dev/null; echo \"* * * * * /usr/local/bin/ipcorrector\") | crontab -"
 done
 
-progress 'Ceph 모니터를 배치하고 스토리지 호스트를 등록합니다.'
+progress 'Glue 모니터를 배치하고 스토리지 호스트를 등록합니다.'
 ceph orch apply mon --placement=3
 
 for host in $scvms
@@ -145,5 +146,5 @@ do
   /usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no $host systemctl enable --now glue-api.service
 done
 
-progress '스토리지센터 내부 구성이 완료되었습니다.'
+progress '스토리지센터 구성이 완료되었습니다.'
 exit

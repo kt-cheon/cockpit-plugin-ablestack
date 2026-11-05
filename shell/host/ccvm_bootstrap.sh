@@ -177,5 +177,5 @@ systemctl enable --now mold-usage.service
 
 # Delete bootstrap script file
 rm -rf /root/bootstrap.sh
-progress '클라우드센터 내부 구성이 완료되었습니다.'
+progress '클라우드센터 구성이 완료되었습니다.'
 

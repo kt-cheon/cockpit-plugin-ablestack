@@ -122,7 +122,11 @@ sys.exit(1 if address == os.environ.get('TEST_JUMBO_FAIL_IP') and attempt == 2 e
         for address in jumbo.storage_targets(HOSTS):
             self.assertEqual(sum(call[-1] == address for call in calls), 3)
         self.assertTrue(all(call[:-1] == ['-n', '-M', 'do', '-s', '8972', '-c', '1', '-W', '2'] for call in calls))
-        self.assertIn('cn-scvm2', output)
+        self.assertIn('스토리지 네트워크 통신을 확인합니다.', output)
+        self.assertIn('스토리지 네트워크 통신 검사가 정상적으로 완료되었습니다.', output)
+        for address in jumbo.storage_targets(HOSTS):
+            self.assertNotIn(address, output)
+        self.assertNotIn('응답', output)
         self.assertIn('구성이 완료되었습니다', output)
         self.assertNotIn('password=', output)
         self.assertIn(b'password=must-not-reach-the-browser', logfile)
@@ -135,7 +139,8 @@ sys.exit(1 if address == os.environ.get('TEST_JUMBO_FAIL_IP') and attempt == 2 e
             bootstrap.configure_center('scvm', 'hv', client, self.plugin, io.BytesIO(), self.hosts_file)
         self.assertEqual([event[0] for event in client.events], ['probe'])
         self.assertIn('cn-scvm2 (203.0.113.12)', output.getvalue())
-        self.assertIn('2/3 응답', output.getvalue())
+        self.assertNotIn('응답', output.getvalue())
+        self.assertNotIn('통신 검사가 정상적으로 완료되었습니다', output.getvalue())
         self.assertIn('1. 스토리지 네트워크', output.getvalue())
         self.assertIn('2. 일부 스토리지센터 가상머신이 아직 배포 중', output.getvalue())
         self.assertIn('3. 케이블 연결이나 스위치 포트 설정', output.getvalue())
@@ -205,7 +210,7 @@ sys.exit(1 if address == os.environ.get('TEST_JUMBO_FAIL_IP') and attempt == 2 e
         self.assertEqual(output.getvalue(), jumbo.PREFIX + '점보 프레임 검사\n' + jumbo.PREFIX + '완료\n')
 
     def test_shell_scripts_stop_and_report_the_stage_on_an_error(self):
-        for kind, marker in (('scvm', "progress 'Ceph"), ('ccvm', 'os_type=')):
+        for kind, marker in (('scvm', "progress 'Glue"), ('ccvm', 'os_type=')):
             with self.subTest(kind=kind):
                 source = (REPO / 'shell/host' / (kind + '_bootstrap.sh')).read_text()
                 header = source[:source.index(marker)]

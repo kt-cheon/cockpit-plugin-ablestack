@@ -58,10 +58,7 @@ def storage_targets(contents):
 def check_jumbo(contents):
     targets = storage_targets(contents)
     failures = []
-    progress('현재 호스트의 SCVM에서 점보 프레임 통신을 검사합니다. 대상 IP ' + str(len(targets)) + '개, 각 3회')
     for address, aliases in targets.items():
-        label = '/'.join(aliases) + ' (' + address + ')'
-        progress('점보 프레임 검사 중: ' + label)
         received = 0
         for _ in range(3):
             try:
@@ -72,15 +69,14 @@ def check_jumbo(contents):
                 received += result.returncode == 0
             except (OSError, subprocess.TimeoutExpired):
                 pass
-        if received == 3:
-            progress('통신 정상: ' + label + ' — 3/3 응답')
-        else:
+        if received != 3:
+            label = '/'.join(aliases) + ' (' + address + ')'
             failures.append(label)
-            progress('통신 실패: ' + label + ' — ' + str(received) + '/3 응답')
+            progress('통신 실패: ' + label)
     if failures:
-        progress('점보 프레임 검사 실패: ' + str(len(failures)) + '개 대상과 정상 통신하지 못해 스토리지센터 구성을 중단합니다.')
+        progress('스토리지 네트워크 통신 검사에 실패하여 스토리지센터 구성을 중단합니다.')
         return 1
-    progress('모든 대상의 점보 프레임 통신 검사가 완료되었습니다.')
+    progress('스토리지 네트워크 통신 검사가 정상적으로 완료되었습니다.')
     return 0
 
 

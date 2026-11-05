@@ -593,7 +593,7 @@ function scvm_bootstrap_run() {
             //cloudinit status: done 일때
             if (retVal.code == 200 && retVal.val == "status: done") {
               $('#modal-title-scvm-status').text("스토리지센터 구성하기");
-              $('#modal-description-scvm-status').html("<p>스토리지센터를 구성하시겠습니까?</p><p>구성 전 현재 호스트의 SCVM에서 스토리지망 점보 프레임 통신을 검사합니다. 모든 대상에서 3회씩 정상 응답이 있어야 구성을 진행합니다.</p>");
+              $('#modal-description-scvm-status').html("<p>스토리지센터를 구성하시겠습니까?</p>");
               $('#button-storage-vm-status-update').html("실행");
               $('#scvm-status-update-cmd').val("bootstrap");
               $('#div-modal-storage-vm-status-update').show();
@@ -2087,6 +2087,8 @@ function resetBootstrap() {
 }
 
 function ribbonWorker() {
+  // License verification must not wait for unrelated cluster or VM status queries.
+  license_check();
   if (os_type == "ablestack-vm") {
     Promise.all([
       pcsExeHost(),
@@ -2102,7 +2104,6 @@ function ribbonWorker() {
       })
       .finally(function () {
         checkDeployStatus();
-        license_check();
 
       });
   } else if (os_type == "ablestack-standalone") {
@@ -2118,7 +2119,6 @@ function ribbonWorker() {
       })
       .finally(function () {
         checkDeployStatus();
-        license_check();
 
       });
   } else if (os_type == "ablestack-hci-filesystem") {
@@ -2138,7 +2138,6 @@ function ribbonWorker() {
       })
       .finally(function () {
         checkDeployStatus();
-        license_check();
 
       });
   } else {
@@ -2146,7 +2145,6 @@ function ribbonWorker() {
     checkStorageVmStatus(), CardCloudClusterStatus(), new CloudCenterVirtualMachine().checkCCVM()]).then(function () {
       scanHostKey();
       checkDeployStatus();
-      license_check();
     });
   }
 }
