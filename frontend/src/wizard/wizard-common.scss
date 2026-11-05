@@ -1,0 +1,592 @@
+.ct-cluster-config-wizard__modal,
+.ct-storage-vm-wizard__modal,
+.ct-cloud-vm-wizard__modal,
+.ct-monitoring-center-wizard__modal,
+.ct-gfs-storage-wizard__modal {
+  --ct-wizard-height: 80vh;
+  --pf-v6-c-modal-box--MaxWidth: 1040px;
+  --pf-v6-c-modal-box--Width: min(96vw, 1040px);
+  width: min(96vw, 1040px);
+  max-width: min(96vw, 1040px);
+  box-sizing: border-box;
+}
+
+.ct-cluster-config-wizard,
+.ct-storage-vm-wizard,
+.ct-cloud-vm-wizard,
+.ct-monitoring-center-wizard,
+.ct-gfs-storage-wizard {
+  height: var(--ct-wizard-height);
+  background: #fff;
+  color: #0f172a;
+  font-family: "Apple SD Gothic Neo", Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
+
+.ct-cluster-config-wizard .pf-v6-c-wizard__nav-link,
+.ct-storage-vm-wizard .pf-v6-c-wizard__nav-link,
+.ct-cloud-vm-wizard .pf-v6-c-wizard__nav-link,
+.ct-monitoring-center-wizard .pf-v6-c-wizard__nav-link,
+.ct-gfs-storage-wizard .pf-v6-c-wizard__nav-link {
+  pointer-events: none;
+  cursor: default;
+}
+
+.ct-cluster-config-wizard:not(.ct-wizard--execution-visible) #cluster-config-finish,
+.ct-storage-vm-wizard:not(.ct-wizard--execution-visible) #storage-vm-deploy,
+.ct-cloud-vm-wizard:not(.ct-wizard--execution-visible) #cloud-vm-deploy,
+.ct-monitoring-center-wizard:not(.ct-wizard--execution-visible) #monitoring-deploy,
+.ct-gfs-storage-wizard:not(.ct-wizard--execution-visible) #gfs-deploy,
+.ct-cluster-config-wizard:not(.ct-wizard--complete-visible) #cluster-config-complete,
+.ct-storage-vm-wizard:not(.ct-wizard--complete-visible) #storage-vm-finish,
+.ct-cloud-vm-wizard:not(.ct-wizard--complete-visible) #cloud-vm-finish,
+.ct-monitoring-center-wizard:not(.ct-wizard--complete-visible) #monitoring-finish,
+.ct-gfs-storage-wizard:not(.ct-wizard--complete-visible) #gfs-finish {
+  display: none;
+}
+
+.ct-cluster-config-wizard__header,
+.ct-storage-vm-wizard__header,
+.ct-cloud-vm-wizard__header,
+.ct-monitoring-center-wizard__header,
+.ct-gfs-storage-wizard__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: #1a1a1a;
+  color: #fff;
+  padding: 18px 24px;
+  border-radius: 18px 18px 0 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ct-cluster-config-wizard__title,
+.ct-storage-vm-wizard__title,
+.ct-cloud-vm-wizard__title,
+.ct-monitoring-center-wizard__title,
+.ct-gfs-storage-wizard__title {
+  color: #fff;
+}
+
+.ct-cluster-config-wizard__subtitle,
+.ct-storage-vm-wizard__subtitle,
+.ct-cloud-vm-wizard__subtitle,
+.ct-monitoring-center-wizard__subtitle,
+.ct-gfs-storage-wizard__subtitle {
+  color: #fff;
+}
+
+.ct-cluster-config-wizard__subtitle p,
+.ct-storage-vm-wizard__subtitle p,
+.ct-cloud-vm-wizard__subtitle p,
+.ct-monitoring-center-wizard__subtitle p,
+.ct-gfs-storage-wizard__subtitle p {
+  color: inherit;
+  color: #fff;
+}
+
+.ct-cluster-config-wizard__close,
+.ct-storage-vm-wizard__close,
+.ct-cloud-vm-wizard__close,
+.ct-monitoring-center-wizard__close,
+.ct-gfs-storage-wizard__close {
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ct-cluster-config-wizard__footer,
+.ct-storage-vm-wizard__footer,
+.ct-cloud-vm-wizard__footer,
+.ct-monitoring-center-wizard__footer,
+.ct-gfs-storage-wizard__footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 24px;
+  border-top: 1px solid #e0e0e0;
+  background: #fff;
+}
+
+.ct-cluster-config-wizard,
+.ct-storage-vm-wizard,
+.ct-cloud-vm-wizard,
+.ct-monitoring-center-wizard,
+.ct-gfs-storage-wizard {
+  .pf-v6-c-button {
+    min-block-size: 38px;
+    padding-block: 7px;
+    padding-inline: 18px;
+    border-radius: 999px;
+    font-weight: 750;
+    letter-spacing: 0;
+    transition:
+      background-color 0.16s ease,
+      border-color 0.16s ease,
+      box-shadow 0.16s ease,
+      color 0.16s ease,
+      transform 0.16s ease;
+  }
+
+  .pf-v6-c-button:not(:disabled):hover {
+    transform: translateY(-1px);
+  }
+
+  .pf-v6-c-button.pf-m-primary {
+    border-color: #0066cc;
+    background: #0066cc;
+    box-shadow: 0 7px 16px rgb(0 102 204 / 22%);
+    color: #fff;
+  }
+
+  .pf-v6-c-button.pf-m-primary:not(:disabled):hover {
+    border-color: #004c99;
+    background: #004c99;
+    box-shadow: 0 10px 20px rgb(0 102 204 / 28%);
+  }
+
+  .pf-v6-c-button.pf-m-secondary {
+    border-color: #0066cc;
+    background: #fff;
+    color: #0050a4;
+    box-shadow: 0 4px 12px rgb(0 102 204 / 8%);
+  }
+
+  .pf-v6-c-button.pf-m-secondary:not(:disabled):hover {
+    border-color: #004c99;
+    background: #eef7ff;
+    color: #003f7d;
+  }
+
+  .pf-v6-c-button.pf-m-link {
+    min-block-size: 34px;
+    padding-inline: 12px;
+    color: #0066cc;
+    text-decoration: none;
+  }
+
+  .pf-v6-c-button.pf-m-link:not(:disabled):hover {
+    background: #eef7ff;
+    color: #004c99;
+  }
+
+  .pf-v6-c-button.pf-m-control {
+    display: inline-grid;
+    place-items: center;
+    min-inline-size: 34px;
+    min-block-size: 34px;
+    padding: 0;
+    border-color: #bcd3ff;
+    border-radius: 50%;
+    background: #fff;
+    color: #0050a4;
+    box-shadow: 0 4px 10px rgb(15 23 42 / 8%);
+  }
+
+  .pf-v6-c-button.pf-m-control:not(:disabled):hover {
+    border-color: #0066cc;
+    background: #eef7ff;
+  }
+
+  .pf-v6-c-button:disabled,
+  .pf-v6-c-button.pf-m-disabled {
+    border-color: #d8dadd;
+    background: #f4f6f8;
+    box-shadow: none;
+    color: #8a93a0;
+    transform: none;
+  }
+
+  .pf-v6-c-radio,
+  .pf-v6-c-check {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    min-block-size: 38px;
+    margin: 0;
+    padding-block: 8px;
+    padding-inline: 12px;
+    border: 1px solid #dbeafe;
+    border-radius: 999px;
+    background: #fff;
+    color: #0f172a;
+    box-shadow: 0 3px 9px rgb(15 23 42 / 4%);
+    cursor: pointer;
+    transition:
+      background-color 0.16s ease,
+      border-color 0.16s ease,
+      box-shadow 0.16s ease,
+      transform 0.16s ease;
+  }
+
+  .pf-v6-c-radio:hover,
+  .pf-v6-c-check:hover {
+    border-color: #73bcf7;
+    background: #fbfdff;
+    box-shadow: 0 6px 14px rgb(15 23 42 / 7%);
+  }
+
+  .pf-v6-c-radio:has(input:checked),
+  .pf-v6-c-check:has(input:checked) {
+    border-color: #0066cc;
+    background: #eef7ff;
+    box-shadow: 0 8px 18px rgb(0 102 204 / 14%);
+  }
+
+  .pf-v6-c-radio__input,
+  .pf-v6-c-check__input {
+    position: relative;
+    z-index: 2;
+    inline-size: 16px;
+    block-size: 16px;
+    accent-color: #0066cc;
+  }
+
+  .pf-v6-c-radio__label,
+  .pf-v6-c-check__label {
+    position: static;
+    color: inherit;
+    font-size: 14px;
+    font-weight: 720;
+    line-height: 1.35;
+    cursor: pointer;
+  }
+
+  .pf-v6-c-radio__label::after,
+  .pf-v6-c-check__label::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    cursor: pointer;
+  }
+
+  .pf-v6-c-check__description,
+  .pf-v6-c-radio__description {
+    color: #4f5255;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .pf-v6-c-form__label,
+  .pf-v6-c-form__label-text {
+    color: #334155;
+    font-weight: 750;
+  }
+
+  .pf-v6-c-form-control,
+  .pf-v6-c-form-select,
+  .pf-v6-c-text-area {
+    border-color: #d7e8ff;
+    border-radius: 10px;
+    background: #fff;
+    color: #0f172a;
+    box-shadow: none;
+  }
+
+  .pf-v6-c-form-control:focus-within,
+  .pf-v6-c-form-select:focus-within,
+  .pf-v6-c-text-area:focus-within {
+    border-color: #2b7fff;
+    box-shadow: 0 0 0 3px rgb(43 127 255 / 14%);
+  }
+}
+
+.ct-cluster-config-wizard__content,
+.ct-storage-vm-wizard__content,
+.ct-cloud-vm-wizard__content,
+.ct-monitoring-center-wizard__content,
+.ct-gfs-storage-wizard__content {
+  color: #0f172a;
+}
+
+.ct-cluster-config-wizard__review-accordion,
+.ct-storage-vm-wizard__review-accordion,
+.ct-cloud-vm-wizard__review-accordion,
+.ct-monitoring-center-wizard__review-accordion,
+.ct-gfs-storage-wizard__review-accordion {
+  gap: 10px;
+}
+
+.ct-cluster-config-wizard__review-section,
+.ct-storage-vm-wizard__review-section,
+.ct-cloud-vm-wizard__review-section,
+.ct-monitoring-center-wizard__review-section,
+.ct-gfs-storage-wizard__review-section {
+  border: 1px solid #dbeafe;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 6px 16px rgb(15 23 42 / 5%);
+  overflow: hidden;
+}
+
+.ct-cluster-config-wizard__review-header,
+.ct-storage-vm-wizard__review-header,
+.ct-cloud-vm-wizard__review-header,
+.ct-monitoring-center-wizard__review-header,
+.ct-gfs-storage-wizard__review-header {
+  min-block-size: 48px;
+  border: 0;
+  border-block-end: 1px solid #e0ecff;
+  border-radius: 0;
+  padding-block: 12px;
+  padding-inline: 16px;
+  background: #f8fbff;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 820;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease;
+}
+
+.ct-cluster-config-wizard__review-header:hover,
+.ct-storage-vm-wizard__review-header:hover,
+.ct-cloud-vm-wizard__review-header:hover,
+.ct-monitoring-center-wizard__review-header:hover,
+.ct-gfs-storage-wizard__review-header:hover {
+  background: #eef7ff;
+  color: #004c99;
+}
+
+.ct-chevron,
+.ct-storage-chevron,
+.ct-cloud-chevron,
+.ct-monitoring-chevron,
+.ct-gfs-chevron {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 28px;
+  block-size: 28px;
+  border: 1px solid #cfe3ff;
+  border-radius: 999px;
+  background: #fff;
+  color: #0066cc;
+}
+
+.ct-cluster-config-wizard__review-body,
+.ct-storage-vm-wizard__review-body,
+.ct-cloud-vm-wizard__review-body,
+.ct-monitoring-center-wizard__review-body,
+.ct-gfs-storage-wizard__review-body {
+  padding: 14px 16px 16px;
+  background: #fff;
+}
+
+.ct-cluster-config-wizard__review-detail,
+.ct-storage-vm-wizard__review-detail,
+.ct-cloud-vm-wizard__review-detail,
+.ct-monitoring-center-wizard__review-detail,
+.ct-gfs-storage-wizard__review-detail {
+  margin-inline-start: 0;
+
+  .pf-v6-c-description-list__term {
+    color: #334155;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .pf-v6-c-description-list__description {
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 650;
+    overflow-wrap: anywhere;
+  }
+}
+
+.ct-cluster-config-wizard__table-wrap,
+.ct-storage-vm-wizard__table-wrap,
+.ct-cloud-vm-wizard__table-wrap {
+  padding: 14px;
+  border: 1px solid #dbeafe;
+  border-radius: 14px;
+  background: #f8fbff;
+  box-shadow: 0 6px 16px rgb(15 23 42 / 5%);
+  overflow-x: auto;
+}
+
+.ct-cluster-config-wizard__table,
+.ct-storage-vm-wizard__table,
+.ct-cloud-vm-wizard__table {
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.ct-cluster-config-wizard__table th,
+.ct-storage-vm-wizard__table th,
+.ct-cloud-vm-wizard__table th {
+  color: #004c99;
+  background: #eef7ff;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.ct-cluster-config-wizard__table th,
+.ct-cluster-config-wizard__table td,
+.ct-storage-vm-wizard__table th,
+.ct-storage-vm-wizard__table td,
+.ct-cloud-vm-wizard__table th,
+.ct-cloud-vm-wizard__table td {
+  border-color: #e0ecff;
+}
+
+.ct-cluster-config-wizard__stepper-value,
+.ct-storage-vm-wizard__stepper-value,
+.ct-cloud-vm-wizard__stepper-value {
+  border-color: #bfdbfe;
+  border-radius: 999px;
+  color: #004080;
+  background: #eef7ff;
+  font-weight: 800;
+}
+
+.ct-storage-vm-wizard__info,
+.ct-cloud-vm-wizard__info,
+.ct-monitoring-center-wizard__info,
+.ct-gfs-storage-wizard__info,
+.ct-cluster-config-wizard__info {
+  border-color: #bfdbfe;
+  border-radius: 14px;
+  background: #eff6ff;
+  color: #0f172a;
+  box-shadow: 0 6px 16px rgb(15 23 42 / 5%);
+}
+
+.ct-storage-vm-wizard__status-list div,
+.ct-cloud-vm-wizard__status-list div,
+.ct-monitoring-center-wizard__status-list div,
+.ct-gfs-storage-wizard__status-list div {
+  min-block-size: 42px;
+  padding-block: 10px;
+  padding-inline: 12px;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  background: #fff;
+  color: #0f172a;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 4%);
+}
+
+div.ct-wizard-status-row {
+  min-block-size: 44px;
+  padding-block: 12px;
+  padding-inline: 14px;
+  border: 1px solid #d8dadd;
+  border-radius: 8px;
+  background: #fff;
+  color: #1f1f1f;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.ct-wizard-status-row.ct-wizard-status-row--running {
+  border-color: #73bcf7;
+  background: #f5f9ff;
+}
+
+.ct-wizard-status-row.ct-wizard-status-row--succeeded {
+  border-color: #95d58e;
+  background: #f4fbf1;
+}
+
+.ct-wizard-status-row.ct-wizard-status-row--failed {
+  border-color: #f4b1b2;
+  background: #fdf2f2;
+}
+
+.ct-wizard-status-label {
+  min-inline-size: 64px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ct-wizard-status-label .pf-v6-c-label__content {
+  inline-size: 100%;
+  justify-content: center;
+}
+
+.ct-wizard-status-row__text {
+  color: #1f1f1f;
+  font-weight: 700;
+}
+
+.ct-gfs-storage-wizard__disk-list,
+.ct-gfs-storage-wizard__sync-result {
+  border-color: #dbeafe;
+  background: #f8fbff;
+  box-shadow: 0 6px 16px rgb(15 23 42 / 4%);
+}
+
+.ct-gfs-storage-wizard__sync-target {
+  border-color: #dbeafe;
+  background: #fff;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 4%);
+}
+
+.ct-validation-error-modal {
+  width: min(560px, calc(100vw - 32px));
+  border-radius: 22px;
+  box-shadow: 0 18px 38px rgb(0 0 0 / 18%);
+
+  .pf-v6-c-modal-box__close {
+    inset-block-start: 10px;
+    inset-inline-end: 18px;
+  }
+
+  .pf-v6-c-modal-box__header {
+    padding-block-start: 42px;
+    padding-inline: 24px;
+  }
+
+  .pf-v6-c-modal-box__title {
+    color: #151515;
+    font-size: 20px;
+    font-weight: 800;
+    line-height: 1.35;
+  }
+
+  .pf-v6-c-modal-box__body {
+    padding-block-start: 18px;
+    padding-inline: 24px;
+  }
+
+  .pf-v6-c-modal-box__footer {
+    padding-block: 24px 32px;
+    padding-inline: 24px;
+  }
+
+  .pf-v6-c-button.pf-m-primary {
+    min-width: 72px;
+    border-radius: 999px;
+    font-weight: 700;
+  }
+}
+
+.ct-validation-error-modal__message {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 2px solid #c9190b;
+  border-radius: 14px;
+  color: #151515;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+
+  svg {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    color: #c9190b;
+  }
+}

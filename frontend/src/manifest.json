@@ -1,0 +1,24 @@
+{
+    "version": "1.0",
+    "name": "ablestack",
+    "requires": {
+        "cockpit": "318"
+    },
+
+
+    "menu": {
+        "index": {
+            "label": "ABLESTACK",
+            "order": 100,
+            "path": "index.html",
+            "docs": [
+                {
+                    "label": "ABLESTACK 문서",
+                    "url": "https://docs.ablecloud.io/"
+                }
+            ]
+        }
+    },
+
+    "content-security-policy": "img-src * data: 'unsafe-inline'; default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' *"
+}

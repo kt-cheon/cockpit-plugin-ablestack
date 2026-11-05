@@ -1,0 +1,215 @@
+@use "./wizard-common";
+
+.ct-monitoring-center-wizard {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  .pf-v6-c-wizard__nav {
+    min-width: 250px;
+  }
+
+  .pf-v6-c-wizard__nav-item {
+    margin: 4px 0;
+  }
+
+  .pf-v6-c-wizard__nav-link {
+    justify-content: flex-start;
+    font-weight: 600;
+  }
+
+  .pf-v6-c-wizard__nav-link::before {
+    background: #f0f0f0;
+    border-radius: 50%;
+  }
+
+  .pf-v6-c-wizard__nav-link.pf-m-current {
+    color: #1f70ff;
+  }
+
+  .pf-v6-c-wizard__nav-link.pf-m-current::before {
+    background: #4d7cff;
+  }
+
+  .pf-v6-c-wizard__main-body {
+    padding: 24px 24px;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+.ct-monitoring-center-wizard--nav-locked {
+  .pf-v6-c-wizard__nav,
+  .pf-v6-c-wizard__nav-link {
+    pointer-events: none;
+  }
+
+  .pf-v6-c-wizard__nav-link {
+    color: #7a7d81;
+  }
+}
+
+.ct-monitoring-center-wizard__content {
+  min-height: 360px;
+}
+
+.ct-monitoring-center-wizard__section {
+  margin-top: 32px;
+  margin-left: 15px;
+}
+
+.ct-monitoring-center-wizard__form-horizontal .pf-v6-c-form__group {
+  display: grid;
+  grid-template-columns: 165px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 16px;
+}
+
+.ct-monitoring-center-wizard__form-horizontal .pf-v6-c-form__group-control {
+  margin-top: 0;
+}
+
+.ct-monitoring-center-wizard__field-group {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin-top: 24px;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 20px;
+}
+
+.ct-monitoring-center-wizard__field-group .pf-v6-c-form__group {
+  display: grid;
+  grid-template-columns: 165px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 16px;
+  padding: 0;
+}
+
+.ct-monitoring-center-wizard__field-title {
+  font-weight: 600;
+  color: #1f70ff;
+  margin-bottom: 14px;
+}
+
+.ct-monitoring-center-wizard__host-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ct-monitoring-center-wizard__host-count-row .pf-v6-c-form__group-control {
+  max-width: 150px;
+}
+
+.ct-monitoring-center-wizard__ip-input {
+  width: min(70%, 720px);
+}
+
+.ct-monitoring-center-wizard__info {
+  margin-top: 16px;
+  background: #eef5ff;
+  border: 1px solid #bcd3ff;
+  color: #0b4ea2;
+}
+
+.ct-monitoring-center-wizard__info .pf-v6-c-alert__icon {
+  color: #1f70ff;
+}
+
+.ct-monitoring-center-wizard__review-accordion {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ct-monitoring-center-wizard__review-section {
+  border: 1px solid #d2d2d2;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.ct-monitoring-center-wizard__review-header {
+  width: 100%;
+  border: 1px solid #d2d2d2;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #f8f8f8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ct-monitoring-center-wizard__review-body {
+  padding: 12px 16px 16px;
+}
+
+.ct-monitoring-center-wizard__review-detail {
+  margin-left: 12px;
+}
+
+.ct-monitoring-center-wizard__review-detail
+.pf-v6-c-description-list__description {
+  color: #6a6e73;
+}
+
+.ct-monitoring-center-wizard__review-detail
+.pf-v6-c-description-list__term {
+  font-weight: 600;
+}
+
+.ct-monitoring-center-wizard__status-list {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ct-monitoring-center-wizard__status-list div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ct-monitoring-center-wizard__deploy-title {
+  font-weight: 600;
+}
+
+.ct-monitoring-center-wizard__helper-text {
+  margin-top: 6px;
+  color: #6a6e73;
+  font-size: 12px;
+}
+
+.ct-monitoring-chevron {
+  transition: transform 0.2s ease;
+  display: inline-flex;
+}
+
+.ct-monitoring-chevron--open {
+  transform: rotate(180deg);
+}
+
+@media (max-width: 1024px) {
+  .ct-monitoring-center-wizard {
+    .pf-v6-c-wizard__nav {
+      min-width: 220px;
+    }
+
+    .pf-v6-c-wizard__main-body {
+      padding: 20px;
+    }
+  }
+
+  .ct-monitoring-center-wizard__form-horizontal .pf-v6-c-form__group {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .ct-monitoring-center-wizard__review-header {
+    font-size: 14px;
+  }
+}

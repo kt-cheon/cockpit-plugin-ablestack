@@ -83,6 +83,20 @@ fi
 # rpmbuild 디렉터리 구조 생성
 mkdir -p "$TOP_DIR"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
+# The React UI is a static Cockpit page; Node.js is required only on the build machine.
+if [ -f "$BUILD_PATH/frontend/package.json" ]; then
+  if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+    echo "React UI build requires Node.js 22+ and npm on the build machine." >&2
+    exit 1
+  fi
+  if ! node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 22 ? 0 : 1)'; then
+    echo "React UI build requires Node.js 22 or later." >&2
+    exit 1
+  fi
+  npm --prefix "$BUILD_PATH/frontend" ci --no-audit --no-fund
+  npm --prefix "$BUILD_PATH/frontend" run build
+fi
+
 # 매번 비어 있는 작업 디렉터리를 사용해 이전 빌드의 삭제된 파일이 섞이지 않게 한다.
 SOURCE_STAGE="$(mktemp -d "$TOP_DIR/SOURCES/.${NAME}-${VER}.XXXXXX")"
 trap 'rm -rf -- "$SOURCE_STAGE"' EXIT
@@ -102,8 +116,9 @@ tar -C "$BUILD_PATH" \
   --exclude='*.rpmnew' \
   --exclude='*.rpmsave' \
   --exclude='*.rpmorig' \
-  -cf - README.md node_modules images main.html manifest.json sample shell src tools python \
-    index.html index.js main-glue.html main-glue-no-permission.html \
+  --exclude='frontend/node_modules' \
+  -cf - README.md node_modules images main.html manifest.json sample shell src tools python frontend \
+    index.html index.js react.html main-glue.html main-glue-no-permission.html \
   | tar -C "$SOURCE_PATH" -xf -
 
 mkdir -p "$SOURCE_PATH/tools/vmconfig"

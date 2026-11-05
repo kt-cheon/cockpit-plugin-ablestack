@@ -26,9 +26,9 @@ def run(args, **kwargs):
 
 
 def fixture(root):
-    for directory in ("node_modules", "images", "sample", "src", "shell/host", "python"):
+    for directory in ("node_modules", "images", "sample", "src", "shell/host", "python", "frontend"):
         (root / directory).mkdir(parents=True, exist_ok=True)
-    for filename in ("README.md", "main.html", "manifest.json", "index.html", "index.js",
+    for filename in ("README.md", "main.html", "manifest.json", "index.html", "index.js", "react.html",
                      "main-glue.html", "main-glue-no-permission.html", "shell/host/ipcorrector",
                      "shell/host/bootstrap.sh", "python/helper.py"):
         (root / filename).write_text("original\n")
@@ -113,7 +113,7 @@ esac
                      "tools/properties/cluster.json.rpmnew", "tools/properties/cluster.json.rpmsave",
                      "tools/properties/cluster.json.rpmorig", "rpmbuild/SOURCES/ablecube-1.0/stale",
                      "tools/properties/cube2.cube-agent.json", "tools/properties/cube2.cube-agent.json.bak",
-                     "tools/properties/.cube-setup-private")
+                     "tools/properties/.cube-setup-private", "frontend/node_modules/cached-package/private-data")
         for filename in artifacts:
             path = self.source / filename
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -168,6 +168,32 @@ esac
         with tarfile.open(self.source / "rpmbuild/SOURCES/ablecube-1.0.tar.gz") as archive:
             self.assertIn("ablecube-1.0/tools/node-agent/agent.py", archive.getnames())
             self.assertIn(b"%package agent", archive.extractfile("ablecube-1.0/tools/makerpm/ablestack.spec").read())
+
+    def test_react_bundle_is_built_before_source_export(self):
+        (self.source / 'frontend/package.json').write_text('{}')
+        self.stub('node', 'exit 0\n')
+        self.stub('npm', '''
+frontend_dir=$2
+case "$3" in
+  ci) mkdir -p "$frontend_dir/node_modules"; printf 'dependency' > "$frontend_dir/node_modules/fixture" ;;
+  run) mkdir -p "$frontend_dir/../src/react"; printf 'built React UI' > "$frontend_dir/../src/react/index.js" ;;
+  *) exit 7 ;;
+esac
+''')
+        self.build_source(str(self.source), '--source-only')
+        with tarfile.open(self.source / 'rpmbuild/SOURCES/ablecube-1.0.tar.gz') as archive:
+            self.assertEqual(archive.extractfile('ablecube-1.0/src/react/index.js').read(), b'built React UI')
+            self.assertIn('ablecube-1.0/react.html', archive.getnames())
+            self.assertNotIn('ablecube-1.0/frontend/node_modules/fixture', archive.getnames())
+
+    def test_react_dependency_failure_stops_packaging(self):
+        (self.source / 'frontend/package.json').write_text('{}')
+        self.stub('node', 'exit 0\n')
+        self.stub('npm', 'exit 3\n')
+        with self.assertRaises(AssertionError):
+            self.build_source(str(self.source), '--source-only')
+        self.assertFalse((self.source / 'rpmbuild/SOURCES/ablecube-1.0.tar.gz').exists())
+        self.assertFalse((self.root / 'rpmbuild.log').exists())
 
     def test_previous_agent_rpm_cannot_mask_missing_new_output(self):
         old = self.source / "rpmbuild/RPMS/ablecube-agent-1.0-1.noarch.rpm"

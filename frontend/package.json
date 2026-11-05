@@ -1,0 +1,36 @@
+{
+  "name": "ablestack-europa-react-ui",
+  "description": "React UI for the existing ABLESTACK Cockpit and Cube Agent workflows",
+  "type": "module",
+  "repository": "https://github.com/kt-cheon/cockpit-plugin-ablestack.git",
+  "license": "LGPL-2.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "test": "node --test tests/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "test:browser": "node tests/browser-check.mjs"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "esbuild": "0.27.2",
+    "esbuild-sass-plugin": "3.3.1",
+    "playwright-core": "^1.64.1",
+    "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "@patternfly/patternfly": "6.4.0",
+    "@patternfly/react-core": "^6.4.0",
+    "@patternfly/react-icons": "^6.4.0",
+    "@patternfly/react-styles": "6.4.0",
+    "@patternfly/react-table": "6.4.0",
+    "@patternfly/react-tokens": "6.4.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "private": true
+}

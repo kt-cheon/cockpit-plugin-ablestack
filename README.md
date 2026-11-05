@@ -8,6 +8,10 @@ ABLESTACK manages and distributes necessary packages and virtual machine applian
 공통 Kickstart 설치 후 브리지와 클러스터 구성 준비 단계에서 통신을 등록하는 절차는
 [클러스터 준비 안내](tools/node-agent/README.md#공통-kickstart와-클러스터-구성-준비)를 참고합니다.
 
+`ablestack-europa-react` 브랜치의 **ABLESTACK** 메뉴는 React 화면을 엽니다.
+호스트 대시보드·라이선스·배포·구성·운영 작업과 SCVM의 스토리지 서비스 관리를
+현재 Python·Shell·Cube Agent에 연결합니다. [React 빌드·시험 적용 안내](frontend/README.md)를 참고합니다.
+
 SCVM 배포 마법사는 기본적으로 PCI·Disk Passthrough만 표시합니다. LUN Passthrough도
 표시하려면 해당 Cube 호스트의 `/usr/share/cockpit/ablestack/tools/properties/ablestack.json`에서
 기존 설정을 유지한 채 아래 `ui` 항목을 추가하거나 값을 변경하고 마법사를 다시 여세요.
