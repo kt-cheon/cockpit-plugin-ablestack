@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import types
 import unittest
 from unittest.mock import Mock, patch
@@ -138,6 +139,32 @@ class ReactBridgeTests(unittest.TestCase):
         self.assertEqual(response['stage'], 'cloud_center_configure')
         self.assertEqual(response['raw']['ccvm_status'], 'running')
         self.assertIn('configure_cloud_vm', response['available_actions'])
+
+    def test_status_queries_preserve_completed_configuration_even_when_preparation_check_fails(self):
+        settings = {'bootstrap': {'scvm': 'true', 'ccvm': 'true', 'gfs_configure': 'true', 'local_configure': 'true'},
+                    'monitoring': {'wall': 'true'}, 'license': {'status': 'true'}}
+        for prepared in (True, False):
+            with self.subTest(prepared=prepared), tempfile.TemporaryDirectory() as directory:
+                properties = Path(directory)
+                profile = {'clusterConfig': {'type': 'ablestack-hci', 'hosts': [{'hostname': 'production1'}]}}
+                cluster_file, status_file = properties / 'cluster.json', properties / 'ablestack.json'
+                cluster_file.write_text(json.dumps(profile))
+                status_file.write_text(json.dumps(settings))
+                before = (cluster_file.read_bytes(), status_file.read_bytes())
+                with patch.object(bridge, 'PROPERTIES', properties), \
+                     patch.object(bridge, 'configuration_prepared', return_value=prepared), \
+                     patch.object(bridge, 'license_status', return_value={'code': 200, 'val': {'status': 'active'}}), \
+                     patch.object(bridge, 'vm_state', return_value='running'), \
+                     patch.object(bridge, 'pcs_status', return_value={'code': 200, 'val': {'health': 'ok', 'ccvm_running_node': 'production1'}}), \
+                     patch.object(bridge, 'tool', return_value={'code': 200, 'val': {'cluster_status': 'HEALTH_OK'}}) as tool:
+                    for _ in range(2):
+                        response = bridge.deployment_status()['data']
+                        for key in ('scvm_bootstrap_status', 'ccvm_bootstrap_status', 'wall_monitoring_status'):
+                            self.assertEqual(response['raw'][key], 'true')
+                        if prepared:
+                            self.assertEqual(response['stage'], 'ready')
+                self.assertEqual((cluster_file.read_bytes(), status_file.read_bytes()), before)
+                self.assertTrue(all('update' not in call.args for call in tool.call_args_list))
 
     def test_unreachable_pcs_does_not_suggest_deploying_a_duplicate_ccvm(self):
         with patch.object(bridge, 'cluster', return_value={'type': 'ablestack-hci'}), \

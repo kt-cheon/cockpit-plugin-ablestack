@@ -105,6 +105,34 @@ RPM이 소유하지 않는 운영 파일이므로 업그레이드에서도 내�
 RPM 업그레이드와 동작이 다릅니다. 설정을 보존하는 업데이트에는 `rpm -Uvh`
 또는 패키지 관리자의 업그레이드 기능을 사용합니다.
 
+### 업데이트 후 구성 준비 단계가 다시 표시되는 경우
+
+완료 여부는 `ablestack.json`의 `bootstrap.scvm`, `bootstrap.ccvm`,
+`monitoring.wall`과 `cluster.json`의 프로파일을 기준으로 확인합니다.
+기존 HTML 화면은 호스트 등록 또는 SSH 공개키 조회 실패 시 위 완료 값을
+모두 `false`로 저장하는 경로가 있었으며, 상태 조회가 완료 상태를 변경하지 않도록
+해당 자동 초기화 코드를 제거했습니다. 실제 구성 초기화와 가상머신 삭제는 사용자가
+별도로 실행하는 작업입니다.
+
+React 화면의 구성 준비 판정에는 프로파일의 호스트 목록, `/etc/hosts`의
+`ablecube` 항목, `/root/.ssh/id_rsa.pub` 존재 여부도 사용합니다.
+따라서 완료 값이 유지돼도 이 중 하나가 없으면 구성 준비 단계가 다시 표시될 수 있습니다.
+화면 표시만으로 가상머신이나 센터 구성이 삭제됐다고 판단하지 않습니다.
+
+업데이트 직후 재구성을 실행하기 전에 다음을 확인합니다.
+
+```sh
+rpm -q ablecube ablecube-agent
+rpm -qc ablecube
+cat /usr/share/cockpit/ablestack/tools/properties/ablestack.json
+```
+
+`rpm -qc ablecube`에 `tools/properties`의 설정 파일이 없으면 설정 보존 속성이 없는
+이전 명세로 빌드된 RPM인지 확인합니다. 파일 내용이 유지된다면 프로파일·호스트 등록·
+공개키를 확인하여 미완료 판정의 원인을 확인합니다. 이미 완료 값이 사라진 경우에는
+업데이트 전 백업이나 실제 실행 상태를 확인한 뒤 복구하며, 모든 값을 일괄 `true`로
+설정하거나 센터 구성을 자동 재실행하지 않습니다.
+
 ## 설치 및 빌드 시 처리
 
 - 최초 설치에서만 `cockpit.socket`을 활성화합니다. 업데이트 시 Cockpit을
@@ -126,6 +154,8 @@ RPM 업그레이드와 동작이 다릅니다. 설정을 보존하는 업데이�
 
 ```sh
 python3 -m unittest discover -s tests -p 'test_rpm_packaging.py' -v
+node --test tests/test_configuration_status.js
+python3 -m unittest discover -s tests -p 'test_react_bridge.py' -v
 ```
 
 소스 아카이브의 제외 항목, RPM 파일 목록과 권한, 설치 후 동작을 검사합니다.

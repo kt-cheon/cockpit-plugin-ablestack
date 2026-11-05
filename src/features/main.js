@@ -694,7 +694,7 @@ function checkConfigStatus() {
               // ssh-key 파일 없음
               createLoggerInfo("no ssh-key file error");
               sessionStorage.setItem("ccfg_status", "false");
-              resetBootstrap();
+              // A failed status read must not reset the saved deployment state.
               resolve();
             })
           ablestack.spawn(["cat", pluginpath + "/tools/properties/cluster.json"])
@@ -713,13 +713,16 @@ function checkConfigStatus() {
               createLoggerInfo("cluster.json 파일 읽기 실패");
               console.log("cluster.json 파일 읽기 실패" + data);
             });
+        } else {
+          sessionStorage.setItem("ccfg_status", "false");
+          resolve();
         }
       })
       .catch(err => {
         // hosts 파일 구성 되지않음
         createLoggerInfo("hosts file not configured error");
         sessionStorage.setItem("ccfg_status", "false");
-        resetBootstrap();
+        // Preserve SCVM, CCVM and monitoring completion flags on query failure.
         resolve();
       })
   });
@@ -2040,49 +2043,6 @@ function pcsExeHost() {
     .catch(function (err) {
       createLoggerInfo("pcsExeHost err");
       console.log("pcsExeHost err : " + err);
-    });
-}
-
-/**
- * Meathod Name : resetBootstrap
- * Date Created : 2021.04.14
- * Writer : 박다정
- * Description : 클러스터 구성 전인 경우 bootstrap 관련 프로퍼티 초기화
- * Parameter : 없음
- * Return : 없음
- * History : 2021.04.14 최초 작성
- */
-function resetBootstrap() {
-  createLoggerInfo("resetBootstrap() start");
-  //scvm bootstrap 프로퍼티 초기화
-  ablestack.spawn(["python3", pluginpath + "/python/ablestack_json/ablestackJson.py", "update", "--depth1", "bootstrap", "--depth2", "scvm", "--value", "false"])
-    .then(function (data) {
-      createLoggerInfo("resetBootstrap scvm ok");
-      console.log("resetBootstrap scvm ok");
-    })
-    .catch(function (err) {
-      createLoggerInfo("resetBootstrap scvm err");
-      console.log("resetBootstrap scvm err : " + err);
-    });
-  //ccvm bootstrap 프로퍼티 초기화
-  ablestack.spawn(["python3", pluginpath + "/python/ablestack_json/ablestackJson.py", "update", "--depth1", "bootstrap", "--depth2", "ccvm", "--value", "false"])
-    .then(function (data) {
-      createLoggerInfo("resetBootstrap ccvm ok");
-      console.log("resetBootstrap ccvm ok");
-    })
-    .catch(function (err) {
-      createLoggerInfo("resetBootstrap ccvm err");
-      console.log("resetBootstrap ccvm err : " + err);
-    });
-  //wall monitoring 프로퍼티 초기화
-  ablestack.spawn(["python3", pluginpath + "/python/ablestack_json/ablestackJson.py", "update", "--depth1", "monitoring", "--depth2", "wall", "--value", "false"])
-    .then(function (data) {
-      createLoggerInfo("resetBootstrap wall ok");
-      console.log("resetBootstrap wall ok");
-    })
-    .catch(function (err) {
-      createLoggerInfo("resetBootstrap wall err");
-      console.log("resetBootstrap wall err : " + err);
     });
 }
 
