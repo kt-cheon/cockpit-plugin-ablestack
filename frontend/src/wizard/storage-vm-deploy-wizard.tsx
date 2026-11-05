@@ -1102,7 +1102,7 @@ export default function StorageVmDeployWizardModal({
             </Content>
 
             <Form className="ct-storage-vm-wizard__section ct-storage-vm-wizard__form-horizontal" isHorizontal>
-              <FormGroup label="클러스터 구성 파일 준비" isRequired fieldId="storage-vm-hosts-file-mode">
+              <FormGroup label={<>클러스터 구성 파일<br />준비</>} isRequired fieldId="storage-vm-hosts-file-mode">
                 <div className="ct-storage-vm-wizard__inline">
                   <Radio
                     id="storage-vm-hosts-file-existing"

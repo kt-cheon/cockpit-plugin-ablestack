@@ -63,6 +63,12 @@
   margin-top: 0;
 }
 
+.ct-cluster-config-wizard__form-horizontal .pf-v6-c-form__label-text {
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
 .ct-cluster-config-wizard__type-grid {
   display: grid;
   gap: 16px;

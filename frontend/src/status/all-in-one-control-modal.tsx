@@ -32,6 +32,9 @@ import {
     type DeployStatusData,
 } from "../services/api/deploy-status.ts";
 import { fetchDiskInventory, fetchNicInventory, type DiskInventoryOption, type InventorySelectOption } from "../services/api/inventory";
+import { useUiFeatures } from "../hooks/useUiFeatures";
+import { isClusterTypeVisible } from "../services/api/system-config";
+import ClusterManagementNetworkHelp from "../components/common/ClusterManagementNetworkHelp";
 
 interface AllInOneControlModalProps {
   isOpen: boolean;
@@ -466,6 +469,7 @@ export default function AllInOneControlModal({
     onStarted,
     onCompleted,
 }: AllInOneControlModalProps) {
+    const uiFeatures = useUiFeatures(isOpen);
     const [activeStep, setActiveStep] = React.useState(0);
     const [productType, setProductType] = React.useState<ProductType>(initialProductType(deployStatus));
     const [ccvmIp, setCcvmIp] = React.useState("");
@@ -1059,15 +1063,15 @@ export default function AllInOneControlModal({
                       label="클러스터 종류" isRequired
                       fieldId="all-in-one-product-type"
                     >
-                        <FormSelect
+                        {isClusterTypeVisible(productType, uiFeatures) ? <FormSelect
                           id="all-in-one-product-type"
                           value={productType}
                           onChange={(_event, value) => updateProductType(value as ProductType)}
                         >
-                            {PRODUCT_OPTIONS.map((option) => (
+                            {PRODUCT_OPTIONS.filter((option) => isClusterTypeVisible(option.value, uiFeatures)).map((option) => (
                                 <FormSelectOption key={option.value} value={option.value} label={option.label} />
                             ))}
-                        </FormSelect>
+                        </FormSelect> : <span>현재 구성: {productLabel(productType)}</span>}
                     </FormGroup>
                 </Form>
 
@@ -1084,8 +1088,11 @@ export default function AllInOneControlModal({
                                 />
                             )}
                             {isHci && (
-                                <label className="ct-all-in-one-node-ip-source" htmlFor="all-in-one-pcs-node-ip-source">
-                                    <span>노드 IP 기준</span>
+                                <div className="ct-all-in-one-node-ip-source">
+                                    <span className="ct-cluster-management-network-label">
+                                        <label htmlFor="all-in-one-pcs-node-ip-source">클러스터 관리 네트워크</label>
+                                        <ClusterManagementNetworkHelp />
+                                    </span>
                                     <FormSelect
                                       id="all-in-one-pcs-node-ip-source"
                                       value={pcsNodeIpSource}
@@ -1094,7 +1101,7 @@ export default function AllInOneControlModal({
                                         <FormSelectOption value="ablecube" label="Ablecube IP (관리망)" />
                                         <FormSelectOption value="ablecubePn" label="HOST PN (HPN)" />
                                     </FormSelect>
-                                </label>
+                                </div>
                             )}
                             <div className="ct-all-in-one-stepper">
                                 <Button
@@ -1111,9 +1118,6 @@ export default function AllInOneControlModal({
                             </div>
                         </div>
                     </div>
-                    {isHci && (
-                        <p className="ct-all-in-one-help">PCS 클러스터 노드 주소로 사용할 IP 항목을 선택합니다.</p>
-                    )}
                     <table className="ct-all-in-one-table">
                         <thead>
                             <tr>

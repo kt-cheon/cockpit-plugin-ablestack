@@ -693,7 +693,7 @@
 
 .ct-deploy-ribbon__actions--primary {
   align-self: flex-start;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 15px;
   margin-block-start: 0;
   min-inline-size: 0;
@@ -3131,6 +3131,12 @@
   }
 }
 
+@media (max-width: 1800px) {
+  .ct-deploy-ribbon__stage-list {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  }
+}
+
 @media (max-width: 900px) {
   .ct-deploy-ribbon__layout,
   .ct-deploy-overview__meta,
@@ -3159,6 +3165,7 @@
   }
 
   .ct-deploy-ribbon--pre-product .ct-deploy-ribbon__layout {
+    grid-template-columns: minmax(0, 1fr);
     min-block-size: auto;
   }
 
@@ -3191,6 +3198,15 @@
 }
 
 @media (max-width: 640px) {
+  .ct-deploy-ribbon__workflow-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ct-deploy-ribbon--pre-product .ct-deploy-ribbon__main,
+  .ct-deploy-ribbon--pre-product .ct-deploy-ribbon__flow-panel {
+    padding-inline: 18px;
+  }
+
   .ct-deploy-overview__header {
     display: grid;
   }

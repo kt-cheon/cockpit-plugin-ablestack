@@ -1,4 +1,5 @@
 import { requestCubeApi } from "./client";
+import { fetchUiFeatures } from "./system-config";
 
 export interface InventorySelectOption {
   value: string;
@@ -286,7 +287,7 @@ export async function fetchStorageVmDiskInventory(): Promise<StorageVmDiskInvent
   const seenLun = new Set<string>();
 
   return {
-    lunPassthroughEnabled: Boolean((await requestCubeApi<{val?: {ui?: {scvm_lun_passthrough?: boolean}}}>('/api/v1/cube/system/config')).val?.ui?.scvm_lun_passthrough),
+    lunPassthroughEnabled: (await fetchUiFeatures()).scvmLunPassthrough,
     raidDisks,
     lunDisks: lunDisks.filter((disk) => {
       if (seenLun.has(disk.value)) return false;

@@ -859,7 +859,7 @@ export default function CloudVmDeployWizardModal({
                 </Content>
               </Content>
               <Form className="ct-cloud-vm-wizard__section ct-cloud-vm-wizard__form-horizontal" isHorizontal>
-                <FormGroup label="클러스터 구성 파일 준비" isRequired fieldId="cloud-vm-hosts-file">
+                <FormGroup label={<>클러스터 구성 파일<br />준비</>} isRequired fieldId="cloud-vm-hosts-file">
                   <div className="ct-cloud-vm-wizard__inline">
                     <Radio
                       id="cloud-vm-hosts-file-existing"

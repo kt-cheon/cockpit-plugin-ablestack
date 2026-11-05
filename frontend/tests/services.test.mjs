@@ -13,6 +13,7 @@ before(async () => {
     export { fetchCloudClusterStatus } from './src/services/api/cloud-cluster-status.ts';
     export { fetchDeployStatus } from './src/services/api/deploy-status.ts';
     export { fetchNicInventory } from './src/services/api/inventory.ts';
+    export { fetchUiFeatures, isClusterTypeVisible } from './src/services/api/system-config.ts';
   `);
 });
 
@@ -84,4 +85,25 @@ test('every wizard receives only user bridges and preserves carrier state', asyn
   const inventory = await services.fetchNicInventory();
   assert.deepEqual(inventory.bridges.map((item) => item.value), ['', 'bridge0']);
   assert.match(inventory.passthroughNics[0].label, /connected/);
+});
+
+test('existing configuration files with no UI flags hide optional products', async () => {
+  for (const val of [{}, {ui: {}}, {ui: {cluster_type_powerflex: false, cluster_type_hci_filesystem: false}}]) {
+    handler = () => ({code: 200, val});
+    const features = await services.fetchUiFeatures();
+    assert.equal(services.isClusterTypeVisible('powerflex', features), false);
+    assert.equal(services.isClusterTypeVisible('ablestack-hci-filesystem', features), false);
+    for (const type of ['ablestack-hci', 'ablestack-vm', 'ablestack-standalone']) {
+      assert.equal(services.isClusterTypeVisible(type, features), true);
+    }
+  }
+});
+
+test('product visibility flags are independent and require JSON true', async () => {
+  for (const [powerflex, filesystem] of [[true, false], [false, true], [true, true], ['false', 'true']]) {
+    handler = () => ({code: 200, val: JSON.stringify({ui: {cluster_type_powerflex: powerflex, cluster_type_hci_filesystem: filesystem}})});
+    const features = await services.fetchUiFeatures();
+    assert.equal(services.isClusterTypeVisible('powerflex', features), powerflex === true);
+    assert.equal(services.isClusterTypeVisible('ablestack-hci-filesystem', features), filesystem === true);
+  }
 });

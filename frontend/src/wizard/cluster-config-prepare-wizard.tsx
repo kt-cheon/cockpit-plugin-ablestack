@@ -27,6 +27,8 @@ import cockpit from "cockpit";
 
 import ValidationErrorModal from "../components/common/ValidationErrorModal";
 import RegistrationInput from "../components/common/RegistrationInput";
+import FileAttachControl, { type FileAttachControlProps } from "../components/common/FileAttachControl";
+import ClusterManagementNetworkHelp from "../components/common/ClusterManagementNetworkHelp";
 import RegistrationDownloads from "../components/common/RegistrationDownloads";
 import WizardStepStatusLabel, { wizardStatusRowClass } from "../components/common/WizardStepStatus";
 import {
@@ -42,6 +44,8 @@ import {
   type SSHKeyBundleDownload,
 } from "../services/api/ssh-key.ts";
 import { fetchCurrentHostIp, fetchCurrentHostname } from "../services/host";
+import { useUiFeatures } from "../hooks/useUiFeatures";
+import { isClusterTypeVisible } from "../services/api/system-config";
 import "./cluster-config-prepare-wizard.scss";
 import {
   duplicateMessage,
@@ -440,6 +444,7 @@ export default function ClusterConfigPrepareWizardModal({
   onClose,
   onCompleted,
 }: ClusterConfigPrepareWizardModalProps) {
+  const uiFeatures = useUiFeatures(isOpen);
   const [registration, setRegistration] = React.useState<Record<string, unknown> | null>(null);
   const [clusterType, setClusterType] = React.useState<ClusterType>("ablestack-hci");
   const [sshKeyMode, setSshKeyMode] = React.useState<RadioValue>("new");
@@ -500,6 +505,7 @@ export default function ClusterConfigPrepareWizardModal({
   }, []);
 
   const resetState = React.useCallback(() => {
+    setRegistration(null);
     setClusterType("ablestack-hci");
     setSshKeyMode("new");
     setClusterHostMode("new");
@@ -549,6 +555,10 @@ export default function ClusterConfigPrepareWizardModal({
     onClose();
     resetState();
   };
+
+  React.useEffect(() => {
+    if (hostsFileMode !== "existing") setRegistration(null);
+  }, [hostsFileMode]);
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -756,7 +766,7 @@ export default function ClusterConfigPrepareWizardModal({
     value: ClusterType,
     title: string,
     description: string
-  ) => (
+  ) => isClusterTypeVisible(value, uiFeatures) ? (
     <button
       type="button"
       className={
@@ -774,7 +784,7 @@ export default function ClusterConfigPrepareWizardModal({
         </div>
       )}
     </button>
-  );
+  ) : null;
 
   const renderSSHKeyPreview = (compact = false) => {
     const isReady = sshKeyPreview.status === "ready";
@@ -828,87 +838,10 @@ export default function ClusterConfigPrepareWizardModal({
     );
   };
 
-  const renderFileAttachControl = ({
-    id,
-    inputRef,
-    filename,
-    placeholder,
-    accept,
-    isDisabled = false,
-    onFileSelect,
-    onClear,
-  }: {
-    id: string;
-    inputRef: React.RefObject<HTMLInputElement | null>;
-    filename: string;
-    placeholder: string;
-    accept?: string;
-    isDisabled?: boolean;
-    onFileSelect: (file: File) => void;
-    onClear: () => void;
-  }) => {
-    const hasFile = Boolean(filename);
-    const openFileDialog = () => {
-      if (!isDisabled) {
-        inputRef.current?.click();
-      }
-    };
-
-    return (
-      <div
-        className={[
-          "ct-file-attach",
-          hasFile ? "ct-file-attach--selected" : "",
-          isDisabled ? "ct-file-attach--disabled" : "",
-        ].filter(Boolean).join(" ")}
-      >
-        <input
-          ref={inputRef}
-          id={id}
-          className="ct-file-attach__input"
-          type="file"
-          accept={accept}
-          disabled={isDisabled}
-          onChange={(event) => {
-            const file = event.currentTarget.files?.[0];
-            if (file) {
-              onFileSelect(file);
-            }
-            event.currentTarget.value = "";
-          }}
-        />
-        <button
-          type="button"
-          className="ct-file-attach__surface"
-          disabled={isDisabled}
-          onClick={openFileDialog}
-          aria-label={`${placeholder} 파일 첨부`}
-        >
-          <span className="ct-file-attach__copy">
-            <strong>{filename || placeholder}</strong>
-            <small>
-              {filename
-                ? "선택된 파일입니다. 다시 누르면 다른 파일을 첨부합니다."
-                : "영역을 클릭해서 파일을 첨부하세요."}
-            </small>
-          </span>
-          <span className="ct-file-attach__action">파일 첨부</span>
-        </button>
-        <Button
-          type="button"
-          variant="secondary"
-          className="ct-file-attach__clear"
-          isDisabled={isDisabled || !hasFile}
-          onClick={onClear}
-        >
-          초기화
-        </Button>
-      </div>
-    );
-  };
+  const renderFileAttachControl = (props: FileAttachControlProps) => <FileAttachControl {...props} />;
 
   const clusterTypeLabel =
-    clusterType === "ablestack-hci"
+    clusterType === "powerflex" ? "PowerFlex" : clusterType === "ablestack-hci"
       ? "ABLESTACK-HCI"
       : clusterType === "ablestack-vm"
         ? "ABLESTACK-VM"
@@ -1691,12 +1624,13 @@ export default function ClusterConfigPrepareWizardModal({
                 <Content component="li">
                   ABLESTACK STANDALONE은 단일 서버에 로컬 스토리지를 활용해 가상화 환경을 구성할 수 있는 옵션입니다.
                 </Content>
-                <Content component="li">
+                {uiFeatures.hciFilesystem && <Content component="li">
                   ABLESTACK HCI Filesystem은 Glue 스토리지에서 생성한 RBD 이미지를 기반으로 GFS2 클러스터 파일시스템을 구성해,
                   여러 호스트가 동일 볼륨을 동시에 마운트하는 공유 스토리지 환경을 제공합니다.
-                </Content>
+                </Content>}
               </Content>
             </Content>
+            {!isClusterTypeVisible(clusterType, uiFeatures) && <p>등록된 프로파일의 클러스터 종류: {clusterTypeLabel}</p>}
             <div className="ct-cluster-config-wizard__type-grid">
               {renderClusterTypeCard("powerflex", "PowerFlex", "PowerFlex 스토리지 클러스터 구성")}
                 {renderClusterTypeCard(
@@ -1809,7 +1743,7 @@ export default function ClusterConfigPrepareWizardModal({
                 </div>
               </FormGroup>
               {hostsFileMode === "existing" && <RegistrationInput onChange={setRegistration} />}
-              <FormGroup label="클러스터 구성 파일 준비" isRequired fieldId="hosts-file-mode">
+              <FormGroup label={<>클러스터 구성 파일<br />준비</>} isRequired fieldId="hosts-file-mode">
                 <div className="ct-cluster-config-wizard__inline">
                   <Radio
                     id="hosts-file-new"
@@ -1864,7 +1798,8 @@ export default function ClusterConfigPrepareWizardModal({
               )}
 
               {isHciCluster && (
-                <FormGroup label="노드 IP 기준" isRequired fieldId="pcs-node-ip-source">
+                <FormGroup label="클러스터 관리 네트워크" labelHelp={<ClusterManagementNetworkHelp />}
+                  className="ct-cluster-management-network-field" isRequired fieldId="pcs-node-ip-source">
                   <FormSelect
                     id="pcs-node-ip-source"
                     value={pcsNodeIpSource}
@@ -1873,9 +1808,6 @@ export default function ClusterConfigPrepareWizardModal({
                     <FormSelectOption value="ablecube" label="Ablecube IP (관리망)" />
                     <FormSelectOption value="ablecubePn" label="HOST PN (HPN)" />
                   </FormSelect>
-                  <Content component="small">
-                    PCS 클러스터 노드 주소로 사용할 IP 항목을 선택합니다.
-                  </Content>
                 </FormGroup>
               )}
 
@@ -2092,7 +2024,7 @@ export default function ClusterConfigPrepareWizardModal({
                       )}
                       {isHciCluster && (
                         <DescriptionListGroup>
-                          <DescriptionListTerm>노드 IP 기준</DescriptionListTerm>
+                          <DescriptionListTerm>클러스터 관리 네트워크</DescriptionListTerm>
                           <DescriptionListDescription>
                             {pcsNodeIpSource === "ablecube" ? "Ablecube IP (관리망)" : "HOST PN (HPN)"}
                           </DescriptionListDescription>

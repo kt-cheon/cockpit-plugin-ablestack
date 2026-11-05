@@ -7,12 +7,12 @@ type Task = { job_id: string; status: string; message: string; logs: string[]; c
 const EMPTY: Task[] = [];
 const fetchTasks = async () => (await requestCubeApi<{ jobs: Task[] }>('/api/v1/cube/_tasks')).jobs;
 
-export default function TaskProgress() {
+export default function TaskProgress({ hideSucceeded = false }: { hideSucceeded?: boolean } = {}) {
   const { data, refresh } = useStatusPolling({ fetcher: fetchTasks, fallback: EMPTY, intervalMs: 2000, retainPreviousOnError: true });
   const [expanded, setExpanded] = React.useState(true);
   const [dismissed, setDismissed] = React.useState('');
   const task = data.find((item) => ['queued', 'running'].includes(item.status)) || data[0];
-  if (!task || task.job_id === dismissed) return null;
+  if (!task || task.job_id === dismissed || (hideSucceeded && task.status === 'succeeded')) return null;
   const running = ['queued', 'running'].includes(task.status);
   return <Alert isInline variant={running ? 'info' : task.status === 'failed' ? 'danger' : 'success'}
     title={task.message} actionLinks={<>

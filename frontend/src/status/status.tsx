@@ -31,11 +31,12 @@ import AblestackUpdateModal from "./ablestack-update-modal.tsx";
 import AllInOneControlModal from "./all-in-one-control-modal.tsx";
 import CloudResourceConfigureModal from "./cloud-resource-configure-modal.tsx";
 import ConfigFileDownloadModal from "./config-file-download-modal.tsx";
-import DeploymentOverview from "./deployment-overview.tsx";
+import DeploymentOverview, { isDeploymentComplete } from "./deployment-overview.tsx";
 import LicenseManagementModal from "./license-management-modal.tsx";
 import TaskProgress from "../components/common/TaskProgress";
 import VmBackupModal from "./vm-backup-modal";
 import SharedStorageModal from "./shared-storage-modal";
+import LocalStorageModal from "./local-storage-modal";
 import PowerflexStatus from "../cards/powerflex-status";
 import { requestCubeApi } from "../services/api/client";
 import { fetchCurrentHostname } from "../services/host";
@@ -54,6 +55,7 @@ type DeployClusterType =
 export default function StatusPage() {
     const [backupOpen, setBackupOpen] = React.useState(false);
     const [sharedOpen, setSharedOpen] = React.useState(false);
+    const [localStorageOpen, setLocalStorageOpen] = React.useState(false);
     const [gfsInventory, setGfsInventory] = React.useState<'gfs' | 'rbd'>('gfs');
     const [hostname, setHostname] = React.useState("");
     const [centerKind, setCenterKind] = React.useState<'scvm' | 'ccvm'>('ccvm');
@@ -145,9 +147,10 @@ export default function StatusPage() {
         setActionNotice("");
 
         switch (action) {
-        case "open_deploy_run":
-            openAllInOneControl();
-            break;
+        // 다중 호스트의 사전 구성 검증 정비 후 올인원 진입 경로를 복원합니다.
+        // case "open_deploy_run":
+        //     openAllInOneControl();
+        //     break;
         case "manage_license":
             setIsLicenseManagementOpen(true);
             break;
@@ -200,7 +203,7 @@ export default function StatusPage() {
             openCenterUrl("wallCenter", "모니터링센터 연결");
             break;
         case "configure_local_storage":
-            openAllInOneControl();
+            setLocalStorageOpen(true);
             break;
         case "run_security_patch":
             setIsSecurityPatchOpen(true);
@@ -324,7 +327,9 @@ export default function StatusPage() {
                         <option value="">배포·운영 작업</option>
                         <option value="download_config_file">설정파일 다운로드</option>
                         {deployStatus.raw.licenseStatus.toLowerCase() === 'true' && <>
+                            {/* 다중 호스트 사전 구성 검증 정비 전까지 올인원 진입 항목 숨김.
                             <option value="open_deploy_run">배포 단계별 작업 제어</option>
+                            */}
                             <option value="prepare_cluster_config">클러스터 구성 준비</option>
                             <option value="deploy_storage_vm">스토리지센터 가상머신 배포</option>
                             <option value="configure_storage_vm">스토리지센터 구성</option>
@@ -339,13 +344,13 @@ export default function StatusPage() {
                         </>}
                     </select>
                 </Flex>
-                <TaskProgress />
+                <TaskProgress hideSucceeded />
             </PageSection>
             <PageSection
               variant={PageSectionVariants.default}
               className="ct-status-deploy-overview"
             >
-                <details className="ct-deploy-details" open={deployStatus.raw.clusterConfigStatus.toLowerCase() !== 'true'}>
+                <details className="ct-deploy-details" open={!isDeploymentComplete(deployStatus)}>
                 <summary>구성 및 배포 단계</summary>
                 <DeploymentOverview
                   key={`deploy-overview-${statusRefreshKey}`}
@@ -420,6 +425,7 @@ export default function StatusPage() {
               onClose={() => setIsConfigFileDownloadOpen(false)}
             />
             <VmBackupModal isOpen={backupOpen} onClose={() => setBackupOpen(false)} />
+            <LocalStorageModal isOpen={localStorageOpen} onClose={() => setLocalStorageOpen(false)} onCompleted={refreshDeployOverview} />
             <SharedStorageModal isOpen={sharedOpen} onClose={() => setSharedOpen(false)} onReady={() => {
                 setSharedOpen(false); setGfsInventory('rbd'); setIsGfsWizardOpen(true);
             }} />
@@ -429,6 +435,7 @@ export default function StatusPage() {
               onClose={() => { setIsLicenseManagementOpen(false); refreshDeployOverview(); }}
             />
 
+            {/* 다중 호스트 사전 구성 검증 정비 전까지 올인원 화면 진입 중단.
             <AllInOneControlModal
               isOpen={isAllInOneControlOpen}
               onClose={() => setIsAllInOneControlOpen(false)}
@@ -436,6 +443,7 @@ export default function StatusPage() {
               onStarted={setActionNotice}
               onCompleted={refreshDeployOverview}
             />
+            */}
 
             <SecurityPatchModal
               isOpen={isSecurityPatchOpen}

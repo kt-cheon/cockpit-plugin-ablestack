@@ -2,6 +2,10 @@ import React from "react";
 
 import {
     Button,
+    Dropdown,
+    DropdownItem,
+    DropdownList,
+    MenuToggle,
     Card,
     CardBody,
     CardHeader,
@@ -93,16 +97,16 @@ const PRODUCT_LABELS: Record<string, string> = {
 const STAGE_LABELS: Record<string, string> = {
     [LICENSE_STAGE]: "라이선스 등록",
     cluster_prepare: "클러스터 구성 준비",
-    storage_vm_deploy: "스토리지 VM 배포",
-    storage_vm_configure: "스토리지 VM 구성",
+    storage_vm_deploy: "스토리지센터 가상머신 배포",
+    storage_vm_configure: "스토리지센터 가상머신 배포",
     [STORAGE_CENTER_CONFIGURE_STAGE]: "스토리지센터 구성",
     [STORAGE_CENTER_CONNECT_STAGE]: "스토리지센터 연결",
     [STORAGE_CLUSTER_CONFIGURE_STAGE]: "스토리지 클러스터 상세 구성",
     [HCI_SHARED_FILE_CONFIGURE_STAGE]: "RBD/GFS 구성",
     gfs_storage_configure: "GFS 스토리지 구성",
     local_storage_configure: "로컬 스토리지 구성",
-    cloud_vm_deploy: "클라우드 VM 배포",
-    cloud_vm_configure: "클라우드 VM 구성",
+    cloud_vm_deploy: "클라우드센터 가상머신 배포",
+    cloud_vm_configure: "클라우드센터 가상머신 배포",
     [CLOUD_CENTER_CONFIGURE_STAGE]: "클라우드센터 구성",
     [CLOUD_CENTER_CONNECT_STAGE]: "클라우드센터 연결",
     cloud_cluster_configure: "클라우드 PCS 구성",
@@ -118,13 +122,13 @@ const STAGE_LABELS: Record<string, string> = {
 
 const MESSAGE_LABELS: Record<string, string> = {
     cluster_config_required: "클러스터 구성 준비가 필요합니다.",
-    storage_vm_not_deployed: "스토리지센터 VM 배포가 필요합니다.",
+    storage_vm_not_deployed: "스토리지센터 가상머신 배포가 필요합니다.",
     storage_vm_not_configured: "스토리지센터 구성이 필요합니다.",
     storage_cluster_not_configured: "스토리지 클러스터 상세 구성이 필요합니다.",
     hci_shared_file_not_configured: "RBD/GFS 구성이 필요합니다.",
     gfs_storage_not_configured: "GFS 스토리지 구성이 필요합니다.",
     local_storage_not_configured: "로컬 스토리지 구성이 필요합니다.",
-    cloud_vm_not_deployed: "클라우드센터 VM 배포가 필요합니다.",
+    cloud_vm_not_deployed: "클라우드센터 가상머신 배포가 필요합니다.",
     cloud_vm_not_configured: "클라우드센터 구성이 필요합니다.",
     cloud_cluster_not_configured: "클라우드센터 PCS 클러스터 구성이 필요합니다.",
     cloud_resource_not_configured: "클라우드센터 리소스 구성이 필요합니다.",
@@ -139,14 +143,14 @@ const ACTION_LABELS: Record<string, string> = {
     manage_license: "라이선스 관리",
     download_config_file: "설정파일 다운로드",
     prepare_cluster_config: "클러스터 구성 준비",
-    deploy_storage_vm: "스토리지 VM 배포",
+    deploy_storage_vm: "스토리지센터 가상머신 배포",
     configure_storage_vm: "스토리지센터 구성",
     open_storage_center: "스토리지센터 연결",
     configure_storage_cluster: "스토리지 클러스터 상세 구성",
     configure_hci_shared_file: "RBD/GFS 구성",
     configure_gfs_storage: "GFS 스토리지 구성",
     configure_local_storage: "로컬 스토리지 구성",
-    deploy_cloud_vm: "클라우드 VM 구성",
+    deploy_cloud_vm: "클라우드센터 가상머신 배포",
     configure_cloud_vm: "클라우드센터 구성",
     configure_cloud_cluster: "클라우드 PCS 구성",
     configure_cloud_resource: "클라우드 리소스 구성",
@@ -182,7 +186,7 @@ const ACTION_STAGE: Record<string, string> = {
 const FLOW_STAGE_ACTIONS: Record<string, string[]> = {
     [LICENSE_STAGE]: ["manage_license"],
     cluster_prepare: ["prepare_cluster_config", "download_config_file"],
-    storage_vm_configure: ["deploy_storage_vm", "configure_storage_vm", "download_config_file"],
+    storage_vm_configure: ["deploy_storage_vm", "download_config_file"],
     [STORAGE_CENTER_CONFIGURE_STAGE]: ["configure_storage_vm"],
     [STORAGE_CLUSTER_CONFIGURE_STAGE]: ["configure_storage_cluster"],
     [STORAGE_CENTER_CONNECT_STAGE]: ["open_storage_center"],
@@ -215,7 +219,7 @@ const FLOW_STAGE_PRIMARY_ACTIONS: Record<string, string[]> = {
 const STAGE_CLICK_ACTION: Record<string, string> = {
     [LICENSE_STAGE]: "manage_license",
     cluster_prepare: "prepare_cluster_config",
-    storage_vm_configure: "configure_storage_vm",
+    storage_vm_configure: "deploy_storage_vm",
     [STORAGE_CENTER_CONFIGURE_STAGE]: "configure_storage_vm",
     [STORAGE_CLUSTER_CONFIGURE_STAGE]: "configure_storage_cluster",
     [STORAGE_CENTER_CONNECT_STAGE]: "open_storage_center",
@@ -232,27 +236,27 @@ const STAGE_CLICK_ACTION: Record<string, string> = {
 const DEPLOY_RUN_STEP_LABELS: Record<string, string> = {
     license_apply: "라이선스 배포",
     cluster_apply: "클러스터 구성 적용",
-    scvm_prepare: "스토리지 VM 준비",
-    scvm_bootstrap: "스토리지 VM 후처리",
+    scvm_prepare: "스토리지센터 가상머신 배포",
+    scvm_bootstrap: "스토리지센터 구성",
     storage_prepare: "GFS/RBD 구성 준비",
     local_prepare: "로컬 스토리지 준비",
-    ccvm_prepare: "클라우드 VM 준비",
-    ccvm_bootstrap: "클라우드 VM 후처리",
+    ccvm_prepare: "클라우드센터 가상머신 배포",
+    ccvm_bootstrap: "클라우드센터 구성",
     system_profile: "시스템 프로필 반영",
 };
 
 const STAGE_DESCRIPTIONS: Record<string, string> = {
     [LICENSE_STAGE]: "라이선스 API로 등록한 뒤 systemProfile.license.status 값을 갱신합니다.",
     cluster_prepare: "클러스터 구성 파일과 호스트 상태를 확인하고 cluster apply를 준비합니다.",
-    storage_vm_configure: "SCVM cloud-init, XML, lifecycle API 흐름으로 스토리지 VM을 준비합니다.",
-    [STORAGE_CENTER_CONFIGURE_STAGE]: "SCVM bootstrap을 실행해 스토리지센터 초기 구성을 완료합니다.",
+    storage_vm_configure: "가상머신의 자원과 네트워크를 설정하고 스토리지센터 가상머신(SCVM)을 배포합니다.",
+    [STORAGE_CENTER_CONFIGURE_STAGE]: "스토리지센터 구성 스크립트를 실행해 배포된 가상머신에 초기 설정을 적용합니다.",
     [STORAGE_CENTER_CONNECT_STAGE]: "API가 반환한 Storage Center URL로 접속해 구성을 이어갑니다.",
     [STORAGE_CLUSTER_CONFIGURE_STAGE]: "SCVM host 등록 상태를 확인하고 OSD 등록, rbd pool 구성을 진행합니다.",
     [HCI_SHARED_FILE_CONFIGURE_STAGE]: "RBD image 생성, 물리 host rbd map, GFS API 흐름으로 HCI Filesystem 구성을 진행합니다.",
     gfs_storage_configure: "GFS disk/resource 상태를 확인하고 필요한 GFS 구성을 진행합니다.",
-    local_storage_configure: "local manage API 또는 올인원 Job으로 로컬 스토리지 구성을 진행합니다.",
-    cloud_vm_configure: "CCVM cloud-init, XML, lifecycle setup 흐름으로 클라우드 VM을 준비합니다.",
-    [CLOUD_CENTER_CONFIGURE_STAGE]: "Cloud Center 초기 구성 후 bootstrap.ccvm 완료 플래그를 반영합니다.",
+    local_storage_configure: "스토리지용 디스크를 선택해 로컬 스토리지를 구성합니다.",
+    cloud_vm_configure: "가상머신의 자원과 네트워크를 설정하고 클라우드센터 가상머신(CCVM)을 배포합니다.",
+    [CLOUD_CENTER_CONFIGURE_STAGE]: "클라우드센터 구성 스크립트를 실행해 배포된 가상머신에 초기 설정을 적용합니다.",
     [CLOUD_CENTER_CONNECT_STAGE]: "API가 반환한 Cloud Center URL로 접속합니다.",
     [MONITORING_CENTER_CONFIGURE_STAGE]: "Wall Center URL에서 모니터링 구성을 완료하고 bootstrap.wall을 반영합니다.",
     [MONITORING_CENTER_CONNECT_STAGE]: "API가 반환한 Monitoring Center URL로 접속합니다.",
@@ -389,6 +393,11 @@ function isStageDone(stage: string, status: DeployStatusData): boolean {
     default:
         return false;
     }
+}
+
+export function isDeploymentComplete(status: DeployStatusData): boolean {
+    const stages = stageItemsFor(status.osType);
+    return stages.length > 0 && stages.every((item) => isStageDone(item.id, status));
 }
 
 export function effectiveCurrentStage(status: DeployStatusData): string {
@@ -566,13 +575,13 @@ function rawStatusRows(status: DeployStatusData) {
     return [
         { label: "라이선스", value: raw.licenseStatus },
         { label: "클러스터 구성", value: raw.clusterConfigStatus },
-        { label: "스토리지 VM", value: raw.storageVmStatus },
-        { label: "스토리지 VM 구성", value: raw.storageVmBootstrapStatus },
+        { label: "스토리지센터 가상머신", value: raw.storageVmStatus },
+        { label: "스토리지센터 구성", value: raw.storageVmBootstrapStatus },
         { label: "스토리지 클러스터", value: raw.storageClusterStatus },
         { label: "GFS 구성", value: raw.gfsConfigureStatus },
         { label: "로컬 스토리지", value: raw.localConfigureStatus },
-        { label: "클라우드 VM", value: raw.cloudVmStatus },
-        { label: "클라우드 VM 구성", value: raw.cloudVmBootstrapStatus },
+        { label: "클라우드센터 가상머신", value: raw.cloudVmStatus },
+        { label: "클라우드센터 구성", value: raw.cloudVmBootstrapStatus },
         { label: "클라우드 PCS", value: raw.cloudClusterStatus },
         { label: "모니터링", value: raw.monitoringStatus },
         { label: "취약점 조치", value: raw.securityPatchStatus },
@@ -738,7 +747,7 @@ function stepLabel(status: "done" | "current" | "pending") {
     case "current":
         return (
             <span className="ct-stage-status ct-stage-status--current">
-                진행 필요
+                다음 단계
             </span>
         );
     default:
@@ -893,7 +902,7 @@ export default function DeploymentOverview({
     const currentStageDescription = useStatusPlaceholder
         ? "서버에서 현재 제품 구성과 배포 상태를 확인하고 있습니다."
         : STAGE_DESCRIPTIONS[currentStage] ?? "현재 단계의 진행 상태를 확인합니다.";
-    const isFlowComplete = stages.length > 0 && stages.every((item) => isStageDone(item.id, data));
+    const isFlowComplete = !useStatusPlaceholder && isDeploymentComplete(data);
     const blockingWarnings = flowWarnings(data);
     const message = useStatusPlaceholder
         ? (isInitialStatusLoading ? "배포 상태를 확인하고 있습니다." : "배포 상태 정보를 확인할 수 없습니다.")
@@ -937,9 +946,10 @@ export default function DeploymentOverview({
         currentStage === LICENSE_STAGE ||
         currentStage === "cluster_prepare" ||
         currentStage === PRODUCT_FLOW_PENDING_STAGE);
-    const isLicenseReady = data.raw.licenseStatus.toLowerCase() === "true";
-    const showDeployRunControl = !useStatusPlaceholder && isLicenseReady &&
-        !isStageDone(MONITORING_CENTER_CONNECT_STAGE, data);
+    // 다중 호스트의 사전 구성 검증을 정비할 때 올인원 진입 버튼과 함께 복원합니다.
+    // const isLicenseReady = data.raw.licenseStatus.toLowerCase() === "true";
+    // const showDeployRunControl = !useStatusPlaceholder && isLicenseReady &&
+    //     !isStageDone(MONITORING_CENTER_CONNECT_STAGE, data);
 
     if (mode === "ribbon") {
         return (
@@ -1020,7 +1030,7 @@ export default function DeploymentOverview({
                         </div>
 
                         <div className="ct-deploy-ribbon__flow-panel">
-                            <div className="ct-deploy-overview__section-title">제품 흐름</div>
+                            <div className="ct-deploy-overview__section-title">ABLESTACK 설치 및 구성 단계</div>
                             <div className="ct-deploy-ribbon__flow-content">
                                 {useStatusPlaceholder
                                     ? (
@@ -1060,7 +1070,7 @@ export default function DeploymentOverview({
                                 <span>단계 작업</span>
                                 <div className="ct-deploy-ribbon__workflow-controls">
                                     <div className="ct-deploy-ribbon__actions ct-deploy-ribbon__actions--primary">
-                                        {ribbonPrimaryActions.length === 0 && !showDeployRunControl && ribbonManagementActions.length === 0
+                                        {ribbonPrimaryActions.length === 0 && ribbonManagementActions.length === 0
                                             ? (
                                                 <span className="ct-deploy-overview__muted">
                                                     {useStatusPlaceholder
@@ -1078,6 +1088,7 @@ export default function DeploymentOverview({
                                                     {ACTION_LABELS[action] ?? action}
                                                 </Button>
                                             ))}
+                                        {/* 다중 호스트 사전 구성 검증 정비 전까지 올인원 버튼 숨김.
                                         {showDeployRunControl && (
                                             <Button
                                               variant="secondary"
@@ -1087,48 +1098,49 @@ export default function DeploymentOverview({
                                                 올인원 제어
                                             </Button>
                                         )}
+                                        */}
                                     </div>
                                     {ribbonManagementActions.length > 0 && (
                                         <div className="ct-deploy-ribbon__utility-menu">
-                                            <Button
-                                              variant="secondary"
-                                              className="ct-deploy-ribbon__action ct-deploy-ribbon__action--utility"
-                                              aria-expanded={isManagementActionsOpen}
-                                              onClick={() => setIsManagementActionsOpen((current) => !current)}
+                                            <Dropdown
+                                              isOpen={isManagementActionsOpen}
+                                              onOpenChange={setIsManagementActionsOpen}
+                                              onSelect={() => setIsManagementActionsOpen(false)}
+                                              className="ct-deploy-management-menu"
+                                              popperProps={{
+                                                  appendTo: () => document.body,
+                                                  direction: "up",
+                                                  position: "right",
+                                                  distance: 8,
+                                                  enableFlip: true,
+                                                  preventOverflow: true,
+                                              }}
+                                              toggle={(toggleRef) => (
+                                                  <MenuToggle
+                                                    ref={toggleRef}
+                                                    className="ct-deploy-management-toggle"
+                                                    variant="secondary"
+                                                    isExpanded={isManagementActionsOpen}
+                                                    onClick={() => setIsManagementActionsOpen((current) => !current)}
+                                                  >
+                                                      관리 도구
+                                                  </MenuToggle>
+                                              )}
                                             >
-                                                <span className="ct-deploy-ribbon__utility-label">
-                                                    관리 도구
-                                                    <span
-                                                      className={[
-                                                          "ct-deploy-ribbon__utility-chevron",
-                                                          isManagementActionsOpen ? "ct-deploy-ribbon__utility-chevron--open" : "",
-                                                      ].join(" ")}
-                                                      aria-hidden="true"
-                                                    />
-                                                </span>
-                                            </Button>
-                                            <div
-                                              className={[
-                                                  "ct-deploy-ribbon__utility-panel",
-                                                  isManagementActionsOpen ? "ct-deploy-ribbon__utility-panel--open" : "",
-                                              ].join(" ")}
-                                              aria-hidden={!isManagementActionsOpen}
-                                            >
+                                              <DropdownList>
                                                 {ribbonManagementActions.map((action) => (
-                                                    <Button
+                                                    <DropdownItem
                                                       key={action}
-                                                      variant="secondary"
-                                                      className={actionClassName(action)}
-                                                      isDisabled={!isManagementActionsOpen}
                                                       onClick={() => {
                                                           setIsManagementActionsOpen(false);
                                                           onAction(action);
                                                       }}
                                                     >
                                                         {ACTION_LABELS[action] ?? action}
-                                                    </Button>
+                                                    </DropdownItem>
                                                 ))}
-                                            </div>
+                                              </DropdownList>
+                                            </Dropdown>
                                         </div>
                                     )}
                                 </div>
@@ -1229,7 +1241,7 @@ export default function DeploymentOverview({
 
                 <div className="ct-deploy-overview__flow">
                     <div className="ct-deploy-overview__flow-list">
-                        <div className="ct-deploy-overview__section-title">제품 흐름</div>
+                        <div className="ct-deploy-overview__section-title">ABLESTACK 설치 및 구성 단계</div>
                         {useStatusPlaceholder
                             ? (
                                 <StatusPlaceholder
@@ -1286,11 +1298,13 @@ export default function DeploymentOverview({
                                         {ACTION_LABELS[action] ?? action}
                                     </Button>
                                 ))}
+                            {/* 다중 호스트 사전 구성 검증 정비 전까지 올인원 버튼 숨김.
                             {showDeployRunControl && (
                                 <Button variant="secondary" onClick={onOpenDeployRun}>
                                     올인원 단계 입력
                                 </Button>
                             )}
+                            */}
                         </div>
                     </div>
                 </div>

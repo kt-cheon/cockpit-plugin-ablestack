@@ -6,6 +6,38 @@ interface SystemConfigResponse {
   message?: string;
 }
 
+export interface UiFeatures {
+  scvmLunPassthrough: boolean;
+  powerflex: boolean;
+  hciFilesystem: boolean;
+}
+
+export const DEFAULT_UI_FEATURES: UiFeatures = {
+    scvmLunPassthrough: false,
+    powerflex: false,
+    hciFilesystem: false,
+};
+
+export async function fetchUiFeatures(): Promise<UiFeatures> {
+    const response = await requestCubeApi<SystemConfigResponse>("/api/v1/cube/system/config");
+    if (!isSuccessCode(response.code)) {
+        throw new Error(responseMessage(response, "화면 표시 설정을 확인하지 못했습니다."));
+    }
+    const settings = typeof response.val === "string" ? JSON.parse(response.val) : response.val;
+    const ui = settings?.ui;
+    return {
+        scvmLunPassthrough: ui?.scvm_lun_passthrough === true,
+        powerflex: ui?.cluster_type_powerflex === true,
+        hciFilesystem: ui?.cluster_type_hci_filesystem === true,
+    };
+}
+
+export function isClusterTypeVisible(type: string, features: UiFeatures): boolean {
+    if (type === "powerflex") return features.powerflex;
+    if (type === "ablestack-hci-filesystem") return features.hciFilesystem;
+    return true;
+}
+
 export interface SystemConfigUpdateOptions {
   depth1: string;
   depth2: string;

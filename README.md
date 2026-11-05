@@ -12,6 +12,22 @@ ABLESTACK manages and distributes necessary packages and virtual machine applian
 호스트 대시보드·라이선스·배포·구성·운영 작업과 SCVM의 스토리지 서비스 관리를
 현재 Python·Shell·Cube Agent에 연결합니다. [React 빌드·시험 적용 안내](frontend/README.md)를 참고합니다.
 
+클러스터 종류 선택 화면의 PowerFlex와 ABLESTACK-HCI-Filesystem은 기본적으로 숨깁니다.
+표시하려면 `/usr/share/cockpit/ablestack/tools/properties/ablestack.json`의 기존 `ui` 항목에
+아래 값을 추가하거나 변경한 뒤 마법사를 다시 여세요. 두 항목은 각각 제어할 수 있습니다.
+
+```json
+"ui": {
+    "scvm_lun_passthrough": false,
+    "cluster_type_powerflex": true,
+    "cluster_type_hci_filesystem": true
+}
+```
+
+두 설정은 기본값이 `false`이며, 항목이 없는 기존 설정 파일에서도 숨김으로 처리합니다.
+`true`는 문자열이 아닌 JSON 불리언 값으로 지정합니다. 구성 준비 마법사의 카드·설명과
+배포 작업 제어의 제품 선택에 적용하며, 이미 등록된 프로파일의 제품 종류는 유지합니다.
+
 SCVM 배포 마법사는 기본적으로 PCI·Disk Passthrough만 표시합니다. LUN Passthrough도
 표시하려면 해당 Cube 호스트의 `/usr/share/cockpit/ablestack/tools/properties/ablestack.json`에서
 기존 설정을 유지한 채 아래 `ui` 항목을 추가하거나 값을 변경하고 마법사를 다시 여세요.

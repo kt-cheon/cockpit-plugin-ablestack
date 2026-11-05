@@ -8,6 +8,19 @@ body { background: var(--pf-t--global--background--color--primary--default); }
 }
 .ct-deploy-details > summary { padding: .75rem 1rem; cursor: pointer; border: 1px solid var(--pf-t--global--border--color--default); border-radius: .5rem; }
 .ct-deploy-details[open] > summary { margin-block-end: 1rem; }
+.ct-cluster-management-network-help {
+  display: inline-grid; place-items: center; width: 1rem; height: 1rem;
+  padding: 0; border: 1px solid currentColor; border-radius: .25rem;
+  background: transparent; color: var(--pf-t--global--text--color--subtle);
+  font: inherit; font-size: .75rem; line-height: 1; cursor: help; vertical-align: middle;
+}
+.ct-cluster-management-network-help:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.ct-cluster-management-network-label { display: inline-flex; align-items: center; gap: .375rem; }
+.ct-cluster-management-network-field .pf-v6-c-form__group-label { display: flex; align-items: center; gap: .25rem; }
+.ct-cluster-management-network-field .pf-v6-c-form__group-label-help { flex-shrink: 0; }
+.ct-deploy-management-toggle { min-inline-size: 7.5rem; border-radius: 999px; }
+.ct-deploy-management-menu { min-inline-size: 13.5rem; max-inline-size: calc(100vw - 1.5rem); border-radius: .5rem; }
+.ct-deploy-management-menu .pf-v6-c-menu__item { min-block-size: 2.5rem; }
 .ct-local-dashboard { display: grid; align-content: start; gap: 1rem; }
 .ct-local-dashboard__header { row-gap: .5rem; }
 .ct-local-dashboard h1 { display: flex; flex-wrap: wrap; align-items: baseline; gap: .75rem; white-space: nowrap; }
