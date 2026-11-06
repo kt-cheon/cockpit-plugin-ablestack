@@ -4339,6 +4339,16 @@
       box-shadow: none;
     }
 
+    .pf-v6-c-button.pf-m-link,
+    .pf-v6-c-expandable-section__toggle {
+      color: var(--ct-able-dark-blue-strong);
+    }
+
+    .pf-v6-c-button.pf-m-link:not(:disabled):hover {
+      background: var(--ct-able-dark-blue-bg);
+      color: var(--ct-able-dark-text);
+    }
+
     .pf-v6-c-form-control,
     .pf-v6-c-form-select,
     .pf-v6-c-text-area {
@@ -4554,6 +4564,27 @@
     border-block-end-color: var(--ct-able-dark-border);
     background: var(--ct-able-dark-surface-muted);
     color: var(--ct-able-dark-text);
+  }
+
+  div.ct-wizard-status-row {
+    color: var(--ct-able-dark-text);
+    border-color: var(--ct-able-dark-border);
+    background: var(--ct-able-dark-surface-soft);
+  }
+
+  .ct-wizard-status-row.ct-wizard-status-row--running {
+    border-color: var(--ct-able-dark-blue);
+    background: var(--ct-able-dark-blue-bg);
+  }
+
+  .ct-wizard-status-row.ct-wizard-status-row--succeeded {
+    border-color: var(--ct-able-dark-green);
+    background: var(--ct-able-dark-green-bg);
+  }
+
+  .ct-wizard-status-row.ct-wizard-status-row--failed {
+    border-color: var(--ct-able-dark-red);
+    background: var(--ct-able-dark-red-bg);
   }
 
   .ct-cluster-config-wizard__review-header:hover,

@@ -31,6 +31,7 @@ import WizardStepStatusLabel, { wizardStatusRowClass } from "../components/commo
 import { fetchClusterConfigProfile } from "../services/api/cluster-config";
 import { fetchNicInventory, fetchStorageVmDiskInventory } from "../services/api/inventory";
 import { fetchCurrentHostname } from "../services/host";
+import { selectionPrompt } from "../utils/selection";
 import {
 	fetchDeployRunJobs,
 	startDeployRun,
@@ -87,9 +88,11 @@ const DEFAULT_HOSTS: ClusterHostRow[] = [
 ];
 
 const ROOT_DISK = "150 GiB (THIN Provisioning)";
+const DEFAULT_CPU = "8";
+const DEFAULT_MEMORY = "16";
 
 const EMPTY_BRIDGE_OPTIONS: SelectOption[] = [
-  { value: "", label: "선택하십시오" },
+  { value: "", label: selectionPrompt("Bridge") },
 ];
 
 const withCidr = (ip: string, cidr: string) =>
@@ -100,17 +103,12 @@ const requireIpv4OrCidr = (value: string, label: string) => {
   return isIpv4(value) || isIpv4Cidr(value) ? "" : `${label} 형식을 확인해주세요.`;
 };
 
-const optionValueAt = (options: SelectOption[], index: number) => options[index]?.value || "";
-
-const bridgeValueAt = (options: SelectOption[], index: number) =>
-  options.filter((option) => option.value)[index]?.value || "";
-
 export default function StorageVmDeployWizardModal({
   isOpen,
   onClose,
 }: StorageVmDeployWizardModalProps) {
-  const [cpu, setCpu] = React.useState("");
-  const [memory, setMemory] = React.useState("");
+  const [cpu, setCpu] = React.useState(DEFAULT_CPU);
+  const [memory, setMemory] = React.useState(DEFAULT_MEMORY);
   const [diskMode, setDiskMode] = React.useState<DiskMode>("rp");
   const [allowLun, setAllowLun] = React.useState(false);
   const [selectedDisks, setSelectedDisks] = React.useState<string[]>([]);
@@ -168,8 +166,8 @@ export default function StorageVmDeployWizardModal({
   }, []);
 
   const resetState = React.useCallback(() => {
-    setCpu("");
-    setMemory("");
+    setCpu(DEFAULT_CPU);
+    setMemory(DEFAULT_MEMORY);
     setDiskMode("rp");
     setSelectedDisks([]);
     setRaidDiskOptions([]);
@@ -252,16 +250,19 @@ export default function StorageVmDeployWizardModal({
 
         setBridgeOptions(inventory.bridges.length > 0 ? inventory.bridges : EMPTY_BRIDGE_OPTIONS);
         setNicOptions(inventory.passthroughNics);
-        setStorageNic1((prev) => prev || optionValueAt(inventory.passthroughNics, 0));
-        setStorageNic2((prev) => prev || optionValueAt(inventory.passthroughNics, 1));
-        setReplicaNic1((prev) => prev || optionValueAt(inventory.passthroughNics, 2));
-        setReplicaNic2((prev) => prev || optionValueAt(inventory.passthroughNics, 3));
         setNicLoadState("success");
       })
       .catch((error) => {
         if (!isActive) return;
         setBridgeOptions(EMPTY_BRIDGE_OPTIONS);
         setNicOptions([]);
+        setMgmtBridge("");
+        setStorageBridge("");
+        setReplicaBridge("");
+        setStorageNic1("");
+        setStorageNic2("");
+        setReplicaNic1("");
+        setReplicaNic2("");
         setNicLoadState("error");
         setNicLoadError(error instanceof Error ? error.message : "NIC 목록을 불러오지 못했습니다.");
       });
@@ -411,15 +412,12 @@ export default function StorageVmDeployWizardModal({
 
   const handleStorageTrafficModeChange = (nextMode: StorageTrafficMode) => {
     setStorageTrafficMode(nextMode);
-    if (nextMode === "bn") {
-      setStorageBridge(bridgeValueAt(bridgeOptions, 1));
-      setReplicaBridge(bridgeValueAt(bridgeOptions, 2));
-      return;
-    }
-    setStorageNic1(optionValueAt(nicOptions, 0));
-    setStorageNic2(optionValueAt(nicOptions, 1));
-    setReplicaNic1(optionValueAt(nicOptions, 2));
-    setReplicaNic2(optionValueAt(nicOptions, 3));
+    setStorageNic1("");
+    setStorageNic2("");
+    setReplicaNic1("");
+    setReplicaNic2("");
+    setStorageBridge("");
+    setReplicaBridge("");
   };
 
   const buildHostsPreview = () => {
@@ -865,7 +863,7 @@ export default function StorageVmDeployWizardModal({
 	                      />}
 	                    </div>
 	                  </FormGroup>
-	                  <FormGroup label="디스크 구성 대상 장치" isRequired fieldId="storage-vm-disk-target">
+	                  <FormGroup label="디바이스 장치" isRequired fieldId="storage-vm-disk-target">
 	                    {diskLoadState === "loading" ? (
 	                      <Alert
 	                        isInline
@@ -962,7 +960,7 @@ export default function StorageVmDeployWizardModal({
 	                      onChange={(_event, value) => setMgmtBridge(String(value))}
 	                    >
 	                      {bridgeOptions.map((option) => (
-	                        <FormSelectOption key={option.value} value={option.value} label={option.label} />
+	                        <FormSelectOption key={option.value} value={option.value} label={option.value ? option.label : selectionPrompt("관리 NIC용 Bridge")} />
 	                      ))}
 	                    </FormSelect>
 	                  </FormGroup>
@@ -983,7 +981,7 @@ export default function StorageVmDeployWizardModal({
 	                        onChange={() => handleStorageTrafficModeChange("npb")}
 	                      />
 	                      <Radio
-	                        id="storage-vm-storage-bridge"
+	                        id="storage-vm-storage-mode-bridge"
 	                        name="storage-vm-storage-mode"
 	                        label="Bridge Network"
 	                        isChecked={storageTrafficMode === "bn"}
@@ -1000,7 +998,7 @@ export default function StorageVmDeployWizardModal({
 	                          onChange={(_event, value) => setStorageBridge(String(value))}
 	                        >
 	                          {bridgeOptions.map((option) => (
-	                            <FormSelectOption key={option.value} value={option.value} label={option.label} />
+	                            <FormSelectOption key={option.value} value={option.value} label={option.value ? option.label : selectionPrompt("서버용 Bridge")} />
 	                          ))}
 	                        </FormSelect>
 	                      ) : (
@@ -1010,6 +1008,7 @@ export default function StorageVmDeployWizardModal({
 	                            value={storageNic1}
 	                            onChange={(_event, value) => setStorageNic1(String(value))}
 	                          >
+	                            <FormSelectOption value="" label={selectionPrompt(storageTrafficMode === "npb" ? "서버용 NIC 1번" : "서버용 NIC")} />
 	                            {nicOptions.map((option) => (
 	                              <FormSelectOption key={option.value} value={option.value} label={option.label} />
 	                            ))}
@@ -1020,6 +1019,7 @@ export default function StorageVmDeployWizardModal({
 	                              value={storageNic2}
 	                              onChange={(_event, value) => setStorageNic2(String(value))}
 	                            >
+	                              <FormSelectOption value="" label={selectionPrompt("서버용 NIC 2번")} />
 	                              {nicOptions.map((option) => (
 	                                <FormSelectOption key={option.value} value={option.value} label={option.label} />
 	                              ))}
@@ -1038,7 +1038,7 @@ export default function StorageVmDeployWizardModal({
 	                          onChange={(_event, value) => setReplicaBridge(String(value))}
 	                        >
 	                          {bridgeOptions.map((option) => (
-	                            <FormSelectOption key={option.value} value={option.value} label={option.label} />
+	                            <FormSelectOption key={option.value} value={option.value} label={option.value ? option.label : selectionPrompt("복제용 Bridge")} />
 	                          ))}
 	                        </FormSelect>
 	                      ) : (
@@ -1048,6 +1048,7 @@ export default function StorageVmDeployWizardModal({
 	                            value={replicaNic1}
 	                            onChange={(_event, value) => setReplicaNic1(String(value))}
 	                          >
+	                            <FormSelectOption value="" label={selectionPrompt(storageTrafficMode === "npb" ? "복제용 NIC 1번" : "복제용 NIC")} />
 	                            {nicOptions.map((option) => (
 	                              <FormSelectOption key={option.value} value={option.value} label={option.label} />
 	                            ))}
@@ -1058,6 +1059,7 @@ export default function StorageVmDeployWizardModal({
 	                              value={replicaNic2}
 	                              onChange={(_event, value) => setReplicaNic2(String(value))}
 	                            >
+	                              <FormSelectOption value="" label={selectionPrompt("복제용 NIC 2번")} />
 	                              {nicOptions.map((option) => (
 	                                <FormSelectOption key={option.value} value={option.value} label={option.label} />
 	                              ))}

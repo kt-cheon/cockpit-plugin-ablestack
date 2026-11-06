@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 import io
+from contextlib import redirect_stdout
 import sys
 import tempfile
 import unittest
@@ -16,6 +17,7 @@ import operations
 import tasks
 import workflows
 import mold
+import progress
 
 
 def adapter():
@@ -202,6 +204,88 @@ class OperationTests(unittest.TestCase):
         self.assertEqual(a.command.call_args.args[0][-3:], [str(ROOT / 'python/bootstrap/center_bootstrap.py'), 'scvm', 'ablestack'])
 
 
+class ProgressTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.log = Path(self.temp.name) / 'execution.log'
+        self.a = adapter()
+        self.a.TASK_LOG = self.log
+
+    def logs(self):
+        return self.log.read_text() if self.log.exists() else ''
+
+    def test_checked_operation_logs_progress_before_execution_without_private_arguments(self):
+        secret = 'private-ipmi-password'
+        def execute(*_args, **_options):
+            self.assertIn('호스트 장애 격리 장치 구성 작업을 시작합니다.', self.logs())
+            self.assertNotIn('작업이 완료되었습니다.', self.logs())
+            return {'code': 200, 'val': 'private-command-output'}
+        self.a.tool.side_effect = execute
+        operations.dispatch(self.a, request('gfs/manage', {'action': 'configure-stonith',
+            'stonith': [{'ipaddr': '10.1.0.1', 'login': 'admin', 'passwd': secret}]}))
+        self.assertIn('호스트 장애 격리 장치 구성 작업이 완료되었습니다.', self.logs())
+        for private in (secret, '10.1.0.1', 'private-command-output', '--configure-stonith'):
+            self.assertNotIn(private, self.logs())
+        self.assertEqual(self.log.stat().st_mode & 0o777, 0o600)
+
+    def test_cluster_preparation_reports_actual_phases_and_keeps_registration_private(self):
+        chrony = Path(self.temp.name) / 'chrony.conf'
+        chrony.write_text('pool previous.example iburst\n')
+        payload = {'cluster': {'type': 'ablestack-hci', 'hosts': self.a.cluster()['hosts']},
+                   'enrollment': {'source': 'existing', 'registration': {'private_key': 'private-enrollment-key'}},
+                   'time_servers': ['time.example'], 'time_role': 'master'}
+        with patch.object(workflows, 'Path', return_value=chrony):
+            self.assertEqual(workflows.cluster_apply(self.a, payload)['code'], 200)
+        labels = ['클러스터 종류와 호스트 구성 정보를 확인합니다.', '호스트 통신 등록 및 연결 설정 적용 작업을 시작합니다.',
+                  '클러스터 프로파일 및 호스트 정보 적용 작업을 시작합니다.',
+                  '시간 동기화 설정 적용 및 서비스 재시작 작업을 시작합니다.', '클러스터 구성 준비가 완료되었습니다.']
+        positions = [self.logs().index(label) for label in labels]
+        self.assertEqual(positions, sorted(positions))
+        self.assertGreaterEqual(len(self.logs().splitlines()), 9)
+        self.assertIn('server time.example iburst', chrony.read_text())
+        self.a.command.assert_called_with(['systemctl', 'restart', 'chronyd.service'])
+        self.assertNotIn('private-enrollment-key', self.logs())
+
+    def test_monitoring_reports_services_settings_and_optional_email_in_order(self):
+        for email in (False, True):
+            with self.subTest(email=email):
+                self.log.unlink(missing_ok=True)
+                a = adapter()
+                a.TASK_LOG = self.log
+                a.parse_output.return_value = {'code': 200}
+                workflows.monitoring(a, {'smtp': {'enabled': email, 'host': 'smtp.example', 'port': 25,
+                                                  'user': 'private-mail-user', 'password': 'private-mail-password'}})
+                labels = ['기존 모니터링 서비스 중지', '모니터링 대상 및 지표 수집 설정 적용', '모니터링 서비스 시작',
+                          *(['모니터링 알림 메일 설정 적용'] if email else []), '클러스터 호스트의 구성 상태 저장']
+                positions = [self.logs().index(label + ' 작업을 시작합니다.') for label in labels]
+                self.assertEqual(positions, sorted(positions))
+                for label in labels:
+                    self.assertIn(label + ' 작업이 완료되었습니다.', self.logs())
+                if not email:
+                    self.assertNotIn('메일 설정', self.logs())
+                for private in ('private-mail-user', 'private-mail-password', 'smtp.example', '--password'):
+                    self.assertNotIn(private, self.logs())
+
+    def test_failed_monitoring_phase_is_not_reported_complete_and_later_steps_do_not_run(self):
+        self.a.parse_output.side_effect = [{'code': 200}, RuntimeError('private-command-error')]
+        with self.assertRaisesRegex(RuntimeError, 'private-command-error'):
+            workflows.monitoring(self.a, {})
+        self.assertIn('모니터링 대상 및 지표 수집 설정 적용 작업에 실패했습니다.', self.logs())
+        self.assertNotIn('모니터링 대상 및 지표 수집 설정 적용 작업이 완료되었습니다.', self.logs())
+        self.assertNotIn('모니터링 서비스 시작 작업', self.logs())
+        self.assertNotIn('private-command-error', self.logs())
+        self.a.tool.assert_not_called()
+
+    def test_synchronous_operations_do_not_pollute_json_stdout_with_progress(self):
+        self.a.TASK_LOG = None
+        output = io.StringIO()
+        with redirect_stdout(output):
+            operations.checked(self.a, 'local/local_manage.py', ['--create-local-disk'])
+        self.assertEqual(output.getvalue(), '')
+        self.assertFalse(self.log.exists())
+
+
 class TaskTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -233,6 +317,22 @@ class TaskTests(unittest.TestCase):
         self.assertEqual(snapshot['status'], 'failed')
         self.assertEqual(snapshot['steps'][0]['status'], 'failed')
         self.assertFalse((self.directory / state['job_id'] / 'request.json').exists())
+
+    def test_progress_is_readable_while_running_and_completion_is_recorded(self):
+        state, _ = self.start()
+        a = adapter()
+        def execute(*_args):
+            progress.emit(a, '중간 설정을 적용합니다.')
+            running = tasks.snapshot(state['job_id'])
+            self.assertEqual(running['status'], 'running')
+            self.assertIn('중간 설정을 적용합니다.', running['logs'])
+            self.assertNotIn('요청한 작업이 모두 완료되었습니다.', running['logs'])
+            return {'code': 200}
+        with patch.object(operations, 'dispatch', side_effect=execute):
+            tasks.worker(state['job_id'], a)
+        completed = tasks.snapshot(state['job_id'])
+        self.assertEqual(completed['status'], 'succeeded')
+        self.assertEqual(completed['logs'][-1], '요청한 작업이 모두 완료되었습니다.')
 
     def test_task_ids_cannot_escape_the_private_directory(self):
         for value in ('../state', '/etc/passwd', 'x' * 32):

@@ -56,7 +56,7 @@ export default function CloudClusterMigrationModal({
                 value={targetNode}
                 onChange={(event) => setTargetNode(event.currentTarget.value)}
               >
-                <option value="">노드를 선택해주세요.</option>
+                <option value="">노드를 선택하세요</option>
                 {nodes.map((node) => (
                   <option key={node} value={node}>
                     {node}

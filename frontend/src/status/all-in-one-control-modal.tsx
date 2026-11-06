@@ -87,7 +87,7 @@ const PRODUCT_OPTIONS: Array<{ value: ProductType; label: string }> = [
 ];
 
 const EMPTY_BRIDGE_OPTIONS: InventorySelectOption[] = [
-    { value: "", label: "선택하십시오" },
+    { value: "", label: "Bridge를 선택하세요" },
 ];
 
 const optionValueAt = (options: InventorySelectOption[], index: number) =>

@@ -9,6 +9,7 @@ import time
 import xml.etree.ElementTree as ET
 
 from operations import atom, checked, choice, flag, host_list, hosts, number, storage_action
+from progress import emit, run
 
 
 def pcs_hosts(a):
@@ -83,7 +84,7 @@ def apply_license(a, roles):
     content = base64.b64encode(Path(info['file_path']).read_bytes()).decode()
     for role in roles:
         target = choice(role, ('ccvm', 'scvm'))
-        wait_ready(a, target + '-mngt')
+        run(a, '가상머신 초기 설정 완료 확인', lambda: wait_ready(a, target + '-mngt'))
         checked(a, 'license/register_license.py',
                 ['--license-content', content, '--original-filename', Path(info['file_path']).name],
                 target=target + '-mngt')
@@ -91,12 +92,14 @@ def apply_license(a, roles):
 
 
 def bootstrap(a, kind):
-    wait_ready(a, kind + '-mngt')
+    title = '스토리지센터' if kind == 'scvm' else '클라우드센터'
+    run(a, title + ' 가상머신 초기 설정 확인', lambda: wait_ready(a, kind + '-mngt'))
     info = checked(a, 'license/register_license.py', ['--status']).get('val', {})
     if info.get('status') != 'active':
         raise ValueError('유효한 라이선스 등록이 필요합니다.')
-    a.command(['python3', '-u', str(a.ROOT / 'python/bootstrap/center_bootstrap.py'), kind,
-               info.get('oem') or 'ablestack'], timeout=7500)
+    run(a, title + ' 구성', lambda: a.command(
+        ['python3', '-u', str(a.ROOT / 'python/bootstrap/center_bootstrap.py'), kind,
+         info.get('oem') or 'ablestack'], timeout=7500))
     return {'code': 200, 'message': ('스토리지센터' if kind == 'scvm' else '클라우드센터') + ' 구성이 완료되었습니다.'}
 
 
@@ -196,6 +199,7 @@ def scvm_prepare(a, definitions, cloudinit_options=None):
 
 
 def cluster_apply(a, payload):
+    emit(a, '클러스터 종류와 호스트 구성 정보를 확인합니다.')
     definition = dict(a.cluster(), **payload['cluster'])
     kind = choice(definition['type'], ('ablestack-hci', 'ablestack-hci-filesystem', 'ablestack-vm', 'ablestack-standalone', 'powerflex'))
     rows = definition['hosts']
@@ -206,14 +210,16 @@ def cluster_apply(a, payload):
         for key in ('ablecube', 'ablecubePn', 'scvmMngt', 'scvm', 'scvmCn'):
             if row.get(key):
                 ipaddress.ip_address(row[key])
+    emit(a, '클러스터 구성 정보 확인이 완료되었습니다.')
     pcs = definition.get('pcs_cluster_list', [])
     profile = {'clusterConfig': {'type': kind, 'hosts': rows, 'ccvm': definition.get('ccvm', a.cluster().get('ccvm')),
                                 'pcsCluster': {'hostname' + str(i + 1): atom(host) for i, host in enumerate(pcs)}}}
     enrollment = payload.get('enrollment', {})
     source = enrollment.get('source', 'existing')
-    a.command(['python3', '/usr/libexec/ablestack/node-agent/cluster_enrollment.py', 'prepare', '--source',
-               choice(source, ('new', 'existing'))], timeout=300,
-              stdin=json.dumps({'cluster': profile, 'registration': enrollment.get('registration')}).encode())
+    run(a, '호스트 통신 등록 및 연결 설정 적용', lambda: a.command(
+        ['python3', '/usr/libexec/ablestack/node-agent/cluster_enrollment.py', 'prepare', '--source',
+         choice(source, ('new', 'existing'))], timeout=300,
+        stdin=json.dumps({'cluster': profile, 'registration': enrollment.get('registration')}).encode()))
     adding = definition.get('option') == 'add'
     args = ['insertAllHost' if adding else 'insert', '--type', kind, '--json-string', json.dumps(rows),
             '--iscsi-storage', str(definition.get('storage_network', 'false')).lower()]
@@ -244,12 +250,15 @@ def cluster_apply(a, payload):
     times = payload.get('time_servers') or [definition.get('external_timeserver')]
     times = [atom(value) for value in times if value]
     if times or payload.get('time_role'):
-        path = Path('/etc/chrony.conf')
-        existing = path.read_text() if path.exists() else ''
-        row = local_row(a)
-        own = [row.get('ablecube'), row.get('ablecubePn'), '127.0.0.1', 'localhost']
-        path.write_text(chrony_settings(existing, times, own, payload.get('time_role')))
-        a.command(['systemctl', 'restart', 'chronyd.service'])
+        def configure_time():
+            path = Path('/etc/chrony.conf')
+            existing = path.read_text() if path.exists() else ''
+            row = local_row(a)
+            own = [row.get('ablecube'), row.get('ablecubePn'), '127.0.0.1', 'localhost']
+            path.write_text(chrony_settings(existing, times, own, payload.get('time_role')))
+            a.command(['systemctl', 'restart', 'chronyd.service'])
+        run(a, '시간 동기화 설정 적용 및 서비스 재시작', configure_time)
+    emit(a, '클러스터 구성 준비가 완료되었습니다.')
     return result
 
 
@@ -276,15 +285,21 @@ def monitoring(a, payload):
     if storage:
         args += ['--scvm', *map(atom, storage)]
     services = ['--service', 'blackbox-exporter', 'node-exporter', 'grafana-server', 'process-exporter', 'prometheus', 'netdive-analyzer']
-    for script, options in [('stop_services.py', ['stop', *services]), ('config_wall.py', args),
-                            ('start_services.py', ['start', *services])]:
-        a.success(a.parse_output(a.command(['python3', root + script, *options], target='ccvm-mngt', timeout=900)))
+    for label, script, options in [
+        ('기존 모니터링 서비스 중지', 'stop_services.py', ['stop', *services]),
+        ('모니터링 대상 및 지표 수집 설정 적용', 'config_wall.py', args),
+        ('모니터링 서비스 시작', 'start_services.py', ['start', *services]),
+    ]:
+        run(a, label, lambda: a.success(a.parse_output(a.command(
+            ['python3', root + script, *options], target='ccvm-mngt', timeout=900))))
     smtp = payload.get('smtp', {})
     if smtp.get('enabled'):
-        a.success(a.parse_output(a.command(['python3', root + 'config_smtp.py', 'config',
-                  '--host', atom(smtp['host']) + ':' + number(smtp['port'], 1, 65535),
-                  '--user', smtp['user'], '--password', smtp['password']], target='ccvm-mngt')))
+        run(a, '모니터링 알림 메일 설정 적용', lambda: a.success(a.parse_output(a.command(
+            ['python3', root + 'config_smtp.py', 'config',
+             '--host', atom(smtp['host']) + ':' + number(smtp['port'], 1, 65535),
+             '--user', smtp['user'], '--password', smtp['password']], target='ccvm-mngt'))))
     flag(a, 'monitoring', 'wall', all_hosts=True)
+    emit(a, '모니터링센터 구성이 완료되었습니다.')
     return {'code': 200, 'message': '모니터링센터 구성이 완료되었습니다.'}
 
 

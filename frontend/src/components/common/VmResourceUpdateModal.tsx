@@ -1,5 +1,6 @@
 // 가상머신 CPU/Memory 자원변경 모달을 공통으로 제공합니다.
 import React from "react";
+import { selectionPrompt } from "../../utils/selection";
 import {
   Button,
   Content,
@@ -53,7 +54,7 @@ export default function VmResourceUpdateModal({
           <label className="ct-action-confirm-modal__field">
             <span>CPU</span>
             <select value={cpu} onChange={(event) => setCpu(event.currentTarget.value)}>
-              <option value="">선택하십시오.</option>
+              <option value="">{selectionPrompt("CPU")}</option>
               {cpuOptions.map((value) => (
                 <option key={value} value={value}>
                   {value} vCore
@@ -64,7 +65,7 @@ export default function VmResourceUpdateModal({
           <label className="ct-action-confirm-modal__field">
             <span>Memory</span>
             <select value={memory} onChange={(event) => setMemory(event.currentTarget.value)}>
-              <option value="">선택하십시오.</option>
+              <option value="">{selectionPrompt("Memory")}</option>
               {memoryOptions.map((value) => (
                 <option key={value} value={value}>
                   {value} GiB

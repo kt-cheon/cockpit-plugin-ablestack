@@ -9,6 +9,7 @@ import re
 import socket
 import zipfile
 from urllib.parse import parse_qs, urlsplit
+from progress import run, tool_label
 
 PATHS = {
     'nics', 'disk', 'ssh/key', 'downloads', 'cluster/health', 'cluster/apply-local',
@@ -84,15 +85,20 @@ def host_list(a):
 
 
 def checked(a, name, args=(), target=None, timeout=3600):
-    return a.success(a.tool(name, args, target=target, timeout=timeout))
+    operation = lambda: a.success(a.tool(name, args, target=target, timeout=timeout))
+    label = tool_label(name, args)
+    return run(a, label, operation) if label else operation()
 
 
 def flag(a, section, key, value='true', all_hosts=False):
     targets = hosts(a) if all_hosts else [None]
-    for target in targets:
-        checked(a, 'ablestack_json/ablestackJson.py',
-                ['update', '--depth1', section, '--depth2', key, '--value', str(value)], target)
-    return {'code': 200}
+    def update():
+        for target in targets:
+            a.success(a.tool('ablestack_json/ablestackJson.py',
+                      ['update', '--depth1', section, '--depth2', key, '--value', str(value)],
+                      target=target, timeout=3600))
+        return {'code': 200}
+    return run(a, '클러스터 호스트의 구성 상태 저장' if all_hosts else '현재 호스트의 구성 상태 저장', update)
 
 
 def ssh_keys(a, body):
@@ -329,7 +335,9 @@ def dispatch(a, request, reporter=None):
                 args += ['--' + key.replace('_', '-'), atom(body[key])]
         return checked(a, 'rbd/rbd_manage.py', args)
     if path == 'multipath/sync':
-        a.command(['bash', str(a.ROOT / 'shell/host/multipath_sync.sh'), choice(action, ('sync', 'rescan'))], timeout=900)
+        run(a, '외부 스토리지 연결 정보 동기화' if action == 'sync' else '외부 스토리지 디스크 재검색',
+            lambda: a.command(['bash', str(a.ROOT / 'shell/host/multipath_sync.sh'),
+                               choice(action, ('sync', 'rescan'))], timeout=900))
         return {'code': 200, 'action': action, 'message': '외부 스토리지 작업이 완료되었습니다.', 'results': []}
     if path == 'auto-shutdown':
         return checked(a, 'host/auto-shutdown.py', [choice(action, ('check_mount', 'stop_scvms', 'shutdown_hosts'))])

@@ -87,8 +87,8 @@ test('every wizard receives only user bridges and preserves carrier state', asyn
   assert.match(inventory.passthroughNics[0].label, /connected/);
 });
 
-test('disk passthrough lists whole physical disks with simple labels and stable deployment paths', async () => {
-  const disk = {name: 'sdb', kname: 'sdb', path: '/dev/disk/by-path/pci-data-disk', type: 'disk', size: '900G', wwn: 'private-wwn', model: 'SSD'};
+test('disk passthrough lists whole disks with capacity, hardware details and stable deployment paths', async () => {
+  const disk = {name: 'sdb', kname: 'sdb', path: '/dev/disk/by-path/pci-data-disk', type: 'disk', size: '900G', wwn: 'private-wwn', vendor: ' ATA ', model: ' Fixture SSD '};
   handler = (request) => request.path.endsWith('/system/config') ? {code: 200, val: {ui: {}}} : {code: 200, val: {
     blockdevices: [
       {name: 'sda', kname: 'sda', path: '/dev/disk/by-path/pci-os-disk', type: 'disk', children: [
@@ -96,7 +96,7 @@ test('disk passthrough lists whole physical disks with simple labels and stable 
         {name: 'sda2', path: '/dev/sda2', type: 'part', children: [{name: 'system-root', path: '/dev/mapper/system-root', type: 'lvm'}]},
       ]},
       disk, {...disk},
-      {name: 'nvme0n1', kname: 'nvme0n1', path: '/dev/nvme0n1', type: 'disk'},
+      {name: 'nvme0n1', kname: 'nvme0n1', path: '/dev/nvme0n1', type: 'disk', size: '1.8T', vendor: null, model: 'Fixture NVMe'},
       {name: 'sdc1', path: '/dev/sdc1', type: 'part'},
       {name: 'orphan-lv', path: '/dev/mapper/orphan-lv', type: 'lvm'},
       {name: 'mpathb', path: '/dev/mapper/mpathb', type: 'mpath', single_path: [{name: 'sdd', path: '/dev/sdd', type: 'disk'}]},
@@ -105,7 +105,7 @@ test('disk passthrough lists whole physical disks with simple labels and stable 
   }};
   const before = fixture.calls.length;
   const inventory = await services.fetchStorageVmDiskInventory();
-  assert.deepEqual(inventory.physicalDisks.map((disk) => disk.label), ['/dev/sda', '/dev/sdb', '/dev/nvme0n1']);
+  assert.deepEqual(inventory.physicalDisks.map((disk) => disk.label), ['/dev/sda', '/dev/sdb · 900G · ATA Fixture SSD', '/dev/nvme0n1 · 1.8T · Fixture NVMe']);
   assert.deepEqual(inventory.physicalDisks.map((disk) => disk.value), ['/dev/disk/by-path/pci-os-disk', '/dev/disk/by-path/pci-data-disk', '/dev/nvme0n1']);
   assert.equal(inventory.physicalDisks[0].isDisabled, true);
   assert.equal(inventory.physicalDisks[1].isDisabled, false);

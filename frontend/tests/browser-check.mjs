@@ -27,6 +27,28 @@ const server = createServer(async (request, response) => {
 });
 await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
 const origin = `http://127.0.0.1:${server.address().port}`;
+const assertReadable = async (locator, description) => {
+  const contrasts = await locator.evaluateAll((nodes) => nodes.map((node) => {
+    const rgba = (value) => (value.match(/[\d.]+/g) || []).map(Number);
+    let background = [255, 255, 255];
+    const ancestors = [];
+    for (let parent = node; parent; parent = parent.parentElement) ancestors.unshift(parent);
+    for (const parent of ancestors) {
+      const color = rgba(getComputedStyle(parent).backgroundColor);
+      const alpha = color[3] ?? 1;
+      background = background.map((channel, index) => color[index] * alpha + channel * (1 - alpha));
+    }
+    const luminance = (color) => color.slice(0, 3).map((value) => {
+      const channel = value / 255;
+      return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+    }).reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
+    const foreground = luminance(rgba(getComputedStyle(node).color));
+    const behind = luminance(background);
+    return (Math.max(foreground, behind) + 0.05) / (Math.min(foreground, behind) + 0.05);
+  }));
+  assert.ok(contrasts.length > 0, description + ': text is present');
+  assert.ok(contrasts.every((contrast) => contrast >= 4.5), description + ': contrast ' + contrasts.join(', '));
+};
 let browser;
 try {
   console.log('Launching Chrome for the local React page');
@@ -41,6 +63,7 @@ try {
     responses['/api/v1/cube/system/context'] = { code: 200, role: product === 'scvm' ? 'scvm' : 'host', hostname: product === 'scvm' ? 'scvm1' : 'ablecube1' };
     responses['/api/v1/cube/glue/catalog'] = { code: 200, services: catalog };
     responses['/api/v1/cube/deploy/jobs'] = { code: 200, jobs: [] };
+    responses['/api/v1/cube/deploy/run'] = {code: 202, job_id: 'fixture-scvm-defaults', status: 'queued'};
     responses['/api/v1/version'] = { code: 200, os_version: 'Europa' };
     responses['/api/v1/cube/system/config'] = { code: 200, val: { bootstrap: { ccvm: 'true', scvm: 'true' }, ui: { scvm_lun_passthrough: false } } };
     for (const suffix of ['/api/v1/cube/nics?action=detail', '/api/v1/cube/disk?action=list', '/api/v1/cube/disk?action=gfs', '/api/v1/cube/cluster/config']) {
@@ -53,8 +76,8 @@ try {
           {name: 'sda1', path: '/dev/sda1', type: 'part'},
           {name: 'sda2', path: '/dev/sda2', type: 'part', children: [{name: 'system-root', path: '/dev/mapper/system-root', type: 'lvm'}]},
         ]},
-        {name: 'sdb', kname: 'sdb', path: '/dev/disk/by-path/pci-data-disk', type: 'disk', size: '900G', model: 'Fixture SSD'},
-        {name: 'nvme0n1', kname: 'nvme0n1', path: '/dev/nvme0n1', type: 'disk', size: '1.8T'},
+        {name: 'sdb', kname: 'sdb', path: '/dev/disk/by-path/pci-data-disk', type: 'disk', size: '900G', vendor: 'ATA', model: 'Fixture SSD'},
+        {name: 'nvme0n1', kname: 'nvme0n1', path: '/dev/nvme0n1', type: 'disk', size: '1.8T', model: 'Fixture NVMe'},
         {name: 'orphan-lv', path: '/dev/mapper/orphan-lv', type: 'lvm'},
       ],
     }};
@@ -206,12 +229,13 @@ try {
           await next.click();
           await dialog.getByRole('radio', {name: 'Disk Passthrough', exact: true}).check();
           const disks = dialog.locator('.ct-storage-vm-wizard__disk-list');
-          await disks.getByRole('checkbox', {name: '/dev/sdb', exact: true}).waitFor();
-          assert.deepEqual(await disks.locator('label').allTextContents(), ['/dev/sda', '/dev/sdb', '/dev/nvme0n1']);
-          assert.equal(await disks.getByRole('checkbox', {name: '/dev/sda', exact: true}).isDisabled(), true, 'the OS disk with partitions cannot be selected');
-          assert.equal(await disks.getByRole('checkbox', {name: '/dev/sda', exact: true}).isChecked(), false);
-          assert.equal(await disks.getByRole('checkbox', {name: '/dev/sdb', exact: true}).isChecked(), true, 'only an eligible disk is selected automatically');
-          await disks.getByRole('checkbox', {name: '/dev/nvme0n1', exact: true}).check();
+          await disks.getByRole('checkbox', {name: '/dev/sdb · 900G · ATA Fixture SSD', exact: true}).waitFor();
+          assert.equal(await dialog.getByText('디바이스 장치', {exact: true}).count(), 1);
+          assert.deepEqual(await disks.locator('label').allTextContents(), ['/dev/sda · 240G', '/dev/sdb · 900G · ATA Fixture SSD', '/dev/nvme0n1 · 1.8T · Fixture NVMe']);
+          assert.equal(await disks.getByRole('checkbox', {name: '/dev/sda · 240G', exact: true}).isDisabled(), true, 'the OS disk with partitions cannot be selected');
+          assert.equal(await disks.getByRole('checkbox', {name: '/dev/sda · 240G', exact: true}).isChecked(), false);
+          assert.equal(await disks.getByRole('checkbox', {name: '/dev/sdb · 900G · ATA Fixture SSD', exact: true}).isChecked(), true, 'only an eligible disk is selected automatically');
+          await disks.getByRole('checkbox', {name: '/dev/nvme0n1 · 1.8T · Fixture NVMe', exact: true}).check();
           await page.screenshot({path: path.join(captures, 'storage-disk-passthrough.png')});
           await page.evaluate(() => {
             for (const disk of window.__responses['/api/v1/cube/disk?action=list'].val.blockdevices) {
@@ -225,7 +249,41 @@ try {
             return disks.length === 3 && disks.every((disk) => disk.disabled && !disk.checked);
           });
           await page.evaluate((response) => { window.__responses['/api/v1/cube/disk?action=list'] = response; }, responses['/api/v1/cube/disk?action=list']);
+          await dialog.getByRole('radio', {name: 'PCI Passthrough', exact: true}).check();
+          await dialog.getByRole('radio', {name: 'Disk Passthrough', exact: true}).check();
+          await page.waitForFunction(() => document.querySelector('.ct-storage-vm-wizard__disk-list input:checked') !== null);
           await next.click();
+          for (const [id, prompt] of [
+            ['storage-vm-mgmt-bridge', '관리 NIC용 Bridge를 선택하세요'],
+            ['storage-vm-storage-nic1', '서버용 NIC를 선택하세요'],
+            ['storage-vm-replica-nic1', '복제용 NIC를 선택하세요'],
+          ]) {
+            assert.equal(await dialog.locator('#' + id).inputValue(), '', 'network devices require an explicit selection');
+            assert.equal(await dialog.locator('#' + id + ' option:checked').innerText(), prompt);
+          }
+          await page.screenshot({path: path.join(captures, 'storage-network-no-defaults.png')});
+          await dialog.locator('#storage-vm-mgmt-bridge').selectOption('bridge0');
+          await dialog.getByRole('radio', {name: 'NIC Passthrough Bonding', exact: true}).check();
+          for (const [id, prompt] of [
+            ['storage-vm-storage-nic1', '서버용 NIC 1번을 선택하세요'],
+            ['storage-vm-storage-nic2', '서버용 NIC 2번을 선택하세요'],
+            ['storage-vm-replica-nic1', '복제용 NIC 1번을 선택하세요'],
+            ['storage-vm-replica-nic2', '복제용 NIC 2번을 선택하세요'],
+          ]) {
+            assert.equal(await dialog.locator('#' + id).inputValue(), '', 'bonding does not select devices automatically');
+            assert.equal(await dialog.locator('#' + id + ' option:checked').innerText(), prompt);
+          }
+          await dialog.getByRole('radio', {name: 'Bridge Network', exact: true}).check();
+          for (const [id, prompt] of [
+            ['storage-vm-storage-bridge', '서버용 Bridge를 선택하세요'],
+            ['storage-vm-replica-bridge', '복제용 Bridge를 선택하세요'],
+          ]) {
+            assert.equal(await dialog.locator('#' + id).inputValue(), '', 'bridge mode does not select devices automatically');
+            assert.equal(await dialog.locator('#' + id + ' option:checked').innerText(), prompt);
+          }
+          await dialog.getByRole('radio', {name: 'NIC Passthrough', exact: true}).check();
+          await dialog.locator('#storage-vm-storage-nic1').selectOption('0000:18:00.0');
+          await dialog.locator('#storage-vm-replica-nic1').selectOption('0000:18:00.1');
           await next.click();
           const profile = dialog.getByRole('table', {name: '클러스터 구성 프로파일', exact: true});
           await profile.waitFor();
@@ -240,6 +298,69 @@ try {
           assert.equal(await dialog.locator('#storage-vm-storage-ip').inputValue(), '100.100.12.10');
           assert.equal(await dialog.locator('#storage-vm-replica-ip').inputValue(), '100.200.12.10');
           await page.screenshot({path: path.join(captures, 'storage-additional-network-profile.png')});
+          await next.click();
+          assert.equal(await dialog.getByText('8 vCore', {exact: true}).count(), 1, 'CPU default is present in React state without changing the select');
+          assert.equal(await dialog.getByText('16 GiB', {exact: true}).count(), 1, 'memory default is present in React state without changing the select');
+          await page.screenshot({path: path.join(captures, 'storage-compute-defaults-review.png')});
+          await dialog.getByRole('button', {name: '구성', exact: true}).click();
+          await page.getByRole('dialog', {name: '스토리지센터 가상머신 배포 진행 확인', exact: true}).getByRole('button', {name: '실행', exact: true}).click();
+          await page.waitForFunction(() => window.__requests.some((call) => call.request.path === '/api/v1/cube/deploy/run'));
+          const submitted = await page.evaluate(() => window.__requests.find((call) => call.request.path === '/api/v1/cube/deploy/run').request.body);
+          assert.deepEqual(submitted.target_hostnames, ['ablecube1']);
+          assert.equal(submitted.scvm_by_host.ablecube1.cpu, 8, 'default CPU is included in the deployment request');
+          assert.equal(submitted.scvm_by_host.ablecube1.memory, 16, 'default memory is included in the deployment request');
+          assert.equal(submitted.scvm_by_host.ablecube1.management_network_bridge, 'bridge0');
+          assert.equal(submitted.scvm_by_host.ablecube1.server_nic_passthrough, '0000:18:00.0');
+          assert.equal(submitted.scvm_by_host.ablecube1.replication_nic_passthrough, '0000:18:00.1');
+          assert.equal(await page.getByRole('dialog', {name: '입력값을 확인해주세요', exact: true}).count(), 0);
+          await page.evaluate(() => { window.__responses['/api/v1/cube/_tasks'] = {jobs: [{job_id: 'fixture-scvm-defaults', status: 'running', message: '스토리지센터 가상머신을 배포합니다.', logs: ['스토리지센터 가상머신을 배포합니다.']}]}; });
+          const logToggle = dialog.getByRole('button', {name: '로그 숨기기', exact: true});
+          await logToggle.waitFor();
+          assert.equal(await dialog.getByRole('button', {name: '로그 새로고침', exact: true}).count(), 0);
+          assert.equal(await dialog.getByRole('button', {name: '진행 로그', exact: true}).count(), 0);
+          const log = dialog.locator('pre');
+          await page.evaluate(() => { window.__responses['/api/v1/cube/_tasks'].jobs[0].logs.push('새 로그가 자동으로 갱신되었습니다.'); });
+          await log.filter({hasText: '새 로그가 자동으로 갱신되었습니다.'}).waitFor();
+          await logToggle.click();
+          const showLog = dialog.getByRole('button', {name: '로그 표시', exact: true});
+          await showLog.waitFor();
+          await log.waitFor({state: 'hidden'});
+          await page.evaluate(() => { window.__responses['/api/v1/cube/_tasks'].jobs[0].logs.push('접힌 상태에서도 로그를 갱신합니다.'); });
+          await page.waitForFunction(() => document.querySelector('.ct-storage-vm-wizard pre')?.textContent.includes('접힌 상태에서도 로그를 갱신합니다.'));
+          await showLog.click();
+          await logToggle.waitFor();
+          await log.filter({hasText: '접힌 상태에서도 로그를 갱신합니다.'}).waitFor();
+          await page.mouse.move(0, 0);
+          for (const dark of [false, true]) {
+            await page.evaluate((dark) => document.documentElement.classList.toggle('pf-v6-theme-dark', dark), dark);
+            await logToggle.evaluate(async (node) => {
+              // Read final theme colors after the button's color transition settles.
+              await Promise.all(node.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
+            });
+            await assertReadable(dialog.locator('.ct-wizard-status-row__text'), (dark ? 'dark' : 'light') + ' deployment status');
+            await assertReadable(logToggle, (dark ? 'dark' : 'light') + ' log toggle');
+            await page.screenshot({path: path.join(captures, 'storage-deploy-' + (dark ? 'dark' : 'light') + '.png')});
+          }
+          await page.evaluate(() => { window.__responses['/api/v1/cube/_tasks'] = {code: 200, jobs: []}; });
+        }
+        if (action === 'deploy_cloud_vm') {
+          await next.click();
+          for (const [id, prompt] of [
+            ['cloud-vm-mgmt-bridge', '관리네트워크 Bridge를 선택하세요'],
+            ['cloud-vm-svc-bridge', '서비스네트워크 Bridge를 선택하세요'],
+          ]) {
+            assert.equal(await dialog.locator('#' + id).inputValue(), '');
+            assert.equal(await dialog.locator('#' + id + ' option:checked').innerText(), prompt);
+          }
+          await dialog.locator('#cloud-vm-svc-enabled').check();
+          assert.equal(await dialog.locator('#cloud-vm-svc-bridge').inputValue(), '', 'enabling service networking still requires a bridge choice');
+          await dialog.locator('#cloud-vm-mgmt-bridge').selectOption('bridge0');
+          await dialog.locator('#cloud-vm-svc-bridge').selectOption('br-storage');
+          await dialog.locator('#cloud-vm-mgmt-bridge').selectOption('br-replication');
+          assert.equal(await dialog.locator('#cloud-vm-svc-bridge').inputValue(), 'br-storage', 'valid user selections are preserved');
+          await dialog.locator('#cloud-vm-mgmt-bridge').selectOption('br-storage');
+          await page.waitForFunction(() => document.getElementById('cloud-vm-svc-bridge').value === '');
+          assert.equal(await dialog.locator('#cloud-vm-svc-bridge option:checked').innerText(), '서비스네트워크 Bridge를 선택하세요', 'a service bridge excluded by the management choice is cleared');
         }
         await dialog.getByRole('button', { name: 'Close', exact: true }).click();
         if (action !== 'prepare_cluster_config') {
@@ -249,6 +370,23 @@ try {
           await cancel.waitFor({ state: 'hidden' });
         }
         await dialog.waitFor({ state: 'hidden' });
+        if (action === 'deploy_storage_vm') {
+          await page.getByLabel('배포·운영 작업', {exact: true}).selectOption(action);
+          await dialog.waitFor();
+          for (let step = 0; step < 5; step += 1) await next.click();
+          assert.equal(await dialog.getByText('8 vCore', {exact: true}).count(), 1, 'reopening restores the CPU default in React state');
+          assert.equal(await dialog.getByText('16 GiB', {exact: true}).count(), 1, 'reopening restores the memory default in React state');
+          const before = await page.evaluate(() => window.__requests.filter((call) => call.request.path === '/api/v1/cube/deploy/run').length);
+          await dialog.getByRole('button', {name: '구성', exact: true}).click();
+          await page.getByRole('dialog', {name: '스토리지센터 가상머신 배포 진행 확인', exact: true}).getByRole('button', {name: '실행', exact: true}).click();
+          const validation = page.getByRole('dialog', {name: '입력값을 확인해주세요', exact: true});
+          await validation.getByText('관리 NIC용 Bridge를 입력해주세요.', {exact: true}).waitFor();
+          assert.equal(await page.evaluate(() => window.__requests.filter((call) => call.request.path === '/api/v1/cube/deploy/run').length), before, 'unselected networking cannot start deployment');
+          await validation.getByRole('button', {name: '확인', exact: true}).click();
+          await dialog.getByRole('button', {name: 'Close', exact: true}).click();
+          await page.getByRole('dialog', {name: /배포 취소 확인/}).getByRole('button', {name: '실행', exact: true}).click();
+          await dialog.waitFor({state: 'hidden'});
+        }
         assert.deepEqual(errors, [], title + ': opening, next and cancel have no runtime exceptions');
         await page.getByRole('button', { name: '상태 새로고침', exact: true }).waitFor();
       }

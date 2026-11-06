@@ -1,5 +1,6 @@
 import { requestCubeApi } from "./client";
 import { fetchUiFeatures } from "./system-config";
+import { selectionPrompt } from "../../utils/selection";
 
 export interface InventorySelectOption {
   value: string;
@@ -137,7 +138,7 @@ export async function fetchNicInventory(): Promise<NicInventory> {
 
   return {
     bridges: [
-      { value: "", label: "선택하십시오" },
+      { value: "", label: selectionPrompt("Bridge") },
       ...uniqueOptions(
         bridges.map((device) => ({
           value: nicOptionValue(device, false),
@@ -284,10 +285,12 @@ function physicalDiskOption(device: RecordValue): DiskSelectOption | null {
   if (!name || !disk.value) return null;
   const hasPartitions = readRecordArray(device, "children").length > 0;
   const isDisabled = hasPartitions || disk.inUse;
+  const devicePath = name.startsWith("/dev/") ? name : `/dev/${name}`;
+  const hardware = [disk.vendor, disk.model].filter(Boolean).join(" ");
   return {
     id: disk.value,
     value: disk.value,
-    label: name.startsWith("/dev/") ? name : `/dev/${name}`,
+    label: [devicePath, disk.size, hardware].filter(Boolean).join(" · "),
     isDisabled,
     disabledReason: isDisabled ? disk.inUseReason || "파티션이 있거나 사용 중인 디스크는 선택할 수 없습니다." : undefined,
   };

@@ -38,6 +38,7 @@ import {
 } from "../services/api/cloud-vm-deploy";
 import { fetchNicInventory } from "../services/api/inventory";
 import { fetchCurrentHostname } from "../services/host";
+import { selectionPrompt } from "../utils/selection";
 import "./cloud-vm-deploy-wizard.scss";
 import {
   duplicateMessage,
@@ -111,7 +112,7 @@ const MEMORY_OPTIONS: SelectOption[] = [
 ];
 
 const EMPTY_BRIDGE_OPTIONS: SelectOption[] = [
-  { value: "", label: "선택하십시오" },
+  { value: "", label: selectionPrompt("Bridge") },
 ];
 
 function errorMessage(error: unknown): string {
@@ -258,6 +259,8 @@ export default function CloudVmDeployWizardModal({
       .catch((error) => {
         if (!isActive) return;
         setBridgeOptions(EMPTY_BRIDGE_OPTIONS);
+        setMgmtBridge("");
+        setSvcBridge("");
         setNicLoadState("error");
         setNicLoadError(error instanceof Error ? error.message : "NIC 목록을 불러오지 못했습니다.");
       });
@@ -266,6 +269,12 @@ export default function CloudVmDeployWizardModal({
       isActive = false;
     };
   }, [isOpen]);
+
+  React.useEffect(() => {
+    if (!isOpen || nicLoadState !== "success") return;
+    setSvcBridge((prev) => bridgeOptions.some((option) => option.value === prev && option.value !== mgmtBridge)
+      ? prev : "");
+  }, [bridgeOptions, isOpen, mgmtBridge, nicLoadState]);
 
   React.useEffect(() => {
     if (!isOpen || hostsFileMode !== "existing") return;
@@ -814,7 +823,7 @@ export default function CloudVmDeployWizardModal({
                         onChange={(_event, value) => setMgmtBridge(String(value))}
                       >
                         {bridgeOptions.map((option) => (
-                          <FormSelectOption key={option.value} value={option.value} label={option.label} />
+                          <FormSelectOption key={option.value} value={option.value} label={option.value ? option.label : selectionPrompt("관리네트워크 Bridge")} />
                         ))}
                       </FormSelect>
                     </FormGroup>
@@ -826,7 +835,7 @@ export default function CloudVmDeployWizardModal({
                         isDisabled={!svcEnabled}
                       >
                         {bridgeOptions.filter((option) => !option.value || option.value !== mgmtBridge).map((option) => (
-                          <FormSelectOption key={option.value} value={option.value} label={option.label} />
+                          <FormSelectOption key={option.value} value={option.value} label={option.value ? option.label : selectionPrompt("서비스네트워크 Bridge")} />
                         ))}
                       </FormSelect>
                     </FormGroup>

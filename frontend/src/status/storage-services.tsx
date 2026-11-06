@@ -1,4 +1,5 @@
 import React from 'react';
+import { selectionPrompt } from '../utils/selection';
 import { Alert, Button, Card, CardBody, CardTitle, Checkbox, Form, FormGroup, Modal, ModalBody, ModalFooter, ModalHeader, PageSection, Spinner, TextArea, TextInput, Title } from '@patternfly/react-core';
 import { requestCubeApi } from '../services/api/client';
 import StorageClusterStatus from '../cards/storage-cluster-status';
@@ -126,7 +127,7 @@ function ServicePanel({ service }: { service: Service }) {
       {selected && <p>선택한 항목의 정보를 입력란에 불러오려면 작업을 선택하세요.</p>}
       {action.fields.map((field) => <FormGroup key={field.name} label={field.label} isRequired={field.required} fieldId={'field-' + field.name}>
         {field.options ? <select id={'field-' + field.name} value={values[field.name] || ''} disabled={busy} onChange={(event) => setValues((previous) => ({ ...previous, [field.name]: event.target.value }))}>
-          <option value="">선택하세요.</option>{field.options.map((value) => <option key={value} value={value}>{value}</option>)}</select>
+          <option value="">{selectionPrompt(field.label)}</option>{field.options.map((value) => <option key={value} value={value}>{value}</option>)}</select>
           : field.type === 'multiple' ? <TextArea id={'field-' + field.name} value={values[field.name] || ''} isDisabled={busy} onChange={(_, value) => setValues((previous) => ({ ...previous, [field.name]: value }))} />
           : <TextInput id={'field-' + field.name} type={field.type === 'password' ? 'password' : 'text'} value={values[field.name] || ''} isDisabled={busy} onChange={(_, value) => setValues((previous) => ({ ...previous, [field.name]: value }))} />}
       </FormGroup>)}

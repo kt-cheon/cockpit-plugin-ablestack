@@ -8,6 +8,7 @@ import re
 import subprocess
 import sys
 import uuid
+from progress import write_progress
 
 DIRECTORY = Path('/var/lib/ablestack/react-tasks')
 ID_PATTERN = re.compile(r'^[a-f0-9]{32}$')
@@ -125,7 +126,7 @@ class Reporter:
 
     def step(self, name, message, function):
         self.update(current_step=name, message=message)
-        print('[ABLESTACK-PROGRESS] ' + message, flush=True)
+        write_progress(self.folder / 'execution.log', message)
         step = {'name': name, 'status': 'running', 'message': message, 'started_at': now(), 'finished_at': ''}
         self.state['steps'].append(step)
         self.update()
@@ -162,7 +163,9 @@ def worker(task_id, adapter):
                                       lambda: dispatch(adapter, request, reporter))
                 adapter.success(value)
             reporter.update(status='succeeded', message='작업이 완료되었습니다.', result=value, finished_at=now())
+            write_progress(reporter.folder / 'execution.log', '요청한 작업이 모두 완료되었습니다.')
     except Exception as error:
         reporter.update(status='failed', message=str(error), finished_at=now())
+        write_progress(reporter.folder / 'execution.log', '작업이 중단되었습니다. 마지막 진행 단계와 오류 안내를 확인해 주세요.')
     finally:
         request_file.unlink(missing_ok=True)

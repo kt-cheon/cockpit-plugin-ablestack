@@ -1,5 +1,6 @@
 // 선택값이 필요한 카드 액션 모달을 공통으로 제공합니다.
 import React from "react";
+import { selectionPrompt } from "../../utils/selection";
 import {
   Button,
   Content,
@@ -34,7 +35,7 @@ export default function SelectActionModal({
   isOpen,
   title,
   message,
-  selectLabel = "선택",
+  selectLabel = "항목",
   options,
   warning,
   checkLabel,
@@ -79,7 +80,7 @@ export default function SelectActionModal({
               value={selectedValue}
               onChange={(event) => setSelectedValue(event.currentTarget.value)}
             >
-              <option value="">선택하십시오</option>
+              <option value="">{selectionPrompt(selectLabel)}</option>
               {options.map((option) => (
                 <option key={option.value} value={option.value} disabled={option.disabled}>
                   {option.label}
