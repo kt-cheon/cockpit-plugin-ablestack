@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ABLESTACK · 클러스터 종류 선택 UI 시안</title>
+<style>
+  :root { color-scheme: dark; --page:#101214; --surface:#181d22; --card:#222930; --border:#39434e; --muted:#b2bdca; --blue:#9bcaff; --selected:#1e3048; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--page); color:#f5f7fa; font:14px/1.6 "Apple SD Gothic Neo",Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+  button { font:inherit; color:inherit; cursor:pointer; }
+  button:focus-visible { outline:2px solid var(--blue); outline-offset:4px; }
+  .page { max-width:1200px; padding:32px; margin:auto; }
+  .masthead { display:flex; align-items:baseline; gap:12px; margin-bottom:8px; }
+  .masthead strong { font-size:24px; letter-spacing:-.6px; }
+  .masthead span { color:var(--muted); font-size:14px; }
+  .intro { margin:0 0 22px; color:var(--muted); }
+  .views { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 24px; }
+  .views button { background:transparent; border:1px solid var(--border); border-radius:8px; padding:9px 16px; color:var(--muted); }
+  .views button[aria-pressed="true"] { background:var(--selected); border-color:var(--blue); color:var(--blue); }
+  .wizard { border:1px solid var(--border); border-radius:20px; overflow:hidden; box-shadow:0 16px 50px #0005; }
+  .wizard-header { padding:22px 26px; background:#191919; }
+  .wizard-header h1 { margin:0; font-size:24px; line-height:1.4; letter-spacing:-.5px; }
+  .wizard-header p { color:var(--muted); font-size:13px; margin:4px 0 0; }
+  .wizard-body { display:grid; grid-template-columns:208px minmax(0,1fr); min-height:430px; background:var(--surface); }
+  .steps { padding:24px 16px; border-right:1px solid var(--border); }
+  .steps div { display:flex; gap:10px; align-items:center; padding:11px 12px; margin:4px 0; color:var(--muted); border-radius:7px; font-size:13px; }
+  .steps i { display:grid; place-items:center; width:21px; height:21px; border-radius:50%; background:#e9edf0; color:#48515b; font-size:11px; font-style:normal; flex:none; }
+  .steps .active { color:var(--blue); background:#ffffff0b; font-weight:700; }
+  .steps .active i { background:#4d7cff; color:white; }
+  .content { padding:26px; min-width:0; }
+  .content h2 { font-size:18px; margin:0 0 4px; }
+  .content > p { color:var(--muted); margin:0 0 22px; }
+  .footer { display:flex; align-items:center; gap:12px; border-top:1px solid var(--border); padding:18px 26px; padding-left:234px; background:var(--surface); }
+  .footer .primary { background:#0869c6; border:1px solid #0869c6; padding:9px 23px; border-radius:22px; font-weight:700; }
+  .footer .secondary { background:transparent; border:1px solid var(--blue); color:var(--blue); padding:8px 20px; border-radius:22px; }
+  .footer output { margin-left:auto; color:var(--muted); font-size:12px; }
+  .products { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+  .product { min-width:0; background:var(--card); border:2px solid var(--border); border-radius:10px; }
+  .product[aria-pressed="true"] { background:var(--selected); border-color:var(--blue); }
+  .product:hover { border-color:#78aee8; }
+  .product h3 { margin:0; font-size:14px; line-height:1.5; overflow-wrap:anywhere; word-break:keep-all; }
+  .product p { color:var(--muted); margin:0; font-size:13px; word-break:keep-all; overflow-wrap:anywhere; }
+  .product[aria-pressed="true"] h3, .product[aria-pressed="true"] .check { color:var(--blue); }
+  .equal .product { display:flex; flex-direction:column; align-items:stretch; gap:14px; padding:20px 18px; min-height:216px; text-align:center; }
+  .equal p { text-align:left; line-height:1.65; }
+  .check { margin-top:auto; min-height:22px; color:var(--blue); font-size:18px; line-height:22px; }
+  .note { display:flex; align-items:center; gap:8px; margin-top:18px; color:var(--muted); font-size:12px; }
+  .note b { color:var(--blue); font-weight:600; }
+  .comparison { overflow:auto; border:1px solid var(--border); border-radius:10px; }
+  table { border-collapse:collapse; width:100%; table-layout:fixed; }
+  th,td { padding:14px 10px; text-align:center; border-bottom:1px solid var(--border); border-right:1px solid var(--border); font-size:12px; }
+  th:first-child { width:100px; color:var(--muted); font-weight:500; text-align:left; padding-left:16px; }
+  tr:last-child > * { border-bottom:0; }
+  tr > :last-child { border-right:0; }
+  thead th { padding:0; background:#20262d; }
+  thead th:first-child { padding-left:16px; }
+  th button { border:0; border-bottom:3px solid transparent; width:100%; padding:18px 10px; background:transparent; font-size:13px; font-weight:700; overflow-wrap:anywhere; }
+  th button[aria-pressed="true"] { color:var(--blue); background:var(--selected); border-bottom-color:var(--blue); }
+  td.selected { background:#1e30484a; color:#d9eaff; }
+  .comparison small { display:block; color:var(--muted); font-size:11px; font-weight:400; margin-top:5px; }
+  .row-list { display:grid; gap:12px; }
+  .row-list .product { display:grid; grid-template-columns:24px minmax(0,1fr) auto; align-items:center; gap:16px; text-align:left; padding:18px 20px; }
+  .radio { width:19px; height:19px; border:1px solid #758292; border-radius:50%; display:grid; place-items:center; }
+  .product[aria-pressed="true"] .radio { border-color:var(--blue); }
+  .product[aria-pressed="true"] .radio:after { content:""; width:9px; height:9px; background:var(--blue); border-radius:50%; }
+  .row-list h3 { margin-bottom:3px; }
+  .tag { border:1px solid #4a5869; color:var(--muted); border-radius:20px; padding:3px 10px; font-size:11px; white-space:nowrap; }
+  .board { display:grid; gap:24px; max-width:960px; margin:auto; }
+  .board article { padding:24px; border:1px solid var(--border); border-radius:16px; background:var(--surface); }
+  .board header { display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin-bottom:18px; }
+  .board h2 { margin:0; font-size:18px; }
+  .board header p { color:var(--muted); font-size:12px; margin:0; }
+  .badge { display:inline-block; background:var(--selected); color:var(--blue); border:1px solid #649fd166; border-radius:20px; padding:2px 8px; font-size:11px; vertical-align:middle; margin-left:6px; }
+  [hidden] { display:none !important; }
+  @media(max-width:800px) { .page { padding:18px; } .wizard-body { grid-template-columns:minmax(0,1fr); } .steps { display:none; } .footer { padding-left:24px; } .content { padding:22px; } .products { gap:10px; } .equal .product { padding:18px 12px; } .board header { display:block; } }
+  @media(max-width:580px) { .masthead { display:block; } .products { grid-template-columns:1fr; } .equal .product { min-height:0; } .footer output { display:none; } .row-list .product { grid-template-columns:20px minmax(0,1fr); padding:16px; } .row-list .tag { grid-column:2; justify-self:start; } .board article { padding:18px; } th:first-child { width:78px; } th,td { padding:10px 7px; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="masthead"><strong>ABLESTACK</strong><span>클러스터 종류 선택 · UI 시안</span></header>
+  <p class="intro">제품을 직접 눌러 선택 상태를 비교해 보세요. 1안은 현재 마법사에 반영한 배치입니다.</p>
+  <nav class="views" aria-label="UI 시안 선택">
+    <button data-view="cards" aria-pressed="true">1. 균등 카드형 · 추천</button>
+    <button data-view="comparison" aria-pressed="false">2. 비교표형</button>
+    <button data-view="list" aria-pressed="false">3. 세로 목록형</button>
+    <button data-view="board" aria-pressed="false">모두 비교</button>
+  </nav>
+  <section class="wizard" id="wizard" aria-label="클러스터 구성 준비 마법사 시안">
+    <header class="wizard-header"><h1>클러스터 구성 준비 마법사</h1><p>스토리지센터 및 클라우드센터 구성을 위한 정보를 준비합니다.</p></header>
+    <div class="wizard-body">
+      <aside class="steps" aria-label="마법사 단계">
+        <div><i>1</i>개요</div><div class="active"><i>2</i>클러스터 종류</div><div><i>3</i>SSH KEY 파일</div>
+        <div><i>4</i>클러스터 구성 파일</div><div><i>5</i>시간서버</div><div><i>6</i>설정확인</div>
+      </aside>
+      <main class="content"><h2>클러스터 종류를 선택하세요</h2><p>사용할 스토리지와 호스트 구성에 맞는 제품을 선택합니다.</p><div id="single-layout"></div><div class="note">선택한 제품 <b class="selected-name">ABLESTACK-HCI</b></div></main>
+    </div>
+    <footer class="footer"><button class="primary" id="next">다음</button><button class="secondary" id="previous">이전</button><output id="preview-message">레이아웃 미리보기</output></footer>
+  </section>
+  <section class="board" id="board" hidden aria-label="세 가지 UI 비교">
+    <article><header><h2>1. 균등 카드형 <span class="badge">추천 · 현재 반영</span></h2><p>같은 너비와 높이로 제품을 고르게 배치</p></header><div data-board="cards"></div></article>
+    <article><header><h2>2. 비교표형</h2><p>스토리지·호스트 구성의 차이를 한눈에 비교</p></header><div data-board="comparison"></div></article>
+    <article><header><h2>3. 세로 목록형</h2><p>긴 설명을 읽기 편하게, 좁은 화면에도 자연스럽게</p></header><div data-board="list"></div></article>
+  </section>
+</div>
+<script>
+const products = [
+  {id:'hci', title:'ABLESTACK-HCI', description:'x86 기반의 서버와 가상화 기술, 그리고 소프트웨어 정의 기술을 접목하여 HCI를 구성하는 소프트웨어 스택입니다.', short:'Glue 분산 스토리지를 사용하는 HCI 환경을 구성합니다.', storage:'내부 분산 스토리지', host:'다중 호스트', category:'Glue 분산 스토리지'},
+  {id:'vm', title:'ABLESTACK-VM', description:'Cube 및 외부 스토리지를 사용하여 Mold를 ABLESTACK VM으로 올린 소프트웨어 솔루션입니다.', short:'외부 스토리지를 연결하여 가상화 환경을 구성합니다.', storage:'외부 공유 스토리지', host:'다중 호스트', category:'외부 스토리지'},
+  {id:'standalone', title:'ABLESTACK-STANDALONE', description:'단일 서버 환경에서 로컬 스토리지를 기반으로 ABLESTACK 제품을 구동하는 소프트웨어 솔루션입니다.', short:'한 대의 서버와 로컬 스토리지로 가상화 환경을 구성합니다.', storage:'서버 로컬 스토리지', host:'단일 호스트', category:'로컬 스토리지'}
+];
+let selected = 'hci';
+let view = new URL(location.href).searchParams.get('view') || 'cards';
+function layout(type) {
+  if(type === 'cards') return '<div class="products equal" role="group" aria-label="클러스터 종류 선택">' + products.map(p =>
+    `<button class="product" data-product="${p.id}" aria-pressed="${p.id === selected}"><h3>${p.title}</h3><p>${p.description}</p><span class="check" aria-hidden="true">${p.id === selected ? '✓' : ''}</span></button>`).join('') + '</div>';
+  if(type === 'comparison') return '<div class="comparison"><table><thead><tr><th scope="col">제품</th>' + products.map(p =>
+    `<th scope="col"><button data-product="${p.id}" aria-pressed="${p.id === selected}">${p.title}<small>${p.id === selected ? '✓ 선택됨' : '선택하기'}</small></button></th>`).join('') + '</tr></thead><tbody>' +
+    [['스토리지','storage'],['호스트 구성','host'],['구성 방식','category']].map(([label,key]) => `<tr><th scope="row">${label}</th>` + products.map(p => `<td class="${p.id === selected ? 'selected' : ''}">${p[key]}</td>`).join('') + '</tr>').join('') + '</tbody></table></div>';
+  return '<div class="row-list" role="group" aria-label="클러스터 종류 선택">' + products.map(p =>
+    `<button class="product" data-product="${p.id}" aria-pressed="${p.id === selected}"><span class="radio" aria-hidden="true"></span><span><h3>${p.title}</h3><p>${p.short}</p></span><span class="tag">${p.category}</span></button>`).join('') + '</div>';
+}
+function render() {
+  document.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.view === view)));
+  document.getElementById('wizard').hidden = view === 'board';
+  document.getElementById('board').hidden = view !== 'board';
+  document.getElementById('single-layout').innerHTML = layout(view === 'board' ? 'cards' : view);
+  document.querySelectorAll('[data-board]').forEach(container => container.innerHTML = layout(container.dataset.board));
+  document.querySelectorAll('.selected-name').forEach(node => node.textContent = products.find(p => p.id === selected).title);
+}
+document.addEventListener('click', event => {
+  const tab = event.target.closest('[data-view]');
+  if(tab) { view = tab.dataset.view; render(); tab.focus(); }
+  const product = event.target.closest('[data-product]');
+  if(product) {
+    const parent = product.closest('[data-board],#single-layout');
+    selected = product.dataset.product;
+    render();
+    parent.querySelector(`[data-product="${selected}"]`).focus();
+  }
+});
+document.getElementById('next').onclick = () => document.getElementById('preview-message').textContent = '선택: ' + products.find(p => p.id === selected).title;
+document.getElementById('previous').onclick = () => { selected = 'hci'; render(); document.getElementById('preview-message').textContent = '레이아웃 미리보기'; };
+render();
+</script>
+</body>
+</html>

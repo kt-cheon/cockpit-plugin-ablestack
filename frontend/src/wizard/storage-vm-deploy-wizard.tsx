@@ -57,6 +57,8 @@ type InventoryLoadState = "idle" | "loading" | "success" | "error";
 interface SelectOption {
   value: string;
   label: string;
+  isDisabled?: boolean;
+  disabledReason?: string;
 }
 
 interface ClusterHostRow {
@@ -113,6 +115,7 @@ export default function StorageVmDeployWizardModal({
   const [allowLun, setAllowLun] = React.useState(false);
   const [selectedDisks, setSelectedDisks] = React.useState<string[]>([]);
   const [raidDiskOptions, setRaidDiskOptions] = React.useState<SelectOption[]>([]);
+  const [physicalDiskOptions, setPhysicalDiskOptions] = React.useState<SelectOption[]>([]);
   const [lunDiskOptions, setLunDiskOptions] = React.useState<SelectOption[]>([]);
   const [diskLoadState, setDiskLoadState] = React.useState<InventoryLoadState>("idle");
   const [diskLoadError, setDiskLoadError] = React.useState("");
@@ -170,6 +173,7 @@ export default function StorageVmDeployWizardModal({
     setDiskMode("rp");
     setSelectedDisks([]);
     setRaidDiskOptions([]);
+    setPhysicalDiskOptions([]);
     setLunDiskOptions([]);
     setDiskLoadState("idle");
     setDiskLoadError("");
@@ -280,10 +284,12 @@ export default function StorageVmDeployWizardModal({
         if (!isActive) return;
 
         setRaidDiskOptions(inventory.raidDisks);
+        setPhysicalDiskOptions(inventory.physicalDisks);
         setAllowLun(inventory.lunPassthroughEnabled);
         setLunDiskOptions(inventory.lunDisks);
         setSelectedDisks((prev) => {
-          const currentOptions = diskMode === "rp" ? inventory.raidDisks : inventory.lunDisks;
+          const currentOptions = (diskMode === "rp" ? inventory.raidDisks : diskMode === "dp" ? inventory.physicalDisks : inventory.lunDisks)
+            .filter((option) => !option.isDisabled);
           const validSelection = prev.filter((disk) => currentOptions.some((option) => option.value === disk));
 
           return validSelection.length > 0
@@ -297,6 +303,7 @@ export default function StorageVmDeployWizardModal({
       .catch((error) => {
         if (!isActive) return;
         setRaidDiskOptions([]);
+        setPhysicalDiskOptions([]);
         setLunDiskOptions([]);
         setSelectedDisks([]);
         setDiskLoadState("error");
@@ -366,24 +373,6 @@ export default function StorageVmDeployWizardModal({
     };
   }, [currentHostname, hostsFileMode, isOpen]);
 
-  const updateHostCount = (nextCount: number) => {
-    const safeCount = Math.max(3, Math.min(99, nextCount));
-    setHostCount(safeCount);
-    setHosts((prev) => {
-      if (safeCount === prev.length) return prev;
-      if (safeCount < prev.length) return prev.slice(0, safeCount);
-      const extras = Array.from({ length: safeCount - prev.length }, (_, idx) => ({
-        hostName: `ablecube${prev.length + idx + 21}`,
-        hostIp: "",
-        scvmMgmtIp: "",
-        hostPnIp: "",
-        scvmPnIp: "",
-        scvmCnIp: "",
-      }));
-      return [...prev, ...extras];
-    });
-  };
-
   const updateHost = (index: number, key: keyof ClusterHostRow, value: string) => {
     setHosts((prev) => prev.map((host, hostIndex) => (
       hostIndex === index ? { ...host, [key]: value } : host
@@ -393,7 +382,7 @@ export default function StorageVmDeployWizardModal({
   const getOptionLabel = (options: SelectOption[], value: string) =>
     options.find((option) => option.value === value)?.label || value || "미입력";
 
-  const currentDiskOptions = diskMode === "rp" ? raidDiskOptions : lunDiskOptions;
+  const currentDiskOptions = diskMode === "rp" ? raidDiskOptions : diskMode === "dp" ? physicalDiskOptions : lunDiskOptions;
   const diskModeLabel = diskMode === "rp" ? "PCI Passthrough" : diskMode === "dp" ? "Disk Passthrough" : "LUN Passthrough";
   const storageTrafficModeLabel =
     storageTrafficMode === "np"
@@ -408,11 +397,13 @@ export default function StorageVmDeployWizardModal({
 
   const handleDiskModeChange = (nextMode: DiskMode) => {
     setDiskMode(nextMode);
-    const nextOptions = nextMode === "rp" ? raidDiskOptions : lunDiskOptions;
-    setSelectedDisks(nextOptions[0]?.value ? [nextOptions[0].value] : []);
+    const nextOptions = nextMode === "rp" ? raidDiskOptions : nextMode === "dp" ? physicalDiskOptions : lunDiskOptions;
+    const firstSelectable = nextOptions.find((option) => !option.isDisabled);
+    setSelectedDisks(firstSelectable ? [firstSelectable.value] : []);
   };
 
   const toggleSelectedDisk = (diskValue: string, checked: boolean) => {
+    if (!currentDiskOptions.some((option) => option.value === diskValue && !option.isDisabled)) return;
     setSelectedDisks((prev) =>
       checked ? [...prev, diskValue] : prev.filter((value) => value !== diskValue)
     );
@@ -473,6 +464,9 @@ export default function StorageVmDeployWizardModal({
     if (!memory) return "Memory를 입력해주세요.";
     if (diskLoadState === "error") return `디스크 정보를 확인해주세요. ${diskLoadError}`;
     if (selectedDisks.length === 0) return "디스크를 입력해주세요.";
+    if (selectedDisks.some((value) => !currentDiskOptions.some((option) => option.value === value && !option.isDisabled))) {
+      return "선택할 수 있는 디스크를 다시 확인해주세요.";
+    }
     if (nicLoadState === "error") return `NIC 정보를 확인해주세요. ${nicLoadError}`;
     if (!mgmtBridge) return "관리 NIC용 Bridge를 입력해주세요.";
 
@@ -896,17 +890,19 @@ export default function StorageVmDeployWizardModal({
 	                        className="ct-storage-vm-wizard__info"
 	                      >
 	                        {diskMode === "rp"
-	                          ? "API에서 RAID/NVMe 컨트롤러 후보를 찾지 못했습니다."
-	                          : "API에서 LUN Passthrough 디스크 후보를 찾지 못했습니다."}
+	                          ? "PCI Passthrough로 할당할 컨트롤러를 찾지 못했습니다."
+	                          : diskMode === "dp" ? "Disk Passthrough로 할당할 물리 디스크를 찾지 못했습니다."
+	                          : "할당할 LUN 디스크를 찾지 못했습니다."}
 	                      </Alert>
 	                    ) : (
 	                      <div className="ct-storage-vm-wizard__disk-list">
 	                        {currentDiskOptions.map((disk) => (
-	                          <div key={disk.value} className="ct-storage-vm-wizard__disk-item">
+	                          <div key={disk.value} className="ct-storage-vm-wizard__disk-item" title={disk.disabledReason}>
 	                            <Checkbox
 	                              id={`storage-vm-disk-${disk.value.replace(/[^a-zA-Z0-9_-]/g, "-")}`}
 	                              label={disk.label}
 	                              isChecked={selectedDisks.includes(disk.value)}
+	                              isDisabled={disk.isDisabled}
 	                              onChange={(_event, checked) => toggleSelectedDisk(disk.value, checked)}
 	                            />
 	                          </div>
@@ -927,7 +923,7 @@ export default function StorageVmDeployWizardModal({
                     호스트 OS RAID가 독립적으로 구성되어 있을 때 사용 가능합니다.
                   </Content>
                   <Content component="p">
-                    RAID Passthrough를 사용할 수 없는 경우에는 디스크 전체를 가상머신에 할당하는 LUN Passthrough 방식을 선택하십시오.
+                    PCI Passthrough를 사용할 수 없는 경우에는 디스크 전체를 가상머신에 할당하는 Disk Passthrough 방식을 선택하십시오.
                   </Content>
                 </Alert>
               </div>
@@ -1094,74 +1090,20 @@ export default function StorageVmDeployWizardModal({
 
         <WizardStep name="추가 네트워크 정보" id="storage-vm-additional">
           <div className="ct-storage-vm-wizard__content">
-            <Content>
-              <Content component="p">
-                스토리지 가상머신의 각종 네트워크 정보를 설정하기 위해 호스트명, IP 정보 등의 추가 네트워크 정보를 입력합니다.
-                가상머신이 생성되면서 입력한 정보가 가상머신 내부에 자동으로 설정됩니다.
-              </Content>
-            </Content>
-
-            <Form className="ct-storage-vm-wizard__section ct-storage-vm-wizard__form-horizontal" isHorizontal>
-              <FormGroup label={<>클러스터 구성 파일<br />준비</>} isRequired fieldId="storage-vm-hosts-file-mode">
-                <div className="ct-storage-vm-wizard__inline">
-                  <Radio
-                    id="storage-vm-hosts-file-existing"
-                    name="storage-vm-hosts-file-mode"
-                    label="해당 호스트 파일 사용"
-                    isChecked
-                    isDisabled
-                  />
-                  <Radio
-                    id="storage-vm-hosts-file-new"
-                    name="storage-vm-hosts-file-mode"
-                    label="신규 생성"
-                    isChecked={false}
-                    isDisabled
-                  />
-                </div>
-              </FormGroup>
-              <FormGroup label="현재 호스트명" isRequired fieldId="storage-vm-current-hostname">
-                <TextInput id="storage-vm-current-hostname" value={currentHostname} readOnly />
-              </FormGroup>
-              <FormGroup label="구성할 호스트 수" isRequired fieldId="storage-vm-host-count">
-                <div className="ct-storage-vm-wizard__stepper">
-                  <Button
-                    variant="control"
-                    isDisabled={hostsFileMode === "existing"}
-                    onClick={() => updateHostCount(hostCount - 1)}
-                  >
-                    -
-                  </Button>
-                  <div className="ct-storage-vm-wizard__stepper-value">{hostCount}</div>
-                  <Button
-                    variant="control"
-                    isDisabled={hostsFileMode === "existing"}
-                    onClick={() => updateHostCount(hostCount + 1)}
-                  >
-                    +
-                  </Button>
-                  <span className="ct-storage-vm-wizard__stepper-unit">대</span>
-                </div>
-              </FormGroup>
-
-              {hostsFileMode === "existing" && (
-                <Alert
-                  isInline
-                  title={
-                    clusterConfigLoadError
-                      ? "cluster.json 정보를 불러오지 못했습니다."
-                      : clusterConfigLoaded
-                        ? "cluster.json의 호스트 정보를 자동으로 적용했습니다."
-                        : "cluster.json 정보를 불러오는 중입니다."
-                  }
-                  variant={clusterConfigLoadError ? "warning" : "info"}
-                  className="ct-storage-vm-wizard__info"
-                />
-              )}
-
+            <Form className="ct-storage-vm-wizard__form-horizontal" isHorizontal>
               <div className="ct-storage-vm-wizard__table-wrap">
                 <div className="ct-storage-vm-wizard__table-title">클러스터 구성 프로파일</div>
-                <table className="ct-storage-vm-wizard__table">
+                {(clusterConfigLoadError || !clusterConfigLoaded) && (
+                  <Alert
+                    isInline
+                    title={clusterConfigLoadError
+                      ? "cluster.json 정보를 불러오지 못했습니다."
+                      : "cluster.json 정보를 불러오는 중입니다."}
+                    variant={clusterConfigLoadError ? "warning" : "info"}
+                    className="ct-storage-vm-wizard__info"
+                  />
+                )}
+                <table className="ct-storage-vm-wizard__table" aria-label="클러스터 구성 프로파일">
                   <thead>
                     <tr>
                       <th>순번</th>

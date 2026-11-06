@@ -46,6 +46,18 @@ try {
     for (const suffix of ['/api/v1/cube/nics?action=detail', '/api/v1/cube/disk?action=list', '/api/v1/cube/disk?action=gfs', '/api/v1/cube/cluster/config']) {
       responses[suffix] = preview.getPreviewCubeApiResponse(suffix);
     }
+    responses['/api/v1/cube/disk?action=list'] = {code: 200, val: {
+      raidcontrollers: [{Slot: '0000:5e:00.0', Class: 'RAID bus controller', Vendor: 'Fixture'}],
+      blockdevices: [
+        {name: 'sda', kname: 'sda', path: '/dev/disk/by-path/pci-os-disk', type: 'disk', size: '240G', children: [
+          {name: 'sda1', path: '/dev/sda1', type: 'part'},
+          {name: 'sda2', path: '/dev/sda2', type: 'part', children: [{name: 'system-root', path: '/dev/mapper/system-root', type: 'lvm'}]},
+        ]},
+        {name: 'sdb', kname: 'sdb', path: '/dev/disk/by-path/pci-data-disk', type: 'disk', size: '900G', model: 'Fixture SSD'},
+        {name: 'nvme0n1', kname: 'nvme0n1', path: '/dev/nvme0n1', type: 'disk', size: '1.8T'},
+        {name: 'orphan-lv', path: '/dev/mapper/orphan-lv', type: 'lvm'},
+      ],
+    }};
     const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
     page.setDefaultTimeout(15000);
     const errors = [];
@@ -143,7 +155,17 @@ try {
         await page.screenshot({ path: path.join(captures, action + '.png'), fullPage: true });
         if (action === 'prepare_cluster_config') {
           await next.click();
+          const sshMode = dialog.locator('.pf-v6-c-form__group').filter({has: page.locator('#ssh-key-new')});
+          assert.equal(await sshMode.locator('.pf-v6-c-form__label-text').innerText(), 'SSH KEY 파일');
+          await dialog.locator('#ssh-key-existing').check();
+          assert.equal(await dialog.getByRole('textbox', {name: /id_rsa.*내용/}).count(), 0, 'key content previews are not rendered');
+          await dialog.locator('#ssh-key-file').setInputFiles({name: 'invalid.dat', mimeType: 'application/octet-stream', buffer: Buffer.from('invalid fixture')});
+          await dialog.locator('.ct-cluster-config-wizard__ssh-preview-summary').filter({hasText: '확인 필요'}).waitFor();
+          assert.equal(await dialog.getByRole('textbox', {name: /id_rsa.*내용/}).count(), 0, 'file validation stays visible without rendering private or public key contents');
+          await page.screenshot({path: path.join(captures, 'ssh-key-file-status.png')});
+          await dialog.locator('#ssh-key-new').check();
           await next.click();
+          await page.screenshot({path: path.join(captures, 'cluster-config-new-labels.png')});
           await dialog.locator('#hosts-file-existing').check();
           const registration = dialog.locator('.ct-file-attach').filter({has: page.locator('#host-registration')});
           const clusterFile = dialog.locator('.ct-file-attach').filter({has: page.locator('#hosts-file')});
@@ -157,8 +179,12 @@ try {
           assert.equal(await registration.locator('.ct-file-attach__surface').evaluate((node) => getComputedStyle(node).borderRadius),
             await clusterFile.locator('.ct-file-attach__surface').evaluate((node) => getComputedStyle(node).borderRadius), 'both uploads share the same control');
           const prepareLabel = dialog.locator('.pf-v6-c-form__group').filter({has: page.locator('#hosts-file-new')}).locator('.pf-v6-c-form__label-text');
-          assert.equal(await prepareLabel.locator('br').count(), 1, 'file preparation label breaks into two lines');
-          assert.ok(await prepareLabel.evaluate((node) => node.getBoundingClientRect().height > parseFloat(getComputedStyle(node).lineHeight)), 'the complete label occupies two visible lines');
+          assert.equal(await prepareLabel.innerText(), '클러스터 구성 파일');
+          for (const text of ['현재 호스트', '클러스터 구성 호스트 수']) {
+            const group = dialog.locator('.pf-v6-c-form__group').filter({has: page.getByText(text, {exact: true})});
+            assert.equal(await group.locator('.pf-v6-c-form__label-text').innerText(), text);
+            assert.equal(await group.locator('.pf-v6-c-form__group-label').evaluate((node) => getComputedStyle(node).justifyContent), 'center', 'form labels are centered in their column');
+          }
           assert.equal(await dialog.getByText('노드 IP 기준', {exact: true}).count(), 0);
           const helpText = 'PCS 클러스터 노드 주소로 사용할 IP 항목을 선택합니다.';
           assert.equal(await page.getByText(helpText, {exact: true}).count(), 0, 'help text stays out of the form until requested');
@@ -175,6 +201,45 @@ try {
           await dialog.locator('.pf-v6-c-alert__title').filter({hasText: '호스트 통신 등록 파일 형식을 확인해 주세요.'}).waitFor();
           await registration.getByRole('button', {name: '초기화', exact: true}).click();
           assert.equal(await dialog.locator('.pf-v6-c-alert__title').filter({hasText: '호스트 통신 등록 파일 형식을 확인해 주세요.'}).count(), 0);
+        }
+        if (action === 'deploy_storage_vm') {
+          await next.click();
+          await dialog.getByRole('radio', {name: 'Disk Passthrough', exact: true}).check();
+          const disks = dialog.locator('.ct-storage-vm-wizard__disk-list');
+          await disks.getByRole('checkbox', {name: '/dev/sdb', exact: true}).waitFor();
+          assert.deepEqual(await disks.locator('label').allTextContents(), ['/dev/sda', '/dev/sdb', '/dev/nvme0n1']);
+          assert.equal(await disks.getByRole('checkbox', {name: '/dev/sda', exact: true}).isDisabled(), true, 'the OS disk with partitions cannot be selected');
+          assert.equal(await disks.getByRole('checkbox', {name: '/dev/sda', exact: true}).isChecked(), false);
+          assert.equal(await disks.getByRole('checkbox', {name: '/dev/sdb', exact: true}).isChecked(), true, 'only an eligible disk is selected automatically');
+          await disks.getByRole('checkbox', {name: '/dev/nvme0n1', exact: true}).check();
+          await page.screenshot({path: path.join(captures, 'storage-disk-passthrough.png')});
+          await page.evaluate(() => {
+            for (const disk of window.__responses['/api/v1/cube/disk?action=list'].val.blockdevices) {
+              if (disk.type === 'disk') disk.children = [{name: disk.name + '-partition', type: 'part'}];
+            }
+          });
+          await dialog.getByRole('radio', {name: 'PCI Passthrough', exact: true}).check();
+          await dialog.getByRole('radio', {name: 'Disk Passthrough', exact: true}).check();
+          await page.waitForFunction(() => {
+            const disks = Array.from(document.querySelectorAll('.ct-storage-vm-wizard__disk-list input[type="checkbox"]'));
+            return disks.length === 3 && disks.every((disk) => disk.disabled && !disk.checked);
+          });
+          await page.evaluate((response) => { window.__responses['/api/v1/cube/disk?action=list'] = response; }, responses['/api/v1/cube/disk?action=list']);
+          await next.click();
+          await next.click();
+          const profile = dialog.getByRole('table', {name: '클러스터 구성 프로파일', exact: true});
+          await profile.waitFor();
+          assert.equal(await dialog.locator('.pf-v6-c-wizard__main-body').innerText().then((text) => text.trim().startsWith('클러스터 구성 프로파일')), true, 'additional network information starts with the saved cluster profile');
+          assert.equal(await dialog.locator('#storage-vm-hosts-file-existing, #storage-vm-hosts-file-new, #storage-vm-current-hostname, #storage-vm-host-count').count(), 0, 'SCVM deployment does not show profile creation, current host or host-count controls');
+          assert.equal(await dialog.getByText('cluster.json의 호스트 정보를 자동으로 적용했습니다.', {exact: true}).count(), 0);
+          assert.equal(await profile.locator('tbody tr').count(), 3, 'all saved cluster hosts remain visible');
+          assert.equal(await profile.getByRole('textbox', {name: '호스트명 1', exact: true}).inputValue(), 'ablecube1');
+          assert.equal(await profile.getByRole('textbox', {name: '호스트명 1', exact: true}).isDisabled(), true, 'the existing profile stays read-only');
+          assert.equal(await dialog.locator('#storage-vm-hostname').inputValue(), 'scvm1');
+          assert.equal(await dialog.locator('#storage-vm-mgmt-ip').inputValue(), '10.10.12.10/16');
+          assert.equal(await dialog.locator('#storage-vm-storage-ip').inputValue(), '100.100.12.10');
+          assert.equal(await dialog.locator('#storage-vm-replica-ip').inputValue(), '100.200.12.10');
+          await page.screenshot({path: path.join(captures, 'storage-additional-network-profile.png')});
         }
         await dialog.getByRole('button', { name: 'Close', exact: true }).click();
         if (action !== 'prepare_cluster_config') {
@@ -199,6 +264,23 @@ try {
         assert.equal(await wizard.locator('.ct-cluster-config-wizard__type-card').filter({hasText: 'PowerFlex'}).count(), Number(ui.cluster_type_powerflex === true));
         assert.equal(await wizard.locator('.ct-cluster-config-wizard__type-card').filter({hasText: 'ABLESTACK-HCI-Filesystem'}).count(), Number(ui.cluster_type_hci_filesystem === true));
         assert.equal(await wizard.getByText(/ABLESTACK HCI Filesystem은 Glue/).count(), Number(ui.cluster_type_hci_filesystem === true));
+        const layout = await wizard.locator('.ct-cluster-config-wizard__type-grid').evaluate((grid) => ({
+          left: grid.getBoundingClientRect().left, right: grid.getBoundingClientRect().right,
+          cards: Array.from(grid.children).map((card) => {
+            const rect = card.getBoundingClientRect();
+            return {left: rect.left, right: rect.right, top: Math.round(rect.top), width: rect.width};
+          }),
+        }));
+        for (const top of new Set(layout.cards.map((card) => card.top))) {
+          const row = layout.cards.filter((card) => card.top === top);
+          assert.ok(Math.abs(row[0].left - layout.left) < 2 && Math.abs(row.at(-1).right - layout.right) < 2, 'every product row fills the available width');
+          assert.ok(row.every((card) => Math.abs(card.width - row[0].width) < 2), 'products in each row have equal widths');
+        }
+        const vmCard = wizard.locator('.ct-cluster-config-wizard__type-card').filter({has: page.getByText('ABLESTACK-VM', {exact: true})});
+        await vmCard.click();
+        assert.equal(await vmCard.getAttribute('aria-pressed'), 'true');
+        assert.equal(await wizard.locator('.ct-cluster-config-wizard__type-card[aria-pressed="true"]').count(), 1);
+        await wizard.locator('.ct-cluster-config-wizard__type-card').filter({has: page.getByText('ABLESTACK-HCI', {exact: true})}).click();
         await page.screenshot({path: path.join(captures, 'cluster-types-' + expected + '-' + Boolean(ui.cluster_type_powerflex) + '.png')});
         await wizard.getByRole('button', {name: 'Close', exact: true}).click();
         await wizard.waitFor({state: 'hidden'});

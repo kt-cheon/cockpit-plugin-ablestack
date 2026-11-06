@@ -22,6 +22,29 @@
   font-family: "Apple SD Gothic Neo", Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 }
 
+:is(.ct-cluster-config-wizard__form-horizontal, .ct-storage-vm-wizard__form-horizontal, .ct-cloud-vm-wizard__form-horizontal) .pf-v6-c-form__group-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  gap: 6px;
+  text-align: center;
+}
+
+:is(.ct-cluster-config-wizard__form-horizontal, .ct-storage-vm-wizard__form-horizontal, .ct-cloud-vm-wizard__form-horizontal) .pf-v6-c-form__label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+}
+
+:is(.ct-cluster-config-wizard__form-horizontal, .ct-storage-vm-wizard__form-horizontal, .ct-cloud-vm-wizard__form-horizontal) .pf-v6-c-form__label-text {
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
 .ct-cluster-config-wizard .pf-v6-c-wizard__nav-link,
 .ct-storage-vm-wizard .pf-v6-c-wizard__nav-link,
 .ct-cloud-vm-wizard .pf-v6-c-wizard__nav-link,

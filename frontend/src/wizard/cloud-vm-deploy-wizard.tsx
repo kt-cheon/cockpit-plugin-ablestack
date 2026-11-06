@@ -859,7 +859,7 @@ export default function CloudVmDeployWizardModal({
                 </Content>
               </Content>
               <Form className="ct-cloud-vm-wizard__section ct-cloud-vm-wizard__form-horizontal" isHorizontal>
-                <FormGroup label={<>클러스터 구성 파일<br />준비</>} isRequired fieldId="cloud-vm-hosts-file">
+                <FormGroup label="클러스터 구성 파일" isRequired fieldId="cloud-vm-hosts-file">
                   <div className="ct-cloud-vm-wizard__inline">
                     <Radio
                       id="cloud-vm-hosts-file-existing"
@@ -877,10 +877,10 @@ export default function CloudVmDeployWizardModal({
                     />
                   </div>
                 </FormGroup>
-                <FormGroup label="현재 호스트명" isRequired fieldId="cloud-vm-current-host">
+                <FormGroup label="현재 호스트" isRequired fieldId="cloud-vm-current-host">
                   <TextInput id="cloud-vm-current-host" value={currentHostname} readOnly />
                 </FormGroup>
-                <FormGroup label="구성할 호스트 수" isRequired fieldId="cloud-vm-host-count">
+                <FormGroup label="클러스터 구성 호스트 수" isRequired fieldId="cloud-vm-host-count">
                   <div className="ct-cloud-vm-wizard__stepper">
                     <Button
                       variant="control"

@@ -146,7 +146,7 @@ const EMPTY_SSH_KEY_PREVIEW: SSHKeyPreview = {
   status: "empty",
   privateKey: "",
   publicKey: "",
-  message: "SSH KEY .dat 파일을 선택하면 id_rsa와 id_rsa.pub 내용을 확인할 수 있습니다.",
+  message: "SSH KEY .dat 파일을 첨부하세요.",
 };
 
 function errorMessage(error: unknown): string {
@@ -697,7 +697,7 @@ export default function ClusterConfigPrepareWizardModal({
           setSshKeyPreview({
             ...EMPTY_SSH_KEY_PREVIEW,
             status: "error",
-            message: `SSH KEY 파일 미리보기를 확인할 수 없습니다. ${errorMessage(error)}`,
+            message: `SSH KEY 파일을 확인할 수 없습니다. ${errorMessage(error)}`,
           });
         });
     };
@@ -768,7 +768,9 @@ export default function ClusterConfigPrepareWizardModal({
     description: string
   ) => isClusterTypeVisible(value, uiFeatures) ? (
     <button
+      key={value}
       type="button"
+      aria-pressed={clusterType === value}
       className={
         clusterType === value
           ? "ct-cluster-config-wizard__type-card ct-cluster-config-wizard__type-card--active"
@@ -778,15 +780,21 @@ export default function ClusterConfigPrepareWizardModal({
     >
       <div className="ct-cluster-config-wizard__type-card-title">{title}</div>
       <div className="ct-cluster-config-wizard__type-card-desc">{description}</div>
-      {clusterType === value && (
-        <div className="ct-cluster-config-wizard__type-card-check">
-          <CheckCircleIcon aria-hidden="true" />
-        </div>
-      )}
+      <div className="ct-cluster-config-wizard__type-card-check" aria-hidden="true">
+        {clusterType === value && <CheckCircleIcon />}
+      </div>
     </button>
   ) : null;
 
-  const renderSSHKeyPreview = (compact = false) => {
+  const clusterTypeCards = [
+    renderClusterTypeCard("powerflex", "PowerFlex", "PowerFlex 스토리지 클러스터 구성"),
+    renderClusterTypeCard("ablestack-hci", "ABLESTACK-HCI", "x86 기반의 서버와 가상화 기술, 그리고 소프트웨어 정의 기술을 접목하여 HCI를 구성하는 소프트웨어 스택입니다."),
+    renderClusterTypeCard("ablestack-vm", "ABLESTACK-VM", "Cube 및 외부 스토리지를 사용하여 Mold를 ABLESTACK VM으로 올린 소프트웨어 솔루션입니다."),
+    renderClusterTypeCard("ablestack-standalone", "ABLESTACK-STANDALONE", "단일 서버 환경에서 로컬 스토리지를 기반으로 ABLESTACK 제품을 구동하는 소프트웨어 솔루션입니다."),
+    renderClusterTypeCard("ablestack-hci-filesystem", "ABLESTACK-HCI-Filesystem", "내부 스토리지(Glue)를 기반으로 공유 파일 환경을 구성하는 ABLESTACK HCI용 소프트웨어 솔루션입니다."),
+  ].filter((card) => card !== null);
+
+  const renderSSHKeyStatus = () => {
     const isReady = sshKeyPreview.status === "ready";
     const statusLabel = sshKeyPreview.status === "loading"
       ? <Label color="blue">확인 중</Label>
@@ -801,38 +809,6 @@ export default function ClusterConfigPrepareWizardModal({
         <div className="ct-cluster-config-wizard__ssh-preview-summary">
           <span>{sshKeyPreview.message}</span>
           {statusLabel}
-        </div>
-        <div className="ct-cluster-config-wizard__ssh-preview-grid">
-          <div className="ct-cluster-config-wizard__ssh-preview-card">
-            <div className="ct-cluster-config-wizard__ssh-preview-title">
-              <strong>id_rsa</strong>
-              <Label color={sshKeyPreview.privateKey ? "green" : "orange"}>
-                {sshKeyPreview.privateKey ? "포함" : "미확인"}
-              </Label>
-            </div>
-            <TextArea
-              aria-label="id_rsa 내용"
-              readOnly
-              value={sshKeyPreview.privateKey || (sshKeyMode === "new" ? "신규 생성 시 서버에서 id_rsa를 생성합니다." : "id_rsa 내용을 확인할 수 없습니다.")}
-              rows={compact ? 4 : 6}
-              className="ct-cluster-config-wizard__review-textarea"
-            />
-          </div>
-          <div className="ct-cluster-config-wizard__ssh-preview-card">
-            <div className="ct-cluster-config-wizard__ssh-preview-title">
-              <strong>id_rsa.pub</strong>
-              <Label color={sshKeyPreview.publicKey ? "green" : "orange"}>
-                {sshKeyPreview.publicKey ? "포함" : "미확인"}
-              </Label>
-            </div>
-            <TextArea
-              aria-label="id_rsa.pub 내용"
-              readOnly
-              value={sshKeyPreview.publicKey || (sshKeyMode === "new" ? "신규 생성 시 API가 id_rsa.pub을 생성합니다." : "id_rsa.pub 내용을 확인할 수 없습니다.")}
-              rows={compact ? 3 : 4}
-              className="ct-cluster-config-wizard__review-textarea"
-            />
-          </div>
         </div>
       </div>
     );
@@ -1018,7 +994,7 @@ export default function ClusterConfigPrepareWizardModal({
 
     if (!clusterType) return "OS Type을 선택해주세요.";
     if (!isIntegerInRange(hostCount, isVmLikeCluster || isStandalone ? 1 : 3, isStandalone ? 1 : 99)) {
-      return isStandalone ? "단일 구성은 호스트 수가 1대여야 합니다." : "구성할 호스트 수는 3~99 범위로 입력해주세요.";
+      return isStandalone ? "단일 구성은 호스트 수가 1대여야 합니다." : "클러스터 구성 호스트 수는 3~99 범위로 입력해주세요.";
     }
 
 	if (hostsFileMode === "new" || isAddHost) {
@@ -1593,7 +1569,7 @@ export default function ClusterConfigPrepareWizardModal({
               </Content>
               <Content component="ul">
                 <Content component="li">HCI를 이용한 가상화 또는 서버 가상화를 사용하기 위한 클러스터 또는 로컬 스토리지를 사용하는 단일 서버 구성</Content>
-                <Content component="li">모든 호스트 및 가상머신에서 사용자 인증을 위해 공통으로 사용할 SSH Key 정보</Content>
+                <Content component="li">모든 호스트 및 가상머신에서 사용자 인증을 위해 공통으로 사용할 SSH KEY 정보</Content>
                 <Content component="li">클러스터 또는 단일 노드를 구성하는 호스트 및 가상머신들의 호스트명 및 IP 정보</Content>
                 <Content component="li">호스트 및 가상머신의 시간 동기화를 위한 시간서버</Content>
               </Content>
@@ -1631,44 +1607,25 @@ export default function ClusterConfigPrepareWizardModal({
               </Content>
             </Content>
             {!isClusterTypeVisible(clusterType, uiFeatures) && <p>등록된 프로파일의 클러스터 종류: {clusterTypeLabel}</p>}
-            <div className="ct-cluster-config-wizard__type-grid">
-              {renderClusterTypeCard("powerflex", "PowerFlex", "PowerFlex 스토리지 클러스터 구성")}
-                {renderClusterTypeCard(
-                "ablestack-hci",
-                "ABLESTACK-HCI",
-                "x86 기반의 서버와 가상화 기술, 그리고 소프트웨어 정의 기술을 접목하여 HCI를 구성하는 소프트웨어 스택입니다."
-              )}
-              {renderClusterTypeCard(
-                "ablestack-vm",
-                "ABLESTACK-VM",
-                "Cube 및 외부 스토리지를 사용하여 Mold를 ABLESTACK VM으로 올린 소프트웨어 솔루션입니다."
-              )}
-              {renderClusterTypeCard(
-                "ablestack-standalone",
-                "ABLESTACK-STANDALONE",
-                "단일 서버 환경에서 로컬 스토리지를 기반으로 ABLESTACK 제품을 구동하는 소프트웨어 솔루션입니다."
-              )}
-              {renderClusterTypeCard(
-                "ablestack-hci-filesystem",
-                "ABLESTACK-HCI-Filesystem",
-                "내부 스토리지(Glue)를 기반으로 공유 파일 환경을 구성하는 ABLESTACK HCI용 소프트웨어 솔루션입니다."
-              )}
+            <div className="ct-cluster-config-wizard__type-grid" data-count={clusterTypeCards.length}
+              role="group" aria-label="클러스터 종류 선택">
+              {clusterTypeCards}
             </div>
           </div>
         </WizardStep>
 
-        <WizardStep name="SSH Key 파일" id="cluster-config-ssh-key">
+        <WizardStep name="SSH KEY 파일" id="cluster-config-ssh-key">
           <div className="ct-cluster-config-wizard__content">
             <Content>
               <Content component="p">
                 클러스터를 구성하는 호스트 및 가상머신은 모든 명령을 SSH를 이용해 암호화 하여 전달합니다.
-                원활한 SSH 연결 및 상호 인증을 위해 동일한 SSH Key 설정이 필요합니다.
-                마법사를 통해 새로운 SSH Key를 생성하여 사용하거나 기존의 SSH Key 파일을 사용할 수 있습니다.
-                클러스터 호스트 구분이 추가 호스트인 경우 반드시 기존 SSH Key 파일을 사용해 주세요.
+                원활한 SSH 연결 및 상호 인증을 위해 동일한 SSH KEY 설정이 필요합니다.
+                마법사를 통해 새로운 SSH KEY를 생성하여 사용하거나 기존의 SSH KEY 파일을 사용할 수 있습니다.
+                클러스터 호스트 구분이 추가 호스트인 경우 반드시 기존 SSH KEY 파일을 사용해 주세요.
               </Content>
             </Content>
             <Form className="ct-cluster-config-wizard__section ct-cluster-config-wizard__form-horizontal" isHorizontal>
-              <FormGroup label="SSH Key 준비 방법" isRequired fieldId="ssh-key-mode">
+              <FormGroup label="SSH KEY 파일" isRequired fieldId="ssh-key-mode">
                 <div className="ct-cluster-config-wizard__inline">
                   <Radio
                     id="ssh-key-new"
@@ -1700,7 +1657,7 @@ export default function ClusterConfigPrepareWizardModal({
                     onFileSelect: readSSHKeyFile,
                     onClear: clearSSHKeyFile,
                   })}
-                  {renderSSHKeyPreview()}
+                  {renderSSHKeyStatus()}
                 </FormGroup>
               )}
             </Form>
@@ -1743,7 +1700,7 @@ export default function ClusterConfigPrepareWizardModal({
                 </div>
               </FormGroup>
               {hostsFileMode === "existing" && <RegistrationInput onChange={setRegistration} />}
-              <FormGroup label={<>클러스터 구성 파일<br />준비</>} isRequired fieldId="hosts-file-mode">
+              <FormGroup label="클러스터 구성 파일" isRequired fieldId="hosts-file-mode">
                 <div className="ct-cluster-config-wizard__inline">
                   <Radio
                     id="hosts-file-new"
@@ -1777,7 +1734,7 @@ export default function ClusterConfigPrepareWizardModal({
                 </FormGroup>
               )}
 
-              <FormGroup label="현재 호스트명" isRequired fieldId="current-hostname">
+              <FormGroup label="현재 호스트" isRequired fieldId="current-hostname">
                 <TextInput
                   id="current-hostname"
                   value={currentHostname}
@@ -1811,7 +1768,7 @@ export default function ClusterConfigPrepareWizardModal({
                 </FormGroup>
               )}
 
-              <FormGroup label="구성할 호스트 수" isRequired fieldId="host-count">
+              <FormGroup label="클러스터 구성 호스트 수" isRequired fieldId="host-count">
                 <div className="ct-cluster-config-wizard__stepper">
                   <Button
                     variant="control"
@@ -1932,7 +1889,7 @@ export default function ClusterConfigPrepareWizardModal({
           <div className="ct-cluster-config-wizard__content">
             <Content>
               <Content component="p">
-                클러스터 구성을 위해 설정한 SSH Key, 호스트 프로파일, 시간 동기화 서버 정보는 다음과 같습니다.
+                클러스터 구성을 위해 설정한 SSH KEY, 호스트 프로파일, 시간 동기화 서버 정보는 다음과 같습니다.
                 정보를 수정해야 하는 경우 해당 단계로 이동하십시오. 설정을 확인한 뒤 "구성" 버튼을 누르면 API Job이 실행됩니다.
               </Content>
             </Content>
@@ -1966,21 +1923,22 @@ export default function ClusterConfigPrepareWizardModal({
                   className="ct-cluster-config-wizard__review-header"
                   onClick={() => setReviewOpen((prev) => ({ ...prev, sshKey: !prev.sshKey }))}
                 >
-                  <span>SSH Key 파일</span>
+                  <span>SSH KEY 파일</span>
                   <span className={reviewOpen.sshKey ? "ct-chevron ct-chevron--open" : "ct-chevron"}>▾</span>
                 </button>
                 {reviewOpen.sshKey && (
                   <div className="ct-cluster-config-wizard__review-body">
                     <DescriptionList isCompact className="ct-cluster-config-wizard__review-detail">
                       <DescriptionListGroup>
-                        <DescriptionListTerm>SSH Key 준비 방법</DescriptionListTerm>
+                        <DescriptionListTerm>SSH KEY 파일</DescriptionListTerm>
                         <DescriptionListDescription>{sshKeyModeLabel}</DescriptionListDescription>
                       </DescriptionListGroup>
                       {sshKeyMode === "existing" ? (
                         <DescriptionListGroup>
                           <DescriptionListTerm>SSH KEY 파일</DescriptionListTerm>
                           <DescriptionListDescription>
-                            {renderSSHKeyPreview(true)}
+                            {sshKeyFilename}
+                            {renderSSHKeyStatus()}
                           </DescriptionListDescription>
                         </DescriptionListGroup>
                       ) : (
@@ -2009,7 +1967,7 @@ export default function ClusterConfigPrepareWizardModal({
                   <div className="ct-cluster-config-wizard__review-body">
                     <DescriptionList isCompact className="ct-cluster-config-wizard__review-detail">
                       <DescriptionListGroup>
-                        <DescriptionListTerm>클러스터 구성 준비</DescriptionListTerm>
+                        <DescriptionListTerm>클러스터 구성 파일</DescriptionListTerm>
                         <DescriptionListDescription>{hostsFileModeLabel}</DescriptionListDescription>
                       </DescriptionListGroup>
                       <DescriptionListGroup>
@@ -2194,7 +2152,7 @@ export default function ClusterConfigPrepareWizardModal({
                 ABLESTACK 클러스터 구성을 위한 모든 설정이 완료되었습니다.
               </Content>
               <Content component="p">
-                SSH Key 파일 및 호스트 프로파일을 다운로드 받아 스토리지센터 및 클라우드센터 가상머신 배포 시 사용하십시오.
+                SSH KEY 파일 및 호스트 프로파일을 다운로드 받아 스토리지센터 및 클라우드센터 가상머신 배포 시 사용하십시오.
               </Content>
             </Content>
             <div className="ct-cluster-config-wizard__download-list">

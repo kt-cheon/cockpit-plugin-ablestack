@@ -35,11 +35,14 @@ export interface DiskSelectOption {
   id: string;
   value: string;
   label: string;
+  isDisabled?: boolean;
+  disabledReason?: string;
 }
 
 export interface StorageVmDiskInventory {
   lunPassthroughEnabled: boolean;
   raidDisks: DiskSelectOption[];
+  physicalDisks: DiskSelectOption[];
   lunDisks: DiskSelectOption[];
 }
 
@@ -273,6 +276,23 @@ function diskSelectOption(disk: DiskInventoryOption, index: number): DiskSelectO
   };
 }
 
+function physicalDiskOption(device: RecordValue): DiskSelectOption | null {
+  // Match the legacy wizard: use the collector's top-level devices, never its children.
+  if (readOptionalString(device, "type").toLowerCase() !== "disk") return null;
+  const name = readString(device, ["kname", "name"]);
+  const disk = diskOption(device);
+  if (!name || !disk.value) return null;
+  const hasPartitions = readRecordArray(device, "children").length > 0;
+  const isDisabled = hasPartitions || disk.inUse;
+  return {
+    id: disk.value,
+    value: disk.value,
+    label: name.startsWith("/dev/") ? name : `/dev/${name}`,
+    isDisabled,
+    disabledReason: isDisabled ? disk.inUseReason || "파티션이 있거나 사용 중인 디스크는 선택할 수 없습니다." : undefined,
+  };
+}
+
 export async function fetchStorageVmDiskInventory(): Promise<StorageVmDiskInventory> {
   const raw = await requestCubeApi<unknown>("/api/v1/cube/disk?action=list");
   const inventory = unwrapApiValue(raw);
@@ -280,15 +300,24 @@ export async function fetchStorageVmDiskInventory(): Promise<StorageVmDiskInvent
   const raidDisks = readRecordArray(record, "raidcontrollers")
     .map(raidControllerOption)
     .filter((option): option is DiskSelectOption => Boolean(option));
+  const physicalDisks = readRecordArray(record, "blockdevices")
+    .map(physicalDiskOption)
+    .filter((option): option is DiskSelectOption => Boolean(option));
   const lunDisks = flattenDisks(readRecordArray(record, "blockdevices"))
     .map((device) => diskOption(device))
     .filter((disk) => disk.value)
     .map(diskSelectOption);
   const seenLun = new Set<string>();
+  const seenPhysical = new Set<string>();
 
   return {
     lunPassthroughEnabled: (await fetchUiFeatures()).scvmLunPassthrough,
     raidDisks,
+    physicalDisks: physicalDisks.filter((disk) => {
+      if (seenPhysical.has(disk.value)) return false;
+      seenPhysical.add(disk.value);
+      return true;
+    }),
     lunDisks: lunDisks.filter((disk) => {
       if (seenLun.has(disk.value)) return false;
       seenLun.add(disk.value);

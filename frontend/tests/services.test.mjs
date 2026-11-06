@@ -12,7 +12,7 @@ before(async () => {
     export * from './src/services/api/license.ts';
     export { fetchCloudClusterStatus } from './src/services/api/cloud-cluster-status.ts';
     export { fetchDeployStatus } from './src/services/api/deploy-status.ts';
-    export { fetchNicInventory } from './src/services/api/inventory.ts';
+    export { fetchNicInventory, fetchStorageVmDiskInventory } from './src/services/api/inventory.ts';
     export { fetchUiFeatures, isClusterTypeVisible } from './src/services/api/system-config.ts';
   `);
 });
@@ -85,6 +85,49 @@ test('every wizard receives only user bridges and preserves carrier state', asyn
   const inventory = await services.fetchNicInventory();
   assert.deepEqual(inventory.bridges.map((item) => item.value), ['', 'bridge0']);
   assert.match(inventory.passthroughNics[0].label, /connected/);
+});
+
+test('disk passthrough lists whole physical disks with simple labels and stable deployment paths', async () => {
+  const disk = {name: 'sdb', kname: 'sdb', path: '/dev/disk/by-path/pci-data-disk', type: 'disk', size: '900G', wwn: 'private-wwn', model: 'SSD'};
+  handler = (request) => request.path.endsWith('/system/config') ? {code: 200, val: {ui: {}}} : {code: 200, val: {
+    blockdevices: [
+      {name: 'sda', kname: 'sda', path: '/dev/disk/by-path/pci-os-disk', type: 'disk', children: [
+        {name: 'sda1', path: '/dev/sda1', type: 'part'},
+        {name: 'sda2', path: '/dev/sda2', type: 'part', children: [{name: 'system-root', path: '/dev/mapper/system-root', type: 'lvm'}]},
+      ]},
+      disk, {...disk},
+      {name: 'nvme0n1', kname: 'nvme0n1', path: '/dev/nvme0n1', type: 'disk'},
+      {name: 'sdc1', path: '/dev/sdc1', type: 'part'},
+      {name: 'orphan-lv', path: '/dev/mapper/orphan-lv', type: 'lvm'},
+      {name: 'mpathb', path: '/dev/mapper/mpathb', type: 'mpath', single_path: [{name: 'sdd', path: '/dev/sdd', type: 'disk'}]},
+      {name: 'sr0', path: '/dev/sr0', type: 'rom'},
+    ], raidcontrollers: [{Slot: '0000:18:00.0', Class: 'RAID bus controller', Vendor: 'Fixture'}],
+  }};
+  const before = fixture.calls.length;
+  const inventory = await services.fetchStorageVmDiskInventory();
+  assert.deepEqual(inventory.physicalDisks.map((disk) => disk.label), ['/dev/sda', '/dev/sdb', '/dev/nvme0n1']);
+  assert.deepEqual(inventory.physicalDisks.map((disk) => disk.value), ['/dev/disk/by-path/pci-os-disk', '/dev/disk/by-path/pci-data-disk', '/dev/nvme0n1']);
+  assert.equal(inventory.physicalDisks[0].isDisabled, true);
+  assert.equal(inventory.physicalDisks[1].isDisabled, false);
+  assert.deepEqual(inventory.raidDisks.map((disk) => disk.value), ['0000:18:00.0']);
+  assert.deepEqual(fixture.calls.slice(before).map((call) => call.request.path), ['/api/v1/cube/disk?action=list', '/api/v1/cube/system/config']);
+});
+
+test('disk passthrough cannot offer partitions or logical volumes as fallback candidates', async () => {
+  handler = (request) => request.path.endsWith('/system/config') ? {code: 200, val: {}} : {code: 200, val: {
+    blockdevices: [{name: 'sda1', path: '/dev/sda1', type: 'part'}, {name: 'root', path: '/dev/mapper/root', type: 'lvm'}],
+  }};
+  assert.deepEqual((await services.fetchStorageVmDiskInventory()).physicalDisks, []);
+});
+
+test('disks marked in use are disabled even when their partition list is empty', async () => {
+  handler = (request) => request.path.endsWith('/system/config') ? {code: 200, val: {}} : {code: 200, val: {blockdevices: [
+    {name: 'sdb', kname: 'sdb', path: '/dev/sdb', type: 'disk', children: [], in_use: true, in_use_reason: '이미 할당된 디스크'},
+  ]}};
+  const [disk] = (await services.fetchStorageVmDiskInventory()).physicalDisks;
+  assert.equal(disk.label, '/dev/sdb');
+  assert.equal(disk.isDisabled, true);
+  assert.equal(disk.disabledReason, '이미 할당된 디스크');
 });
 
 test('existing configuration files with no UI flags hide optional products', async () => {

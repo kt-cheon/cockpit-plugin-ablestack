@@ -72,21 +72,38 @@
 .ct-cluster-config-wizard__type-grid {
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-top: 16px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin-top: 24px;
+}
+
+.ct-cluster-config-wizard__type-grid[data-count="4"] > .ct-cluster-config-wizard__type-card,
+.ct-cluster-config-wizard__type-grid[data-count="5"] > .ct-cluster-config-wizard__type-card:nth-child(n + 4) {
+  grid-column: span 3;
 }
 
 .ct-cluster-config-wizard__type-card {
-  border: 1px solid #d2d2d2;
-  border-radius: 6px;
-  padding: 16px 14px;
+  grid-column: span 2;
+  min-width: 0;
+  border: 2px solid #d2d2d2;
+  border-radius: 10px;
+  padding: 20px 18px;
   background: #fff;
+  font: inherit;
   text-align: center;
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  min-height: 150px;
+  gap: 12px;
+  min-height: 180px;
+}
+
+.ct-cluster-config-wizard__type-card:hover {
+  border-color: #73bcf7;
+}
+
+.ct-cluster-config-wizard__type-card:focus-visible {
+  outline: 2px solid #1f70ff;
+  outline-offset: 3px;
 }
 
 .ct-cluster-config-wizard__type-card--active {
@@ -97,11 +114,18 @@
 
 .ct-cluster-config-wizard__type-card-title {
   font-weight: 700;
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .ct-cluster-config-wizard__type-card-desc {
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.65;
+  text-align: start;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
   color: #4f5255;
 }
 
@@ -113,6 +137,7 @@
 .ct-cluster-config-wizard__type-card-check {
   margin-top: auto;
   color: #1f70ff;
+  min-height: 20px;
 }
 
 .ct-cluster-config-wizard__section {
@@ -666,6 +691,14 @@
 @media (max-width: 1024px) {
   .ct-cluster-config-wizard__type-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ct-cluster-config-wizard__type-grid[data-count] > .ct-cluster-config-wizard__type-card {
+    grid-column: auto;
+  }
+
+  .ct-cluster-config-wizard__type-grid[data-count] > .ct-cluster-config-wizard__type-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
   }
 
   .ct-cluster-config-wizard {

@@ -37,9 +37,10 @@ class OperationTests(unittest.TestCase):
     def test_nic_and_disk_inventory_reuse_current_collectors(self):
         a = adapter()
         operations.dispatch(a, request('nics?action=detail', method='GET'))
+        operations.dispatch(a, request('disk?action=list', method='GET'))
         operations.dispatch(a, request('disk?action=gfs', method='GET'))
         self.assertEqual([call.args for call in a.tool.call_args_list],
-                         [('nic/network_action.py', ['list']), ('disk/disk_action.py', ['gfs-list'])])
+                         [('nic/network_action.py', ['list']), ('disk/disk_action.py', ['list']), ('disk/disk_action.py', ['gfs-list'])])
 
     def test_get_cannot_execute_a_vm_mutation(self):
         a = adapter()
