@@ -21,6 +21,8 @@ class UpdateIsoTests(unittest.TestCase):
         self.root = Path(self.temp.name).resolve()
         self.mount = self.root / "iso"
         self.mount.mkdir()
+        self.script_dir = self.mount / "update"
+        self.script_dir.mkdir()
         self.work = self.root / "work"
         os_release = self.root / "os-release"
         os_release.write_text('PRETTY_NAME="ABLESTACK Current"\n')
@@ -57,7 +59,7 @@ class UpdateIsoTests(unittest.TestCase):
         return path
 
     def mold_iso(self, directory="rpms"):
-        (self.mount / "update-mold.sh").write_text(
+        (self.script_dir / "update-mold.sh").write_text(
             '#!/bin/bash\nset -eu\n'
             'test -f rpms/cloudstack-common-2.0-1.noarch.rpm\n'
             'printf "mold:%s:%s" "$PWD" "$ABLESTACK_UPDATE_TYPE"\n')
@@ -68,7 +70,7 @@ class UpdateIsoTests(unittest.TestCase):
         ks = self.mount / update.TARGET_KS_PATH
         ks.parent.mkdir(parents=True, exist_ok=True)
         ks.write_text('ABLESTACK_VERSION="ABLESTACK Next"\n')
-        (self.mount / "update-all.sh").write_text(
+        (self.script_dir / "update-all.sh").write_text(
             '#!/bin/bash\nset -eu\ntest -f ks/ablestack-ks.cfg\n'
             'printf "all:%s:%s" "$PWD" "$ABLESTACK_UPDATE_TYPE"\n')
 
@@ -79,7 +81,8 @@ class UpdateIsoTests(unittest.TestCase):
         self.assertEqual(info["current_mold_version"], "1.0-1")
         self.assertEqual(info["current_ablestack_version"], info["target_ablestack_version"])
         self.assertEqual([p["name"] for p in info["mold_packages"]], list(update.MOLD_PACKAGES))
-        self.assertEqual(info["work_update_script"], str(self.work / "update-mold.sh"))
+        self.assertEqual(info["update_script"], str(self.script_dir / "update-mold.sh"))
+        self.assertEqual(info["work_update_script"], str(self.work / "update/update-mold.sh"))
         self.assertTrue(all(command[0] == "rpm" for command in self.commands))
 
     def test_mold_ignores_ks_version_even_if_present(self):
@@ -103,7 +106,7 @@ class UpdateIsoTests(unittest.TestCase):
         self.assertEqual(current_query[current_query.index("--qf") + 1], "%{VERSION}-%{RELEASE}\n")
         self.assertNotIn("EPOCHNUM", update.MOLD_RPM_QUERY_FORMAT)
 
-    def test_mold_supports_script_root_and_legacy_rpm_layout(self):
+    def test_mold_supports_iso_root_and_appstream_rpm_layout(self):
         for layout in (".", "AppStream/Packages/mold"):
             with self.subTest(layout=layout):
                 self.mold_iso(directory=layout)
@@ -112,13 +115,13 @@ class UpdateIsoTests(unittest.TestCase):
 
     def test_mold_missing_script_is_rejected(self):
         self.mold_iso()
-        (self.mount / "update-mold.sh").unlink()
+        (self.script_dir / "update-mold.sh").unlink()
         with self.assertRaisesRegex(FileNotFoundError, "update-mold.sh"):
             update.read_update_info(str(self.mount), "mold")
 
     def test_mold_script_directory_is_rejected(self):
         self.mold_iso()
-        script = self.mount / "update-mold.sh"
+        script = self.script_dir / "update-mold.sh"
         script.unlink()
         script.mkdir()
         with self.assertRaises(FileNotFoundError):
@@ -131,7 +134,7 @@ class UpdateIsoTests(unittest.TestCase):
             update.read_update_info(str(self.mount), "mold")
 
     def test_mold_no_rpms_is_rejected(self):
-        (self.mount / "update-mold.sh").write_text("#!/bin/bash\n")
+        (self.script_dir / "update-mold.sh").write_text("#!/bin/bash\n")
         with self.assertRaisesRegex(FileNotFoundError, "RPM 파일"):
             update.read_update_info(str(self.mount), "mold")
 
@@ -186,6 +189,8 @@ class UpdateIsoTests(unittest.TestCase):
         info = update.read_update_info(str(self.mount))
         self.assertEqual(info["target_ablestack_version"], "ABLESTACK Next")
         self.assertEqual(info["current_ablestack_version"], "ABLESTACK Current")
+        self.assertEqual(info["update_script"], str(self.script_dir / "update-all.sh"))
+        self.assertEqual(info["work_update_script"], str(self.work / "update/update-all.sh"))
         self.assertNotIn("target_mold_version", info)
         self.assertEqual(self.commands, [])
 
@@ -203,6 +208,15 @@ class UpdateIsoTests(unittest.TestCase):
         self.mold_iso()
         with self.assertRaises(FileNotFoundError):
             update.read_update_info(str(self.mount), "all")
+
+    def test_root_level_script_does_not_replace_required_update_directory(self):
+        for update_type, script_name in (("mold", "update-mold.sh"), ("all", "update-all.sh")):
+            with self.subTest(update_type=update_type):
+                self.mold_iso()
+                self.full_iso()
+                (self.script_dir / script_name).rename(self.mount / script_name)
+                with self.assertRaises(FileNotFoundError):
+                    update.read_update_info(str(self.mount), update_type)
 
     def test_mold_run_copies_small_iso_and_executes_its_script(self):
         self.mold_iso()
@@ -236,7 +250,7 @@ class UpdateIsoTests(unittest.TestCase):
 
     def test_script_failure_is_reported(self):
         self.mold_iso()
-        (self.mount / "update-mold.sh").write_text('echo "update failed" >&2\nexit 7\n')
+        (self.script_dir / "update-mold.sh").write_text('echo "update failed" >&2\nexit 7\n')
         with self.assertRaisesRegex(RuntimeError, "update failed"):
             update.run_update(str(self.mount), "mold")
 

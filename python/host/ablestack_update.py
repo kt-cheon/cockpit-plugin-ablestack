@@ -33,11 +33,11 @@ MOLD_RPM_QUERY_FORMAT = "%{NAME}\t%{VERSION}-%{RELEASE}\t%{ARCH}\n"
 UPDATE_SCRIPT_MAP = {
     "all": {
         "label": "전체 업데이트",
-        "script": Path("update-all.sh"),
+        "script": Path("update/update-all.sh"),
     },
     "mold": {
         "label": "Mold 업데이트",
-        "script": Path("update-mold.sh"),
+        "script": Path("update/update-mold.sh"),
     },
 }
 
