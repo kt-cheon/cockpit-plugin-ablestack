@@ -32,7 +32,7 @@ interface AblestackUpdateModalProps {
   onCompleted: (message: string) => void;
 }
 
-type SubmitState = "idle" | "checking" | "ready" | "running" | "success" | "error";
+type SubmitState = "idle" | "checking" | "ready" | "running" | "started" | "success" | "error";
 
 const UPDATE_TYPES: Array<{
   type: VersionUpdateType;
@@ -42,12 +42,17 @@ const UPDATE_TYPES: Array<{
     {
         type: "all",
         title: "전체 업데이트",
-        description: "커널과 Mold를 함께 업데이트합니다.",
+        description: "백그라운드로 업데이트합니다. 완료 후 재부팅하고 Tools를 별도로 업데이트하세요.",
     },
     {
         type: "mold",
         title: "Mold 업데이트",
         description: "호스트와 CCVM의 Mold만 업데이트합니다.",
+    },
+    {
+        type: "tools",
+        title: "ABLESTACK Tools 업데이트",
+        description: "전체 업데이트와 재부팅 후 실행합니다. 현재 커널이 설치 대상과 맞는지 확인합니다.",
     },
 ];
 
@@ -68,6 +73,10 @@ function displayValue(value: string): string {
 }
 
 function resultMessage(result: VersionUpdateRunResult): string {
+    if (result.updateType === "tools") return result.message;
+    if (result.background) {
+        return `${result.message} 진행/완료 로그: ${result.logFile || "/var/log/ablestack-update.log"}`;
+    }
     const target = [
         result.targetOsVersion ? `OS ${result.targetOsVersion}` : "",
         result.targetMoldVersion ? `Mold ${result.targetMoldVersion}` : "",
@@ -171,7 +180,7 @@ export default function AblestackUpdateModal({
             const result = await runVersionUpdate(updateInfo.mountPath || mountPath.trim(), updateType);
             const nextMessage = resultMessage(result);
 
-            setSubmitState("success");
+            setSubmitState(result.background ? "started" : "success");
             setMessage(nextMessage);
             setConfirmed(false);
             onCompleted(nextMessage);
@@ -204,6 +213,12 @@ export default function AblestackUpdateModal({
             <ModalBody>
                 <div className="ct-ablestack-update-modal__body">
                     <div className="ct-ablestack-update-modal__summary">
+                        {updateType === "tools" ? (
+                            <>
+                                <div><span>현재 실행 커널</span><strong>{displayValue(updateInfo?.currentKernel || versionInfo.kernelVersion)}</strong></div>
+                                <div><span>Tools 설치 대상 커널</span><strong>{displayValue(updateInfo?.targetKernel ?? "")}</strong></div>
+                            </>
+                        ) : <>
                         <div>
                             <span>현재 OS 버전</span>
                             <strong>{displayValue(currentOsVersion)}</strong>
@@ -220,6 +235,7 @@ export default function AblestackUpdateModal({
                             <span>업데이트 Mold 버전</span>
                             <strong>{displayValue(updateInfo?.targetMoldVersion ?? "")}</strong>
                         </div>
+                        </>}
                     </div>
 
                     <Form className="ct-ablestack-update-modal__form">
@@ -240,6 +256,9 @@ export default function AblestackUpdateModal({
                                       ].join(" ")}
                                       onClick={() => {
                                           setUpdateType(item.type);
+                                          if (item.type === "tools" && !mountPath.trim()) {
+                                              setMountPath("/opt/ABLESTACK_UPDATE");
+                                          }
                                           resetCheckedInfo();
                                       }}
                                       disabled={isBusy}
@@ -296,7 +315,11 @@ export default function AblestackUpdateModal({
                         <div>
                             <strong>업데이트 실행 확인</strong>
                             <Content component="p">
-                                버전 확인이 완료된 마운트 경로와 업데이트 방식으로 실행합니다.
+                                {updateType === "tools"
+                                    ? "재부팅 후 대상 커널로 부팅했는지 확인합니다. 커널이 맞지 않으면 설치를 중단합니다."
+                                    : updateType === "all"
+                                        ? "백그라운드 시작 후 로그에서 완료를 확인하세요. 완료 후 재부팅하고 ABLESTACK Tools 업데이트를 실행하세요."
+                                        : "버전 확인이 완료된 마운트 경로와 업데이트 방식으로 실행합니다."}
                             </Content>
                         </div>
                         <Switch

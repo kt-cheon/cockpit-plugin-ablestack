@@ -1,6 +1,6 @@
 import { requestCubeApi } from "./client.ts";
 
-export type VersionUpdateType = "all" | "mold";
+export type VersionUpdateType = "all" | "mold" | "tools";
 
 export interface VersionUpdateInfo {
   mountPath: string;
@@ -9,6 +9,8 @@ export interface VersionUpdateInfo {
   currentMoldVersion: string;
   targetOsVersion: string;
   targetMoldVersion: string;
+  currentKernel: string;
+  targetKernel: string;
   updateType: VersionUpdateType;
   updateLabel: string;
   updateScript: string;
@@ -19,6 +21,8 @@ export interface VersionUpdateRunResult extends VersionUpdateInfo {
   message: string;
   stdout: string;
   stderr: string;
+  background: boolean;
+  logFile: string;
 }
 
 interface VersionUpdateResponse {
@@ -45,6 +49,10 @@ interface VersionUpdateInfoResponse {
   message?: string;
   stdout?: string;
   stderr?: string;
+  current_kernel?: string;
+  target_kernel?: string;
+  background?: boolean;
+  log_file?: string;
 }
 
 function normalizeString(value: unknown): string {
@@ -92,7 +100,8 @@ function infoValue(response: VersionUpdateResponse): VersionUpdateInfoResponse {
 }
 
 function normalizeUpdateType(value: unknown): VersionUpdateType {
-    return normalizeString(value).toLowerCase() === "mold" ? "mold" : "all";
+    const updateType = normalizeString(value).toLowerCase();
+    return updateType === "mold" || updateType === "tools" ? updateType : "all";
 }
 
 function normalizeVersionInfo(response: VersionUpdateResponse): VersionUpdateInfo {
@@ -108,9 +117,11 @@ function normalizeVersionInfo(response: VersionUpdateResponse): VersionUpdateInf
         targetOsVersion: normalizeString(val.target_os_version) ||
             normalizeString(val.target_ablestack_version),
         targetMoldVersion: normalizeString(val.target_mold_version),
+        currentKernel: normalizeString(val.current_kernel),
+        targetKernel: normalizeString(val.target_kernel),
         updateType,
         updateLabel: normalizeString(val.update_label) ||
-            (updateType === "mold" ? "Mold 업데이트" : "전체 업데이트"),
+            (updateType === "tools" ? "ABLESTACK Tools 업데이트" : updateType === "mold" ? "Mold 업데이트" : "전체 업데이트"),
         updateScript: normalizeString(val.update_script),
         workUpdateScript: normalizeString(val.work_update_script),
     };
@@ -125,6 +136,8 @@ function normalizeRunResult(response: VersionUpdateResponse): VersionUpdateRunRe
         message: responseMessage(response, "ABLESTACK 업데이트 실행이 완료되었습니다."),
         stdout: normalizeString(val.stdout),
         stderr: normalizeString(val.stderr),
+        background: val.background === true,
+        logFile: normalizeString(val.log_file),
     };
 }
 

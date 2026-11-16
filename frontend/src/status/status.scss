@@ -2163,6 +2163,10 @@
   gap: 10px;
 }
 
+.ct-ablestack-update-modal__type-card:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
 .ct-ablestack-update-modal__type-card {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);

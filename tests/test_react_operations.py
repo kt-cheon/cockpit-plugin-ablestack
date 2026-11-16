@@ -81,6 +81,13 @@ class OperationTests(unittest.TestCase):
         operations.dispatch(a, request('version/update', {'action': 'info', 'mount_path': '/mnt/iso', 'update_type': 'mold'}))
         self.assertEqual(a.tool.call_args.args[1], ['info', '--mount-path', '/mnt/iso', '--update-type', 'mold'])
 
+    def test_version_update_accepts_tools_kernel_check_and_install(self):
+        for action in ('info', 'run'):
+            with self.subTest(action=action):
+                a = adapter()
+                operations.dispatch(a, request('version/update', {'action': action, 'mount_path': '/mnt/iso', 'update_type': 'tools'}))
+                self.assertEqual(a.tool.call_args.args[1], [action, '--mount-path', '/mnt/iso', '--update-type', 'tools'])
+
     def test_backup_and_restore_call_the_existing_backup_implementation(self):
         a = adapter()
         operations.dispatch(a, request('backup/manage', {'action': 'restore', 'target_file': '/mnt/backup/file.qcow2'}))

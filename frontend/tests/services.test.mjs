@@ -14,7 +14,39 @@ before(async () => {
     export { fetchDeployStatus } from './src/services/api/deploy-status.ts';
     export { fetchNicInventory, fetchStorageVmDiskInventory } from './src/services/api/inventory.ts';
     export { fetchUiFeatures, isClusterTypeVisible } from './src/services/api/system-config.ts';
+    export { fetchVersionUpdateInfo, runVersionUpdate } from './src/services/api/version-update.ts';
   `);
+});
+
+test('Tools update checks and executes the separate Tools action', async () => {
+  handler = (request) => {
+    assert.equal(request.body.update_type, 'tools');
+    return {code: 200, val: {update_type: 'tools', update_label: 'ABLESTACK Tools 업데이트',
+      current_kernel: '5.14.0-new', target_kernel: '5.14.0-new',
+      work_update_script: '/opt/ABLESTACK_UPDATE/update/update-qemu-exec-tools.sh',
+      message: 'ABLESTACK Tools 업데이트 실행이 완료되었습니다.'}};
+  };
+  const info = await services.fetchVersionUpdateInfo('/opt/ABLESTACK_UPDATE', 'tools');
+  assert.equal(info.updateType, 'tools');
+  assert.equal(info.currentKernel, '5.14.0-new');
+  assert.equal(info.targetKernel, '5.14.0-new');
+  assert.match(info.workUpdateScript, /update-qemu-exec-tools\.sh$/);
+  const result = await services.runVersionUpdate('/opt/ABLESTACK_UPDATE', 'tools');
+  assert.equal(result.background, false);
+});
+
+test('background update start retains launch state and existing log path', async () => {
+  handler = () => ({code: 200, val: {update_type: 'all', background: true,
+    log_file: '/var/log/ablestack-update.log', message: '백그라운드에서 시작했습니다.'}});
+  const result = await services.runVersionUpdate('/mnt/iso', 'all');
+  assert.equal(result.background, true);
+  assert.equal(result.logFile, '/var/log/ablestack-update.log');
+  assert.match(result.message, /시작/);
+});
+
+test('Tools kernel mismatch is shown to the caller', async () => {
+  handler = () => ({code: 500, val: '현재 커널 버전이 맞지 않아 설치할 수 없습니다.'});
+  await assert.rejects(services.fetchVersionUpdateInfo('/mnt/iso', 'tools'), /현재 커널 버전/);
 });
 
 test('request payload travels on stdin to the existing tool bridge', async () => {

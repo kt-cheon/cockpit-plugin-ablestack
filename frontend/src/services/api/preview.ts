@@ -824,31 +824,37 @@ export function getPreviewCubeApiResponse<T>(
     const body = typeof options.body === "object" && options.body
       ? options.body as { action?: unknown; mount_path?: unknown; update_type?: unknown }
       : {};
-    const updateType = String(body.update_type ?? "all") === "mold" ? "mold" : "all";
+    const requestedType = String(body.update_type ?? "all");
+    const updateType = requestedType === "mold" || requestedType === "tools" ? requestedType : "all";
     const isRun = String(body.action ?? "info") === "run";
+    const background = isRun && updateType === "all";
+    const message = background ? "프리뷰: 전체 업데이트를 백그라운드에서 시작했습니다. 완료 확인 후 재부팅하고 Tools를 업데이트하세요."
+      : "프리뷰 모드 ABLESTACK 업데이트 실행이 완료되었습니다.";
+    const scriptName = updateType === "tools" ? "update-qemu-exec-tools.sh"
+      : updateType === "mold" ? "update-mold.sh" : "update-all.sh";
 
     return {
       code: 200,
       action: isRun ? "run" : "info",
       message: isRun
-        ? "프리뷰 모드 ABLESTACK 업데이트 실행이 완료되었습니다."
+        ? message
         : "ok",
       val: {
-        message: isRun ? "프리뷰 모드 ABLESTACK 업데이트 실행이 완료되었습니다." : undefined,
+        message: isRun ? message : undefined,
+        background,
+        log_file: "/var/log/ablestack-update.log",
         mount_path: String(body.mount_path ?? "/mnt/ablestack-iso"),
         copy_path: "/opt/ABLESTACK_UPDATE",
         current_os_version: "ABLESTACK Diplo v4.6.1",
         current_mold_version: "4.20.0",
         target_os_version: updateType === "all" ? "ABLESTACK Diplo v4.7.0" : "ABLESTACK Diplo v4.6.1",
         target_mold_version: "4.21.0",
+        current_kernel: "5.14.0-687.66.1.el9_8.x86_64",
+        target_kernel: "5.14.0-687.66.1.el9_8.x86_64",
         update_type: updateType,
-        update_label: updateType === "mold" ? "Mold 업데이트" : "전체 업데이트",
-        update_script: updateType === "mold"
-          ? "/mnt/ablestack-iso/update_mold.sh"
-          : "/mnt/ablestack-iso/update_all.sh",
-        work_update_script: updateType === "mold"
-          ? "/opt/ABLESTACK_UPDATE/update_mold.sh"
-          : "/opt/ABLESTACK_UPDATE/update_all.sh",
+        update_label: updateType === "tools" ? "ABLESTACK Tools 업데이트" : updateType === "mold" ? "Mold 업데이트" : "전체 업데이트",
+        update_script: `/mnt/ablestack-iso/update/${scriptName}`,
+        work_update_script: `/opt/ABLESTACK_UPDATE/update/${scriptName}`,
         stdout: isRun ? "preview update completed" : "",
         stderr: "",
       },

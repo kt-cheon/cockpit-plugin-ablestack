@@ -349,7 +349,7 @@ def dispatch(a, request, reporter=None):
     if path == 'version/update':
         return checked(a, 'host/ablestack_update.py',
                        [choice(action, ('info', 'run')), '--mount-path', atom(body['mount_path']),
-                        '--update-type', choice(body.get('update_type', 'all'), ('all', 'mold'))])
+                        '--update-type', choice(body.get('update_type', 'all'), ('all', 'mold', 'tools'))])
     if request['path'] == '/api/v1/version':
         return {'code': 200, 'os_version': Path('/etc/os-release').read_text().splitlines()[0],
                 'kernel_version': a.command(['uname', '-r']).strip(),
