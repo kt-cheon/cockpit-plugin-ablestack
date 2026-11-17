@@ -14,7 +14,7 @@ before(async () => {
     export { fetchDeployStatus } from './src/services/api/deploy-status.ts';
     export { fetchNicInventory, fetchStorageVmDiskInventory } from './src/services/api/inventory.ts';
     export { fetchUiFeatures, isClusterTypeVisible } from './src/services/api/system-config.ts';
-    export { fetchVersionUpdateInfo, runVersionUpdate } from './src/services/api/version-update.ts';
+    export { fetchVersionUpdateInfo, runVersionUpdate, fetchVersionUpdateLog } from './src/services/api/version-update.ts';
   `);
 });
 
@@ -42,6 +42,19 @@ test('background update start retains launch state and existing log path', async
   assert.equal(result.background, true);
   assert.equal(result.logFile, '/var/log/ablestack-update.log');
   assert.match(result.message, /시작/);
+});
+
+test('update log is read separately and keeps the Korean display returned by the helper', async () => {
+  handler = (request) => {
+    assert.equal(request.body.action, 'log');
+    assert.equal(request.body.update_type, 'all');
+    assert.equal(request.body.mount_path, undefined);
+    return {code: 200, val: {log_file: '/var/log/ablestack-update.log',
+      text: '[2026-11-17 09:45:33] 호스트 업데이트 완료'}};
+  };
+  const result = await services.fetchVersionUpdateLog('all');
+  assert.equal(result.logFile, '/var/log/ablestack-update.log');
+  assert.match(result.text, /호스트 업데이트 완료/);
 });
 
 test('Tools kernel mismatch is shown to the caller', async () => {

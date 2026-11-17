@@ -48,6 +48,8 @@ def should_queue(request):
         body = request.get('body', {})
         return operation(body['service'], body.get('action', 'list'))['method'] != 'GET'
     action = (request.get('body') or {}).get('action', '')
+    if path == 'version/update' and action == 'log':
+        return False
     if str(action).startswith(('list', 'check')) or action in ('info', 'status', 'overview'):
         return False
     return (request.get('method', 'GET') == 'POST' and path not in {
@@ -348,7 +350,8 @@ def dispatch(a, request, reporter=None):
         return monitoring(a, body)
     if path == 'version/update':
         return checked(a, 'host/ablestack_update.py',
-                       [choice(action, ('info', 'run')), '--mount-path', atom(body['mount_path']),
+                       [choice(action, ('info', 'run', 'log')), '--mount-path',
+                        atom(body.get('mount_path', '/') if action == 'log' else body['mount_path']),
                         '--update-type', choice(body.get('update_type', 'all'), ('all', 'mold', 'tools'))])
     if request['path'] == '/api/v1/version':
         return {'code': 200, 'os_version': Path('/etc/os-release').read_text().splitlines()[0],

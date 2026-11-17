@@ -826,6 +826,12 @@ export function getPreviewCubeApiResponse<T>(
       : {};
     const requestedType = String(body.update_type ?? "all");
     const updateType = requestedType === "mold" || requestedType === "tools" ? requestedType : "all";
+    if (body.action === "log") {
+      return { code: 200, val: {
+        log_file: updateType === "mold" ? "/var/log/ablestack-mold-update.log" : "/var/log/ablestack-update.log",
+        text: "[프리뷰] 업데이트 진행 메시지는 한국어로 표시됩니다.",
+      } } as T;
+    }
     const isRun = String(body.action ?? "info") === "run";
     const background = isRun && updateType === "all";
     const message = background ? "프리뷰: 전체 업데이트를 백그라운드에서 시작했습니다. 완료 확인 후 재부팅하고 Tools를 업데이트하세요."

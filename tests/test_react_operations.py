@@ -81,6 +81,13 @@ class OperationTests(unittest.TestCase):
         operations.dispatch(a, request('version/update', {'action': 'info', 'mount_path': '/mnt/iso', 'update_type': 'mold'}))
         self.assertEqual(a.tool.call_args.args[1], ['info', '--mount-path', '/mnt/iso', '--update-type', 'mold'])
 
+    def test_version_update_log_is_read_only_and_does_not_queue_a_job(self):
+        a = adapter()
+        req = request('version/update', {'action': 'log', 'update_type': 'all'})
+        self.assertFalse(operations.should_queue(req))
+        operations.dispatch(a, req)
+        self.assertEqual(a.tool.call_args.args[1], ['log', '--mount-path', '/', '--update-type', 'all'])
+
     def test_version_update_accepts_tools_kernel_check_and_install(self):
         for action in ('info', 'run'):
             with self.subTest(action=action):

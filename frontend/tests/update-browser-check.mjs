@@ -33,6 +33,8 @@ window.__completed=[]; window.__requests=[]; window.__kernelMismatch=false;
 window.__fixtureCockpit={spawn(){let resolve;const process=new Promise(done=>resolve=done);process.input=function(payload){
   const request=JSON.parse(payload);window.__requests.push(request);const type=request.body?.update_type||'all';
   if(request.path==='/api/v1/version'){resolve(JSON.stringify({code:200,kernel_version:'5.14.0-new',os_version:'ABLESTACK Current'}));return;}
+  if(request.body.action==='log'){resolve(JSON.stringify({code:200,val:{log_file:'/var/log/ablestack-update.log',
+    text:'[2026-11-17 09:45:33] 호스트 업데이트 완료\\n[2026-11-17 09:46:04] ERROR: 호스트 업데이트 후 커널 로그에 스토리지 오류가 감지되었습니다.'}}));return;}
   if(type==='tools'&&window.__kernelMismatch){resolve(JSON.stringify({code:500,val:'현재 커널 버전(5.14.0-old)이 맞지 않아 설치할 수 없습니다. 대상 커널: 5.14.0-new'}));return;}
   const background=type==='all'&&request.body.action==='run';
   resolve(JSON.stringify({code:200,val:{mount_path:request.body.mount_path,copy_path:'/opt/ABLESTACK_UPDATE',
@@ -57,6 +59,7 @@ try {
   };
   await open();
   assert.equal(await page.locator('.ct-ablestack-update-modal__type-card').count(), 3);
+  await page.getByRole('region', {name: '업데이트 로그'}).getByText(/호스트 업데이트 후 커널 로그에 스토리지 오류/).waitFor();
   await page.getByRole('button', {name: /^ABLESTACK Tools 업데이트/}).click();
   assert.equal(await page.locator('#ablestack-update-mount-path').inputValue(), '/opt/ABLESTACK_UPDATE');
   await page.getByRole('button', {name: '버전 확인', exact: true}).click();

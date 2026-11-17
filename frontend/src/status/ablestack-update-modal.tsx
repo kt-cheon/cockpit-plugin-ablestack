@@ -16,6 +16,7 @@ import {
 
 import {
     fetchVersionUpdateInfo,
+    fetchVersionUpdateLog,
     runVersionUpdate,
     type VersionUpdateInfo,
     type VersionUpdateRunResult,
@@ -97,6 +98,37 @@ export default function AblestackUpdateModal({
     const [confirmed, setConfirmed] = React.useState(false);
     const [submitState, setSubmitState] = React.useState<SubmitState>("idle");
     const [message, setMessage] = React.useState("");
+    const [logText, setLogText] = React.useState("");
+    const [logFile, setLogFile] = React.useState("");
+    const [logError, setLogError] = React.useState("");
+
+    React.useEffect(() => {
+        if (!isOpen) return;
+        let disposed = false;
+        let pending = false;
+        setLogText("");
+        setLogFile("");
+        setLogError("");
+        const refreshLog = async () => {
+            if (pending) return;
+            pending = true;
+            try {
+                const result = await fetchVersionUpdateLog(updateType);
+                if (!disposed) {
+                    setLogText(result.text);
+                    setLogFile(result.logFile);
+                    setLogError("");
+                }
+            } catch (error) {
+                if (!disposed) setLogError(`로그 조회 실패: ${errorMessage(error)}`);
+            } finally {
+                pending = false;
+            }
+        };
+        void refreshLog();
+        const timer = window.setInterval(() => { void refreshLog(); }, 5000);
+        return () => { disposed = true; window.clearInterval(timer); };
+    }, [isOpen, updateType]);
 
     React.useEffect(() => {
         if (!isOpen) return;
@@ -344,6 +376,12 @@ export default function AblestackUpdateModal({
                           isInline
                         />
                     )}
+                    <section className="ct-ablestack-update-modal__log" aria-label="업데이트 로그">
+                        <strong>업데이트 로그</strong>
+                        <small>{logFile} · 5초마다 갱신</small>
+                        {logError && <p role="status">{logError}</p>}
+                        <pre tabIndex={0}>{logText || "아직 기록된 업데이트 로그가 없습니다."}</pre>
+                    </section>
                 </div>
             </ModalBody>
             <ModalFooter>

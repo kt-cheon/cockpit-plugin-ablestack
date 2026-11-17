@@ -25,6 +25,11 @@ export interface VersionUpdateRunResult extends VersionUpdateInfo {
   logFile: string;
 }
 
+export interface VersionUpdateLog {
+  logFile: string;
+  text: string;
+}
+
 interface VersionUpdateResponse {
   code?: number | string;
   val?: unknown;
@@ -191,4 +196,16 @@ export async function runVersionUpdate(
     assertSuccess(parsed, "ABLESTACK 업데이트 실행에 실패했습니다.");
 
     return normalizeRunResult(parsed);
+}
+
+export async function fetchVersionUpdateLog(updateType: VersionUpdateType): Promise<VersionUpdateLog> {
+    const parsed = await requestCubeApi<VersionUpdateResponse>("/api/v1/cube/version/update", {
+        method: "POST",
+        connectTimeoutSeconds: 10,
+        maxTimeSeconds: 30,
+        body: { action: "log", update_type: updateType },
+    });
+    assertSuccess(parsed, "업데이트 로그를 불러올 수 없습니다.");
+    const val = infoValue(parsed) as VersionUpdateInfoResponse & { text?: string };
+    return { logFile: normalizeString(val.log_file), text: normalizeString(val.text) };
 }

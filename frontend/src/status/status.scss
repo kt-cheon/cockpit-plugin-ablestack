@@ -4805,3 +4805,16 @@
     color: var(--ct-able-dark-text);
   }
 }
+
+.ct-ablestack-update-modal__log {
+  min-width: 0;
+  small { display: block; overflow-wrap: anywhere; }
+  pre {
+    max-height: 20rem;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    padding: 0.75rem;
+    background: var(--pf-t--global--background--color--secondary--default);
+  }
+}
