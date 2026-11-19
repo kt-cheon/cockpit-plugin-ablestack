@@ -695,9 +695,15 @@ export function getPreviewCubeApiResponse<T>(
     } as T;
   case "/api/v1/cube/gfs/manage": {
     const body = typeof options.body === "object" && options.body
-      ? options.body as { action?: unknown }
+      ? options.body as { action?: unknown; stripe_size_kib?: unknown }
       : {};
     const action = String(body.action ?? "init-pcs-cluster");
+
+    if (action === "get-gfs-settings" || action === "set-gfs-settings") {
+      const selected = Number(body.stripe_size_kib ?? window.sessionStorage.getItem("preview-gfs-stripe-size-kib") ?? 128);
+      if (action === "set-gfs-settings") window.sessionStorage.setItem("preview-gfs-stripe-size-kib", String(selected));
+      return { code: 200, val: { stripe_size_kib: selected } } as T;
+    }
 
     return {
       code: 200,

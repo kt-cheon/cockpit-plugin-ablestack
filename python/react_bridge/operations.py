@@ -48,6 +48,8 @@ def should_queue(request):
         body = request.get('body', {})
         return operation(body['service'], body.get('action', 'list'))['method'] != 'GET'
     action = (request.get('body') or {}).get('action', '')
+    if path == 'gfs/manage' and action in ('get-gfs-settings', 'set-gfs-settings'):
+        return False
     if path == 'version/update' and action == 'log':
         return False
     if str(action).startswith(('list', 'check')) or action in ('info', 'status', 'overview'):
@@ -414,6 +416,11 @@ def dispatch(a, request, reporter=None):
 
 def storage_action(a, path, body):
     action = body.get('action', 'list-hba-wwn' if path == 'hba/manage' else '')
+    if path == 'gfs/manage' and action in ('get-gfs-settings', 'set-gfs-settings'):
+        args = ['--' + action]
+        if action == 'set-gfs-settings':
+            args += ['--stripe-size-kib', choice(str(body.get('stripe_size_kib')), ('64', '128', '256', '512'))]
+        return checked(a, 'gfs/gfs_manage.py', args)
     gfs_actions = {'init-pcs-cluster', 'create-gfs', 'configure-stonith', 'check-ipmi', 'set-alert',
                    'check-host', 'check-stonith', 'remove-host', 'create-ccvm-cluster'}
     clvm_actions = {'list-hba-wwn', 'list-clvm', 'create-clvm', 'delete-clvm', 'delete-gfs', 'extend', 'add-extend', 'rescan', 'scan', 'list-gfs'}
@@ -452,4 +459,6 @@ def storage_action(a, path, body):
         args += ['--list-ip', host_list(a)]
         if action == 'create-gfs':
             args += ['--journal-nums', str(len(hosts(a)) + 1)]
+            if body.get('stripe_size_kib') is not None:
+                args += ['--stripe-size-kib', choice(str(body['stripe_size_kib']), ('64', '128', '256', '512'))]
     return checked(a, module, args)

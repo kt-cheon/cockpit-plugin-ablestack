@@ -11,6 +11,9 @@ import {
   Content,
   Form,
   FormGroup,
+  FormSelect,
+  FormSelectOption,
+  Tooltip,
   Radio,
   TextInput,
   Button,
@@ -23,7 +26,7 @@ import {
   DescriptionListTerm,
   DescriptionListDescription,
 } from "@patternfly/react-core";
-import { InfoCircleIcon, AngleRightIcon, ExclamationTriangleIcon } from "@patternfly/react-icons";
+import { InfoCircleIcon, AngleRightIcon, ExclamationTriangleIcon, QuestionCircleIcon } from "@patternfly/react-icons";
 
 import ValidationErrorModal from "../components/common/ValidationErrorModal";
 import WizardStepStatusLabel, { wizardStatusRowClass } from "../components/common/WizardStepStatus";
@@ -32,6 +35,10 @@ import {
   configureGfsStonith,
   createGfsStorage,
   initGfsPcsCluster,
+  fetchGfsStripeSize,
+  saveGfsStripeSize,
+  GFS_STRIPE_SIZES_KIB,
+  type GfsStripeSizeKib,
   setGfsPcsAlert,
   type GfsManageStonithDevice,
 } from "../services/api/gfs-manage";
@@ -55,6 +62,13 @@ type InventoryLoadState = "idle" | "loading" | "success" | "error";
 type DeployStepId = "pcs" | "stonith" | "gfs" | "alert" | "profile";
 type DeployStepStatus = "pending" | "running" | "succeeded" | "failed";
 
+const stripeDescriptions = [
+  [64, "작은 단위로 LUN에 분산", "작은 랜덤 I/O"],
+  [128, "분산과 I/O 크기의 균형", "일반적인 VM"],
+  [256, "상대적으로 큰 단위로 분산", "혼합 워크로드"],
+  [512, "큰 I/O에 적합할 수 있음", "순차 I/O 중심"],
+] as const;
+
 interface MonitoringHostIpmi {
   hostName: string;
   ip: string;
@@ -77,6 +91,10 @@ export default function GfsStorageConfigureWizardModal({
 }: GfsStorageConfigureWizardModalProps) {
   const [externalSyncMode, setExternalSyncMode] = React.useState<ExternalSyncMode>("duplication");
   const [selectedDisks, setSelectedDisks] = React.useState<string[]>([]);
+  const [stripeSize, setStripeSize] = React.useState<GfsStripeSizeKib>(128);
+  const [stripeLoadState, setStripeLoadState] = React.useState<InventoryLoadState>("idle");
+  const [stripeError, setStripeError] = React.useState("");
+  const stripeRequestRef = React.useRef(0);
   const [ipmiMode, setIpmiMode] = React.useState<IpmiMode>("common");
   const [ipmiCommonUser, setIpmiCommonUser] = React.useState("");
   const [ipmiCommonPass, setIpmiCommonPass] = React.useState("");
@@ -142,6 +160,47 @@ export default function GfsStorageConfigureWizardModal({
     onClose();
     resetState();
   };
+
+  const loadStripeSettings = React.useCallback(async () => {
+    const request = ++stripeRequestRef.current;
+    setStripeLoadState("loading");
+    setStripeError("");
+    try {
+      const size = await fetchGfsStripeSize();
+      if (request !== stripeRequestRef.current) return;
+      setStripeSize(size);
+      setStripeLoadState("success");
+    } catch (error) {
+      if (request !== stripeRequestRef.current) return;
+      setStripeLoadState("error");
+      setStripeError(error instanceof Error ? error.message : "Stripe 설정을 불러오지 못했습니다.");
+    }
+  }, []);
+
+  const changeStripeSize = async (size: GfsStripeSizeKib) => {
+    const request = ++stripeRequestRef.current;
+    const previous = stripeSize;
+    setStripeSize(size);
+    setStripeLoadState("loading");
+    setStripeError("");
+    try {
+      const saved = await saveGfsStripeSize(size);
+      if (request !== stripeRequestRef.current) return;
+      setStripeSize(saved);
+      setStripeLoadState("success");
+    } catch (error) {
+      if (request !== stripeRequestRef.current) return;
+      setStripeSize(previous);
+      setStripeLoadState("error");
+      setStripeError(error instanceof Error ? error.message : "Stripe 설정 저장에 실패했습니다.");
+    }
+  };
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    void loadStripeSettings();
+    return () => { stripeRequestRef.current++; };
+  }, [isOpen, loadStripeSettings]);
 
   const requestClose = () => {
     if (deployPhase === "done") {
@@ -257,6 +316,10 @@ export default function GfsStorageConfigureWizardModal({
       return "GFS 디스크를 선택해주세요.";
     }
 
+    if (stripeLoadState !== "success") {
+      return stripeError || "Stripe 설정 확인·저장이 끝난 뒤 다시 시도해주세요.";
+    }
+
     if (diskLoadState === "error") {
       return `GFS 디스크 정보를 확인해주세요. ${diskLoadError}`;
     }
@@ -361,7 +424,7 @@ export default function GfsStorageConfigureWizardModal({
       setDeployStep("gfs", "running");
       setDeployMessage("PCS locking 안정화를 확인하고 GFS2 리소스를 생성하고 있습니다.");
 
-      await createGfsStorage(selectedDisks);
+      await createGfsStorage(selectedDisks, stripeSize);
       setDeployStep("gfs", "succeeded");
       setDeployStep("alert", "running");
       setDeployMessage("PCS 알림 구성을 적용하고 있습니다.");
@@ -466,6 +529,7 @@ export default function GfsStorageConfigureWizardModal({
         : "다음";
     const primaryDisabled = isExternalSyncRequired ||
       isExternalSyncRunning ||
+      ((isReview || stepId === "gfs-disk-configure") && stripeLoadState !== "success") ||
       (isDeploy && deployPhase !== "done" && deployPhase !== "error");
 
     return (
@@ -757,6 +821,36 @@ export default function GfsStorageConfigureWizardModal({
                     </div>
                   )}
                 </FormGroup>
+                <FormGroup
+                  label="Stripe당 데이터 블록 크기"
+                  fieldId="gfs-stripe-size-kib"
+                  labelHelp={(
+                    <Tooltip position="top" maxWidth="36rem" isContentLeftAligned content={(
+                      <table className="ct-gfs-stripe-tooltip-table">
+                        <thead><tr><th>블록 크기</th><th>분산 특성</th><th>워크로드 예시</th></tr></thead>
+                        <tbody>{stripeDescriptions.map(([size, description, workload]) => (
+                          <tr key={size}><th scope="row">{size}KiB</th><td>{description}</td><td>{workload}</td></tr>
+                        ))}</tbody>
+                      </table>
+                    )}>
+                      <Button variant="plain" aria-label="Stripe당 데이터 블록 크기 설명"><QuestionCircleIcon /></Button>
+                    </Tooltip>
+                  )}
+                >
+                  <FormSelect
+                    id="gfs-stripe-size-kib"
+                    value={stripeSize}
+                    isDisabled={stripeLoadState === "loading" || deployPhase === "running"}
+                    onChange={(_event, value) => { void changeStripeSize(Number(value) as GfsStripeSizeKib); }}
+                  >
+                    {GFS_STRIPE_SIZES_KIB.map((size) => <FormSelectOption key={size} value={size} label={`${size}KiB`} />)}
+                  </FormSelect>
+                  <p className="ct-gfs-storage-wizard__stripe-status" role="status">
+                    Stripe 수: 선택한 디스크 {selectedDisks.length}개
+                    {stripeLoadState === "loading" && " · 설정 확인·저장 중"}
+                  </p>
+                  {stripeError && <div role="alert">{stripeError} <Button variant="link" onClick={() => { void loadStripeSettings(); }}>다시 불러오기</Button></div>}
+                </FormGroup>
               </Form>
               <Alert
                 isInline
@@ -957,6 +1051,14 @@ export default function GfsStorageConfigureWizardModal({
                                   .map((diskId) => diskLabel(diskId))
                                   .join(", ")}
                           </DescriptionListDescription>
+                        </DescriptionListGroup>
+                        <DescriptionListGroup>
+                          <DescriptionListTerm>Stripe 수</DescriptionListTerm>
+                          <DescriptionListDescription>{selectedDisks.length}</DescriptionListDescription>
+                        </DescriptionListGroup>
+                        <DescriptionListGroup>
+                          <DescriptionListTerm>Stripe당 데이터 블록 크기</DescriptionListTerm>
+                          <DescriptionListDescription>{stripeSize}KiB</DescriptionListDescription>
                         </DescriptionListGroup>
                       </DescriptionList>
                     </div>

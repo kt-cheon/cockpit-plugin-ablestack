@@ -13,7 +13,8 @@
     "test": "node --test tests/*.test.mjs",
     "typecheck": "tsc --noEmit",
     "test:browser": "node tests/browser-check.mjs",
-    "test:update-browser": "node tests/update-browser-check.mjs"
+    "test:update-browser": "node tests/update-browser-check.mjs",
+    "test:gfs-browser": "node tests/gfs-stripe-browser-check.mjs"
   },
   "devDependencies": {
     "@types/react": "18.3.12",

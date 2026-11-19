@@ -36,6 +36,29 @@ def request(path, body=None, method='POST'):
 
 
 class OperationTests(unittest.TestCase):
+    def test_gfs_stripe_settings_are_synchronous_and_do_not_run_cluster_commands(self):
+        a = adapter()
+        for action in ('get-gfs-settings', 'set-gfs-settings'):
+            body = {'action': action, 'stripe_size_kib': 256}
+            req = request('gfs/manage', body)
+            self.assertFalse(operations.should_queue(req))
+            operations.dispatch(a, req)
+            args = a.tool.call_args.args[1]
+            self.assertEqual(args, ['--get-gfs-settings'] if action.startswith('get') else
+                             ['--set-gfs-settings', '--stripe-size-kib', '256'])
+
+    def test_gfs_creation_forwards_selected_stripe_size_and_rejects_other_sizes(self):
+        a = adapter()
+        for size in (64, 128, 256, 512):
+            operations.dispatch(a, request('gfs/manage', {'action': 'create-gfs',
+                'disks': ['/dev/sdb', '/dev/sdc'], 'stripe_size_kib': size}))
+            args = a.tool.call_args.args[1]
+            self.assertEqual(args[args.index('--stripe-size-kib') + 1], str(size))
+            self.assertEqual(args[args.index('--disks') + 1], '/dev/sdb,/dev/sdc')
+        for value in (0, 129, True, 128.5, '128;echo bad'):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                operations.dispatch(a, request('gfs/manage', {'action': 'create-gfs', 'stripe_size_kib': value}))
+
     def test_nic_and_disk_inventory_reuse_current_collectors(self):
         a = adapter()
         operations.dispatch(a, request('nics?action=detail', method='GET'))

@@ -15,7 +15,31 @@ before(async () => {
     export { fetchNicInventory, fetchStorageVmDiskInventory } from './src/services/api/inventory.ts';
     export { fetchUiFeatures, isClusterTypeVisible } from './src/services/api/system-config.ts';
     export { fetchVersionUpdateInfo, runVersionUpdate, fetchVersionUpdateLog } from './src/services/api/version-update.ts';
+    export { fetchGfsStripeSize, saveGfsStripeSize, createGfsStorage } from './src/services/api/gfs-manage.ts';
   `);
+});
+
+test('GFS stripe choice loads, saves numerically and follows the selected disks into creation', async () => {
+  let saved = 128;
+  handler = (request) => {
+    assert.equal(request.path, '/api/v1/cube/gfs/manage');
+    const body = request.body;
+    if (body.action === 'set-gfs-settings') saved = body.stripe_size_kib;
+    if (body.action === 'create-gfs') {
+      assert.deepEqual(body.disks, ['/dev/sdb', '/dev/sdc', '/dev/sdd']);
+      assert.equal(body.stripe_size_kib, 512);
+      return {code: 200};
+    }
+    return {code: 200, val: {stripe_size_kib: saved}};
+  };
+  assert.equal(await services.fetchGfsStripeSize(), 128);
+  for (const size of [64, 128, 256, 512]) {
+    assert.equal(await services.saveGfsStripeSize(size), size);
+    assert.equal(await services.fetchGfsStripeSize(), size);
+  }
+  await services.createGfsStorage(['/dev/sdb', '/dev/sdc', '/dev/sdd'], 512);
+  handler = () => ({code: 500, val: 'GFS settings write failed'});
+  await assert.rejects(services.saveGfsStripeSize(256), /GFS settings write failed/);
 });
 
 test('Tools update checks and executes the separate Tools action', async () => {

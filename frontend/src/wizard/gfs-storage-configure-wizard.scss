@@ -1,5 +1,14 @@
 @use "./wizard-common";
 
+.ct-gfs-stripe-tooltip-table {
+  border-collapse: collapse;
+  th, td { padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; }
+  th { white-space: nowrap; }
+  tr + tr, tbody { border-top: 1px solid currentColor; }
+}
+
+.ct-gfs-storage-wizard__stripe-status { margin-top: 0.5rem; }
+
 .ct-gfs-storage-wizard {
   width: 100%;
   max-width: 100%;

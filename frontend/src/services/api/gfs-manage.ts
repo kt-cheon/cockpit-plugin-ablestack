@@ -1,6 +1,11 @@
 import { requestCubeApi } from "./client.ts";
 
+export const GFS_STRIPE_SIZES_KIB = [64, 128, 256, 512] as const;
+export type GfsStripeSizeKib = typeof GFS_STRIPE_SIZES_KIB[number];
+
 export type GfsManageAction =
+  | "get-gfs-settings"
+  | "set-gfs-settings"
   | "init-pcs-cluster"
   | "create-gfs"
   | "configure-stonith"
@@ -112,6 +117,10 @@ function resultMessage(result: GfsManageResult, fallback: string): string {
             : failedTarget.message;
     }
 
+    if (typeof result.val === "string" && result.val.trim()) {
+        return result.val;
+    }
+
     return fallback;
 }
 
@@ -164,11 +173,28 @@ export function configureGfsStonith(stonith: GfsManageStonithDevice[]): Promise<
     );
 }
 
-export function createGfsStorage(disks: string[]): Promise<GfsManageResult> {
+function stripeSizeFromResult(result: GfsManageResult): GfsStripeSizeKib {
+    const value = isRecord(result.val) ? Number(result.val.stripe_size_kib) : NaN;
+    if (!GFS_STRIPE_SIZES_KIB.some((size) => size === value)) {
+        throw new Error("GFS Stripe 크기 설정을 확인할 수 없습니다.");
+    }
+    return value as GfsStripeSizeKib;
+}
+
+export async function fetchGfsStripeSize(): Promise<GfsStripeSizeKib> {
+    return stripeSizeFromResult(await runGfsManage("get-gfs-settings", {}, "GFS Stripe 설정을 불러오지 못했습니다."));
+}
+
+export async function saveGfsStripeSize(stripeSizeKib: GfsStripeSizeKib): Promise<GfsStripeSizeKib> {
+    return stripeSizeFromResult(await runGfsManage("set-gfs-settings", { stripe_size_kib: stripeSizeKib }, "GFS Stripe 설정 저장에 실패했습니다."));
+}
+
+export function createGfsStorage(disks: string[], stripeSizeKib: GfsStripeSizeKib = 128): Promise<GfsManageResult> {
     return runGfsManage(
         "create-gfs",
         {
             disks,
+            stripe_size_kib: stripeSizeKib,
             cluster_name: "cloudcenter_cluster",
             vg_name: "vg_glue",
             lv_name: "lv_glue",
