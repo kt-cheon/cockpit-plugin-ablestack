@@ -1,7 +1,68 @@
+# 패키지 업데이트 구분과 Mold HA 제어
+
+Cockpit 업데이트 창에는 **전체 패키지 업데이트**, **Mold 패키지 업데이트**,
+**기타 패키지 업데이트**, **ABLESTACK Tools 업데이트**가 있습니다.
+
+| 구분 | ISO 및 실행 스크립트 | 처리 범위 |
+| --- | --- | --- |
+| 전체 | 통합 RPM ISO 또는 기존 OS 전체 ISO의 `update/update-all.sh` | JSON 역할별 전체 목록 또는 기존 OS 업데이트 |
+| Mold | `update/update-mold.sh` | JSON 역할별 목록 중 CloudStack RPM (기존 Mold 전용 ISO도 지원) |
+| 기타 | 통합 RPM ISO의 `update/update-all.sh --scope packages` | JSON 역할별 목록 중 CloudStack 이외의 RPM |
+| Tools | `update/update-qemu-exec-tools.sh` | 전체 업데이트 및 재부팅 후 커널이 일치할 때 설치 |
+
+전체·Mold·기타 업데이트를 실행할 때 UI에서 Mold API 주소, 관리자 ID와 비밀번호를
+입력합니다. 비밀번호는 숨겨 입력하며 시작 요청 처리 후 지웁니다. 버전 확인과 로그
+조회에는 인증정보를 보내지 않습니다. Tools 업데이트는 Mold 인증을 요구하지 않습니다.
+
+현재 호스트의 Mold 클러스터와 그 안의 전체 Routing 호스트 HA를 비활성화하고
+비동기 작업 완료 및 실제 HA 설정을 확인한 뒤 업데이트합니다. 스크립트가 성공하고
+Mold에서 전체 호스트 Up/Enabled 및 동일한 클러스터 구성을 확인한 후 호스트 HA를
+켜고 마지막으로 클러스터 HA를 켭니다. HA Available 상태까지 확인해야 완료입니다.
+실패하면 자동 활성화를 중단하며, 부분 활성화 실패 시 다시 비활성화를 시도합니다.
+API 장애 시에는 실제 HA 상태와 로그를 확인하고 원인 해결 후 재실행합니다.
+
+인증정보는 표준 입력 및 익명 파이프로만 전달합니다. React 브리지의 업데이트 실행
+요청은 `request.json`을 만드는 작업 큐에 넣지 않습니다. 명령행·환경변수·작업 요청
+파일·로그에 ID/비밀번호/API 키를 기록하지 않습니다. API 키는 기존 쌍을 재사용하며,
+키가 전혀 없을 때만 일반 실행에서 최초 발급합니다. 기존 키를 회전하지 않습니다.
+
+HA 제어는 각 호스트 실행 단위입니다. 동일 클러스터의 여러 호스트에서 동시에
+실행하지 않습니다. ISO/스크립트 직접 실행은 터미널에서 Mold ID/비밀번호를 묻고
+백그라운드 작업을 시작합니다. 직접 사용할 ISO에는 `mold-ha.py`를 업데이트
+스크립트 옆에 함께 넣습니다. Cockpit에는 `python/host/mold-ha.py`가 필요하며,
+이 모듈이 없는 구버전 도우미로 HA 제어를 우회해 설치하지 않습니다.
+
+통합 RPM ISO는 `update/manifest.json`의 `ablestack-rpm-update` v3 형식으로 판별합니다.
+`rpms/repodata/repomd.xml`, `SHA256SUMS`, RPM 헤더 및 루트 `packages.json`을 검증합니다.
+JSON에는 `host`, `scvm`, `ccvm` 배열을 모두 정의하며 RPM 헤더의 정확한 패키지 이름
+(또는 `이름.아키텍처`)을 적습니다. React 화면에서 선택 범위의 역할별 목록을 표시합니다.
+설치된 패키지는 업데이트하고 미설치 패키지는 설치합니다. 목록 밖의 RPM은 설치·업데이트
+하지 않으며 새 의존성도 그 역할의 JSON에 명시해야 합니다. 누락된 의존성은 사전 검사에서
+중단합니다. CloudStack이 전혀 없는 ISO도 정상 처리하고, 선택 범위가 비면 생략합니다.
+host에는 common/agent, ccvm에는 common/management/usage/ui의 CloudStack 패키지만
+허용합니다. scvm의 `cloudstack*` 지정은 거부합니다.
+
+VM 구성에서는 SCVM을 생략합니다. HCI에서 SCVM 목록이 비어 있으면 생략하고,
+항목이 있으면 실행 중인 로컬 SCVM을 처리합니다. CCVM 목록이 비어 있거나
+`cloudcenter_res`가 다른 호스트에서 실행 중이거나 로컬 CCVM이 정지 상태이면 CCVM을
+생략합니다. 통합 RPM 실행기는 CCVM을 마이그레이션하지 않습니다.
+
+통합 RPM ISO는 전체/Mold/기타 탭에서 같은 ISO를 쓰며 OS 설치용 `ks/`를 요구하지
+않습니다. 이전 v2 RPM ISO와 전용 Mold/기타 ISO도 지원합니다. 기존 OS 전체 ISO만
+`ks/ablestack-ks.cfg`를 요구하고 `--include-cockpit`을 전달합니다.
+이 문서의 이후 OS·펌웨어·firewalld·Tools 절차는 기존 OS 전체 업데이트에 관한 설명입니다.
+
+`tools/properties/`의 패키지 JSON은 RPM의 설치 전후 도구가 기존 값을 우선하여
+재귀 병합하고 새 키만 추가합니다. OS 전체 `update-all.sh`도 HOST·SCVM·CCVM의
+후처리에서 이전 디렉터리를 통째로 복원하지 않고 JSON 값을 병합합니다.
+새 파일과 새 키를 남기며 기존 배열과 `false`·빈 값도 유지합니다.
+자세한 동작과 오류 복구는 [RPM 설정 보존 안내](../tools/makerpm/README.md#설정-파일-처리)를 참고합니다.
+
 # 전체 업데이트와 ABLESTACK Tools 업데이트
 
 업데이트 ISO의 `update/` 디렉터리에 다음 파일을 함께 넣습니다.
 
+- `mold-ha.py` (직접 실행 시 업데이트 스크립트와 함께 필요)
 - `update-all.sh`
 - `update-qemu-exec-tools.sh`
 - `update-mold.sh` (Mold 업데이트를 제공하는 ISO)
@@ -13,7 +74,7 @@ bash /마운트경로/update/update-all.sh --include-cockpit
 tail -f /var/log/ablestack-update.log
 ```
 
-`update-all.sh`는 nohup과 setsid로 백그라운드 작업을 시작하고 PID를 출력한 뒤 반환합니다.
+`update-all.sh`는 Mold 인증 후 Python의 새 세션에서 HA 제어와 업데이트를 진행하고 PID를 출력한 뒤 반환합니다.
 표준 입력은 분리하고 출력은 기존 로그에 기록합니다. SSH 연결이 끊겨도 작업이 계속됩니다.
 네트워크 단절 자체를 방지하는 기능은 아닙니다.
 ISO에서 직접 실행한 경우 작업이 완료될 때까지 마운트를 유지합니다.
@@ -60,7 +121,7 @@ Cockpit 업데이트 창의 **업데이트 로그**는 최근 300줄(최대 64 K
 Tools의 버전 확인 및 설치 실패 메시지도 한국어로 표시합니다.
 표시를 위한 변환은 원본 로그 파일을 수정하지 않습니다.
 
-진행 로그는 `ablestack_update.py log --update-type all|mold|tools`로 조회합니다.
+진행 로그는 `ablestack_update.py log --update-type all|mold|packages|tools`로 조회합니다.
 이 조회는 업데이트나 서비스 재시작을 실행하지 않으며 임의 파일 경로를 받지 않습니다.
 이전 한국어 로그는 기존 내용대로 표시합니다.
 

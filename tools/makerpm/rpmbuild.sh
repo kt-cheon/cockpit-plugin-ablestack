@@ -1,72 +1,63 @@
 #!/bin/bash
-# Copyright (c) 2021 ABLECLOUD Co. Ltd
-# 이 파일은 rpmbuild를 이용하여 ablestack-cockpit-plugin을 빌드하는 스크립트입니다.
-# 최초 작성일 : 2026. 1. 5
-
+# Build Diplo as a single RPM, without agent or React packaging.
 set -euo pipefail
-
-PATH=/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin:/usr/local/sbin
-export PATH
-
-# 이 스크립트(ablestack.spec)의 실제 위치
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-
-# 사용법 체크
-# 사용법: ./rpmbuild.sh <VER> <REL> [BUILD_PATH]
-if [ $# -lt 2 ]; then
-  echo "Usage: $0 <VER> <REL> [BUILD_PATH]"
-  echo "  예) $0 v4.5.1 251208 ."
-  exit 1
+SOURCE_ONLY=0
+if [ "${4:-}" = --source-only ]; then
+    SOURCE_ONLY=1
+    set -- "$1" "$2" "$3"
+elif [ "${3:-}" = --source-only ]; then
+    SOURCE_ONLY=1
+    set -- "$1" "$2"
 fi
-
-VER="$1"   # 예: v4.5.1
-REL="$2"   # 예: 251208
-
-# 빌드 기준 경로 (cockpit-plugin-ablestack 루트)
-if [ -z "${3:-}" ]; then
-  BUILD_PATH="$(pwd)"
-else
-  BUILD_PATH="$3"
+if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
+    echo "Usage: $0 <VER> <REL> [BUILD_PATH] [--source-only]" >&2
+    exit 1
 fi
+VER="$1"
+REL="$2"
+BUILD_PATH="${3:-$SCRIPT_DIR/../..}"
 BUILD_PATH="$(cd "$BUILD_PATH" && pwd)"
-
-# spec Name 과 맞춤
-NAME="ablecube"
-
-echo "BUILD_PATH = $BUILD_PATH"
-echo "VER        = $VER"
-echo "REL        = $REL"
-echo "NAME       = $NAME"
-
-# rpmbuild 디렉터리 구조 생성
-mkdir -p "$BUILD_PATH/rpmbuild"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
-
-# Source0: %{name}-%{version}.tar.gz 생성
-cd "$BUILD_PATH/rpmbuild/SOURCES"
-
-mkdir -p "${NAME}-${VER}"
-
-# 플러그인 소스 복사 (파일/디렉터리 구조는 환경에 맞게 조정 가능)
-cp -a "$BUILD_PATH"/{README.md,node_modules,images,main.html,manifest.json,sample,shell,src,tools,python,index.html,index.js,main-glue.html,main-glue-no-permission.html} "${NAME}-${VER}/"
-
-# gzip 압축 tarball 생성 → ablecube-<VER>.tar.gz
-tar -czf "${NAME}-${VER}.tar.gz" "${NAME}-${VER}"
-rm -rf "${NAME}-${VER}"
-
-# spec 파일 복사 (스크립트와 같은 디렉터리에서 가져옴)
-cp -f "$SCRIPT_DIR/ablestack.spec" "$BUILD_PATH/rpmbuild/SPECS/"
-
-# rpmbuild 실행
+NAME=ablecube
+TOP_DIR="${ABLESTACK_RPM_TOPDIR:-$BUILD_PATH/rpmbuild}"
+mkdir -p "$TOP_DIR"
+TOP_DIR="$(cd "$TOP_DIR" && pwd)"
+if [ ! -f "$BUILD_PATH/tools/makerpm/properties_config.py" ]; then
+    echo "Missing property merge helper: $BUILD_PATH/tools/makerpm/properties_config.py" >&2
+    exit 1
+fi
+if [ "$SOURCE_ONLY" -eq 0 ] && ! command -v rpmbuild >/dev/null 2>&1; then
+    echo "rpmbuild command not found. Install rpm-build first." >&2
+    exit 1
+fi
+mkdir -p "$TOP_DIR"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+SOURCE_STAGE="$(mktemp -d "$TOP_DIR/SOURCES/.${NAME}-${VER}.XXXXXX")"
+trap 'rm -rf -- "$SOURCE_STAGE"' EXIT
+mkdir -p "$SOURCE_STAGE/${NAME}-${VER}"
+tar -C "$BUILD_PATH" \
+    --exclude='tools/vmconfig' \
+    --exclude='tools/makerpm/rpmbuild' \
+    --exclude='tools/makerpm/property-defaults' \
+    --exclude='tools/properties/*.cube-agent.json*' \
+    --exclude='tools/properties/.cube-setup-*' \
+    --exclude='tools/properties/.properties-merge-*' \
+    --exclude='.DS_Store' --exclude='__pycache__' --exclude='*.pyc' \
+    --exclude='*.rpmnew' --exclude='*.rpmsave' --exclude='*.rpmorig' \
+    -cf - README.md node_modules images main.html manifest.json sample shell src tools python \
+    index.html index.js main-glue.html main-glue-no-permission.html \
+    | tar -C "$SOURCE_STAGE/${NAME}-${VER}" -xf -
+mkdir -p "$SOURCE_STAGE/${NAME}-${VER}/tools/vmconfig"
+if [ -f "$BUILD_PATH/tools/vmconfig/readme.md" ]; then
+    cp -p "$BUILD_PATH/tools/vmconfig/readme.md" "$SOURCE_STAGE/${NAME}-${VER}/tools/vmconfig/"
+fi
+tar -czf "$TOP_DIR/SOURCES/${NAME}-${VER}.tar.gz" -C "$SOURCE_STAGE" "${NAME}-${VER}"
+cp -f "$SCRIPT_DIR/ablestack.spec" "$TOP_DIR/SPECS/"
+if [ "$SOURCE_ONLY" -eq 1 ]; then
+    echo "Source archive prepared: $TOP_DIR/SOURCES/${NAME}-${VER}.tar.gz"
+    exit 0
+fi
 cd "$BUILD_PATH"
-rpmbuild -ba "$BUILD_PATH/rpmbuild/SPECS/ablestack.spec" \
-  --define "_topdir $BUILD_PATH/rpmbuild" \
-  --define "version ${VER}" \
-  --define "release ${REL}" \
-  --target x86_64 \
-  --nocheck
-
-echo
-echo "빌드 완료!"
-echo "결과 RPM 위치 예:"
-echo "  $BUILD_PATH/rpmbuild/RPMS/x86_64/${NAME}-${VER}-${REL}.x86_64.rpm"
-
+rpmbuild -ba "$TOP_DIR/SPECS/ablestack.spec" \
+    --define "_topdir $TOP_DIR" --define "version $VER" --define "release $REL" \
+    --target x86_64 --nocheck
+echo "RPM build completed: $TOP_DIR/RPMS/x86_64/${NAME}-${VER}-${REL}.x86_64.rpm"

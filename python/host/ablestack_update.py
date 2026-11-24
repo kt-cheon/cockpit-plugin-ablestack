@@ -11,8 +11,11 @@ import shutil
 import shlex
 import re
 import subprocess
+import sys
+import importlib.util
 from string import Formatter
 from pathlib import Path
+from urllib.parse import urlsplit
 
 try:
     from ablestack import createReturn
@@ -28,10 +31,13 @@ OS_RELEASE_PATH = Path("/etc/os-release")
 TARGET_KS_PATH = Path("ks/ablestack-ks.cfg")
 UPDATE_WORK_DIR = Path("/opt/ABLESTACK_UPDATE")
 UPDATE_LOCK_PATH = Path("/run/lock/ablestack-update.lock")
+HA_HELPER_PATH = Path(__file__).with_name("mold-ha.py")
+PACKAGE_POLICY_PATH = Path(__file__).with_name('package-policy.py')
 UPDATE_LOG_PATHS = {
     "all": Path("/var/log/ablestack-update.log"),
     "tools": Path("/var/log/ablestack-update.log"),
     "mold": Path("/var/log/ablestack-mold-update.log"),
+    "packages": Path("/var/log/ablestack-rpm-update.log"),
 }
 MOLD_PACKAGES = (
     "cloudstack-common",
@@ -43,16 +49,20 @@ MOLD_PACKAGES = (
 MOLD_RPM_QUERY_FORMAT = "%{NAME}\t%{VERSION}-%{RELEASE}\t%{ARCH}\n"
 UPDATE_SCRIPT_MAP = {
     "all": {
-        "label": "전체 업데이트",
+        "label": "전체 패키지 업데이트",
         "script": Path("update/update-all.sh"),
     },
     "mold": {
-        "label": "Mold 업데이트",
+        "label": "Mold 패키지 업데이트",
         "script": Path("update/update-mold.sh"),
     },
     "tools": {
         "label": "ABLESTACK Tools 업데이트",
         "script": Path("update/update-qemu-exec-tools.sh"),
+    },
+    "packages": {
+        "label": "기타 패키지 업데이트",
+        "script": Path("update/update-all.sh"),
     },
 }
 
@@ -61,6 +71,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="ABLESTACK ISO update helper")
     parser.add_argument("action", choices=["info", "run", "log"], help="Action to execute")
     parser.add_argument("--mount-path", help="Mounted ABLESTACK ISO path")
+    parser.add_argument("--credentials-stdin", action="store_true", help="Read Mold credentials from stdin only")
     parser.add_argument(
         "--update-type",
         choices=sorted(UPDATE_SCRIPT_MAP.keys()),
@@ -283,9 +294,84 @@ def read_update_info(mount_path, update_type="all"):
     current_info = parse_key_values(OS_RELEASE_PATH)
     current_ablestack_version = current_info.get("PRETTY_NAME", "N/A")
     mold_info = {}
-    if update_type == "mold":
+    manifest = mount / 'update/manifest.json'
+    unified = False
+    if update_type != 'tools' and manifest.is_file():
+        try:
+            metadata = json.loads(manifest.read_text(encoding='utf-8'))
+            unified = metadata.get('format') == 'ablestack-rpm-update' and metadata.get('version') in (2, 3)
+        except (ValueError, AttributeError):
+            raise ValueError('통합 업데이트 ISO manifest 형식이 잘못되었습니다.') from None
+        if not unified:
+            raise ValueError('지원하지 않는 통합 업데이트 ISO 형식입니다.')
+    if unified:
+        if not (mount / 'rpms/repodata/repomd.xml').is_file() or not (mount / 'SHA256SUMS').is_file():
+            raise FileNotFoundError('통합 업데이트 ISO에 RPM 저장소와 SHA256SUMS가 필요합니다.')
+        command = detect_rpm_command()
+        records = []
+        seen = set()
+        for path in sorted((mount / 'rpms').rglob('*.rpm')):
+            proc = subprocess.run([command, '-qp', '--qf', MOLD_RPM_QUERY_FORMAT, '--', str(path)],
+                                  text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+            fields = proc.stdout.strip().split('\t')
+            if proc.returncode or len(fields) != 3:
+                raise ValueError('통합 ISO의 RPM 헤더를 읽을 수 없습니다.')
+            name, version, arch = fields
+            if arch in ('src', 'nosrc') or (name, arch) in seen:
+                raise ValueError('통합 ISO에 소스/중복 RPM이 있습니다.')
+            seen.add((name, arch))
+            records.append(dict(name=name, version=version, arch=arch))
+        if not records:
+            raise ValueError('통합 ISO에 RPM이 없습니다.')
+        role_packages = None
+        if metadata['version'] == 3:
+            if not PACKAGE_POLICY_PATH.is_file():
+                raise FileNotFoundError('역할별 패키지 검증 모듈이 없습니다. Cockpit 플러그인을 업데이트하세요.')
+            spec = importlib.util.spec_from_file_location('ablestack_package_policy', PACKAGE_POLICY_PATH)
+            policy = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(policy)
+            plan = policy.resolve(policy.load_config(mount / 'packages.json'), records)
+            scope = {'all': 'all', 'mold': 'mold', 'packages': 'packages'}[update_type]
+            scoped_plan = {role: policy.scoped(plan, role, scope) for role in policy.ROLES}
+            role_packages = {role: [row['name'] + '.' + row['arch'] for row in rows] for role, rows in scoped_plan.items()}
+            unique = {(row['name'], row['arch']): row for rows in scoped_plan.values() for row in rows}
+            records = list(unique.values())
+        mold_records = [row for row in records if row['name'] in MOLD_PACKAGES]
+        selected = (mold_records if update_type == 'mold' else
+                    [row for row in records if not row['name'].startswith('cloudstack')] if update_type == 'packages' else records)
+        current = subprocess.run([command, '-q', '--qf', '%{VERSION}-%{RELEASE}\n', '--', 'cloudstack-common'],
+                                 text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+        common = next((row['version'] for row in mold_records if row['name'] == 'cloudstack-common'), '포함 안 됨')
+        mold_info = dict(rpm_only=True, package_count=len(selected), packages=selected,
+                         role_packages=role_packages,
+                         mold_package_count=len(mold_records), mold_packages=mold_records,
+                         current_mold_version=current.stdout.strip() if current.returncode == 0 else 'N/A',
+                         target_mold_version=common)
+        target_ablestack_version = current_ablestack_version
+    elif update_type == "mold":
         mold_info = read_mold_iso_info(mount)
         # Mold 전용 업데이트는 OS 버전을 변경하지 않는다.
+        target_ablestack_version = current_ablestack_version
+    elif update_type == "packages":
+        if not (mount / 'rpms/repodata/repomd.xml').is_file() or not (mount / 'SHA256SUMS').is_file():
+            raise FileNotFoundError("기타 패키지 ISO의 rpms/repodata/repomd.xml 및 SHA256SUMS가 필요합니다.")
+        command = detect_rpm_command()
+        packages = []
+        keys = set()
+        for path in sorted((mount / 'rpms').rglob('*.rpm')):
+            proc = subprocess.run([command, '-qp', '--qf', MOLD_RPM_QUERY_FORMAT, '--', str(path)],
+                                  text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+            fields = proc.stdout.strip().split('\t')
+            if proc.returncode or len(fields) != 3:
+                raise ValueError("기타 패키지 RPM 정보 형식 또는 헤더 조회 오류")
+            name, version, arch = fields
+            if name.startswith('cloudstack') or arch in ('src', 'nosrc') or (name, arch) in keys:
+                raise ValueError("기타 패키지 ISO에 CloudStack/소스/중복 RPM이 포함되어 있습니다.")
+            keys.add((name, arch))
+            packages.append(dict(name=name, version=version, arch=arch))
+        if not packages:
+            raise ValueError("기타 패키지 ISO에 RPM이 없습니다.")
+        mold_info = {'package_count': len(packages), 'packages': packages}
         target_ablestack_version = current_ablestack_version
     elif update_type == "tools":
         proc = subprocess.run(
@@ -386,13 +472,32 @@ def update_work_lock():
         os.close(lock_fd)
 
 
-def run_update(mount_path, update_type="all"):
+def run_update(mount_path, update_type="all", credentials=None):
     with update_work_lock() as lock_fd:
-        return run_update_locked(mount_path, update_type, lock_fd)
+        return run_update_locked(mount_path, update_type, lock_fd, credentials)
 
 
-def run_update_locked(mount_path, update_type, lock_fd):
+def run_update_locked(mount_path, update_type, lock_fd, credentials=None):
     info = read_update_info(mount_path, update_type)
+    if info.get('rpm_only') and info.get('package_count') == 0:
+        return {**info, 'message': '선택한 범위의 RPM이 없어 정상 생략했습니다.', 'background': False,
+                'skipped': True, 'pid': None, 'log_file': str(UPDATE_LOG_PATHS[update_type]), 'stdout': '', 'stderr': ''}
+    if update_type != 'tools':
+        if (not isinstance(credentials, dict) or not isinstance(credentials.get('username'), str)
+                or not credentials['username'].strip() or not isinstance(credentials.get('password'), str)
+                or not credentials['password']):
+            raise ValueError('Mold 관리자 ID와 비밀번호를 입력해야 합니다.')
+        if not HA_HELPER_PATH.is_file():
+            raise FileNotFoundError('Mold HA 제어 모듈이 없습니다. Cockpit 플러그인을 업데이트하세요.')
+        if credentials.get('api_url'):
+            try:
+                url = urlsplit(credentials['api_url'])
+                valid = (url.scheme in ('http', 'https') and url.netloc and not url.username
+                         and not url.password and not url.query and not url.fragment)
+            except (ValueError, TypeError, AttributeError):
+                valid = False
+            if not valid:
+                raise ValueError('Mold API 주소에는 인증정보나 쿼리를 넣을 수 없습니다.')
     script_info = get_update_script_info(update_type)
     mount = Path(info["mount_path"])
     # 재부팅 후에는 전체 업데이트가 복사한 ISO에서 Tools만 바로 실행할 수 있다.
@@ -414,8 +519,27 @@ def run_update_locked(mount_path, update_type, lock_fd):
     env["ABLESTACK_UPDATE_TYPE"] = update_type
     env["ABLESTACK_UPDATE_LOCK_FD"] = str(lock_fd)
 
+    command = ["/bin/bash", f"./{script_info['script'].as_posix()}"]
+    payload = None
+    if update_type != 'tools':
+        kind = {'all': 'full', 'mold': 'mold', 'packages': 'rpms'}[update_type]
+        command = [sys.executable, '-B', str(HA_HELPER_PATH), '--script', str(work_update_script),
+                   '--kind', kind, '--lock-fd', str(lock_fd), '--log-file', str(UPDATE_LOG_PATHS[update_type]),
+                   '--credentials-stdin']
+        if update_type == 'all':
+            if info.get('rpm_only'):
+                command[command.index('--kind') + 1] = 'rpms'
+            else:
+                command.append('--worker-arg=--include-cockpit')
+        if info.get('rpm_only'):
+            command += ['--worker-arg=--scope', '--worker-arg=' + {'all': 'all', 'mold': 'mold', 'packages': 'packages'}[update_type]]
+        for key, flag in (('api_url', '--api-url'), ('domain', '--domain'), ('host_id', '--host-id')):
+            if credentials.get(key):
+                command += [flag, str(credentials[key])]
+        payload = json.dumps({'username': credentials['username'], 'password': credentials['password']})
     proc = subprocess.run(
-        ["/bin/bash", f"./{script_info['script'].as_posix()}"],
+        command,
+        input=payload,
         cwd=str(work_dir),
         text=True,
         stdout=subprocess.PIPE,
@@ -429,16 +553,17 @@ def run_update_locked(mount_path, update_type, lock_fd):
         raise RuntimeError(localize_update_output(message))
 
     started = re.search(r"^ABLESTACK_UPDATE_STARTED_PID=([0-9]+)$", proc.stdout, re.M)
-    background = update_type == "all" and started is not None
-    message = ("전체 업데이트를 백그라운드에서 시작했습니다. /var/log/ablestack-update.log에서 완료를 확인한 후 "
-               "재부팅하고 ABLESTACK Tools 업데이트를 실행하세요." if background else
+    background = update_type != "tools" and started is not None
+    message = (f"{script_info['label']}를 백그라운드에서 시작했습니다. 로그에서 업데이트·검증 및 HA 활성화 완료를 확인하세요." if background else
                f"{script_info['label']} 실행이 완료되었습니다.")
+    if background and update_type == 'all' and not info.get('rpm_only'):
+        message += ' 완료 후 재부팅하고 ABLESTACK Tools를 업데이트하세요.'
     return {
         **info,
         "message": message,
         "background": background,
         "pid": int(started.group(1)) if background else None,
-        "log_file": "/var/log/ablestack-update.log",
+        "log_file": str(UPDATE_LOG_PATHS[update_type]),
         "mount_path": info["mount_path"],
         "copy_path": str(work_dir),
         "update_type": update_type,
@@ -457,7 +582,13 @@ def main():
         elif args.action == "info":
             ret = createReturn(code=200, val=read_update_info(args.mount_path, args.update_type))
         else:
-            ret = createReturn(code=200, val=run_update(args.mount_path, args.update_type))
+            credentials = None
+            if args.credentials_stdin:
+                try:
+                    credentials = json.loads(sys.stdin.read(65537))
+                except (ValueError, TypeError):
+                    raise ValueError('Mold 인증정보 입력 형식이 잘못되었습니다.') from None
+            ret = createReturn(code=200, val=run_update(args.mount_path, args.update_type, credentials))
     except Exception as e:
         ret = createReturn(code=500, val=str(e))
     print(ret)

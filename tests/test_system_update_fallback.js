@@ -73,8 +73,8 @@ async function testSystemUpdateFallback(source) {
       }
       throw new Error('Unexpected command: ' + JSON.stringify(args));
     } };
-    const api = new Function('$', 'cockpit', 'document', source + '\nreturn {' +
-      'loadSystemUpdateInfoFallback, runSystemUpdateFallback, updateSystemUpdateInfo, clearSystemUpdateLoadedInfo, resetSystemUpdateConfirmModal};')($, cockpit, {});
+    const api = new Function('$', 'cockpit', 'ablestack', 'document', source + '\nreturn {' +
+      'loadSystemUpdateInfoFallback, runSystemUpdateFallback, updateSystemUpdateInfo, clearSystemUpdateLoadedInfo, resetSystemUpdateConfirmModal};')($, cockpit, cockpit, {});
     return { api, calls, records, $, get executions() { return executions; } };
   }
   function test(name, run) { tests.push({ name, run }); }
@@ -120,6 +120,18 @@ async function testSystemUpdateFallback(source) {
     await rejects(() => fixture().api.loadSystemUpdateInfoFallback('/mnt/iso', 'all'), /ks/);
     await rejects(() => fixture({ ks: '' }).api.loadSystemUpdateInfoFallback('/mnt/iso', 'all'), /ABLESTACK_VERSION/);
   });
+  test('Unified RPM info displays explicit role lists and package count', async () => {
+    const f = fixture();
+    f.api.updateSystemUpdateInfo({update_type:'all',rpm_only:true,package_count:2,
+      role_packages:{host:['cloudstack-agent.noarch','curl.noarch'],scvm:[],ccvm:['curl.noarch']}});
+    assert(f.$('#system-update-version-label').text() === 'RPM', 'RPM label');
+    assert(f.$('#system-update-target-ablestack-version').text() === '2개', 'RPM count');
+    const text = f.$('#system-update-role-packages').text();
+    assert(text.includes('HOST: cloudstack-agent.noarch, curl.noarch'), 'host plan');
+    assert(text.includes('SCVM: 대상 없음 · 생략'), 'empty SCVM plan');
+    f.api.clearSystemUpdateLoadedInfo();
+    assert(f.$('#system-update-role-packages').text() === '', 'plan clears with old info');
+  });
   test('Mold rejects missing package headers despite expected filenames', async () => {
     const f = fixture();
     f.records[4].name = 'unrelated-package';
@@ -154,29 +166,12 @@ async function testSystemUpdateFallback(source) {
     const info = await fixture({ uninstalled: true }).api.loadSystemUpdateInfoFallback('/mnt/iso', 'mold');
     assert(info.current_mold_version === 'N/A', 'unknown installed version');
   });
-  test('Mold run revalidates media before copying or executing', async () => {
-    const f = fixture();
-    await f.api.loadSystemUpdateInfoFallback('/mnt/iso', 'mold');
-    f.records.pop();
-    await rejects(() => f.api.runSystemUpdateFallback('/mnt/iso', 'mold'), /cloudstack-ui/);
-    assert(f.executions === 0, 'invalid ISO must not reach copy/execute');
-  });
-  test('Mold run uses the selected updater after validation', async () => {
-    const f = fixture();
-    const result = await f.api.runSystemUpdateFallback('/mnt/iso', 'mold');
-    assert(result.code === 200 && result.val.update_type === 'mold', 'successful result');
-    const command = f.calls.find((args) => args[3] === 'ablestack-update');
-    assert(command[6] === 'update/update-mold.sh' && command[7] === 'mold', 'Mold script and type');
-    assert(result.val.update_script === '/opt/ABLESTACK_UPDATE/update/update-mold.sh', 'nested execution result');
-    assert(f.executions === 1, 'one execution');
-  });
-  test('Full run uses the updater inside the copied update directory', async () => {
-    const f = fixture();
-    const result = await f.api.runSystemUpdateFallback('/mnt/iso', 'all');
-    const command = f.calls.find((args) => args[3] === 'ablestack-update');
-    assert(command[6] === 'update/update-all.sh' && command[7] === 'all', 'full script and type');
-    assert(result.val.update_script === '/opt/ABLESTACK_UPDATE/update/update-all.sh', 'nested execution result');
-    assert(f.executions === 1, 'one execution');
+  test('Package updates require the HA-aware helper instead of an unauthenticated fallback', async () => {
+    for (const type of ['all','mold','packages']) {
+      const f=fixture();
+      await rejects(()=>f.api.runSystemUpdateFallback('/mnt/iso',type), /HA.*도우미/);
+      assert(f.executions===0,'missing helper must not execute package updates');
+    }
   });
   test('Tools info checks the running kernel without requiring KS', async () => {
     const f = fixture({type: 'tools'});
@@ -203,13 +198,10 @@ async function testSystemUpdateFallback(source) {
     assert(command[6] === 'update/update-qemu-exec-tools.sh' && command[7] === 'tools', 'Tools command');
     assert(result.val.update_type === 'tools' && !result.val.background, 'Tools completes synchronously');
   });
-  test('Background launch is reported as started rather than complete', async () => {
-    const f = fixture({background: true});
-    const result = await f.api.runSystemUpdateFallback('/mnt/iso', 'all');
-    assert(result.val.background && result.val.pid === 12345, 'background process acknowledgment');
-    assert(result.val.message.includes('백그라운드에서 시작'), 'show launch state');
-    assert(!result.val.message.includes('실행이 완료'), 'do not claim the update finished');
-    assert(result.val.log_file === '/var/log/ablestack-update.log', 'existing log');
+  test('Missing HA helper cannot start a package update in the background', async () => {
+    const f=fixture();
+    await rejects(()=>f.api.runSystemUpdateFallback('/mnt/iso','all'),/HA.*도우미/);
+    assert(f.executions===0,'HA authentication is required before background launch');
   });
   test('Version and confirmation text follow the selected update type', async () => {
     const f = fixture({ ks: 'ABLESTACK_VERSION="ABLESTACK Next"\n' });
