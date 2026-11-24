@@ -11,6 +11,9 @@ import {
     ModalFooter,
     ModalHeader,
     Switch,
+    Tabs,
+    Tab,
+    TabTitleText,
     TextInput,
 } from "@patternfly/react-core";
 
@@ -42,13 +45,18 @@ const UPDATE_TYPES: Array<{
 }> = [
     {
         type: "all",
-        title: "전체 업데이트",
-        description: "백그라운드로 업데이트합니다. 완료 후 재부팅하고 Tools를 별도로 업데이트하세요.",
+        title: "전체 패키지 업데이트",
+        description: "OS 전체 패키지를 업데이트합니다. HA를 비활성화하고 업데이트·검증 후 다시 활성화합니다.",
     },
     {
         type: "mold",
-        title: "Mold 업데이트",
-        description: "호스트와 CCVM의 Mold만 업데이트합니다.",
+        title: "Mold 패키지 업데이트",
+        description: "호스트와 실행 중인 CCVM의 Mold를 업데이트합니다. 검증 후 HA를 다시 활성화합니다.",
+    },
+    {
+        type: "packages",
+        title: "기타 패키지 업데이트",
+        description: "RPM 전용 ISO로 호스트·SCVM·실행 중인 CCVM을 업데이트합니다. CloudStack 패키지는 제외합니다.",
     },
     {
         type: "tools",
@@ -78,6 +86,7 @@ function resultMessage(result: VersionUpdateRunResult): string {
     if (result.background) {
         return `${result.message} 진행/완료 로그: ${result.logFile || "/var/log/ablestack-update.log"}`;
     }
+    if (result.rpmOnly) return result.message;
     const target = [
         result.targetOsVersion ? `OS ${result.targetOsVersion}` : "",
         result.targetMoldVersion ? `Mold ${result.targetMoldVersion}` : "",
@@ -101,6 +110,10 @@ export default function AblestackUpdateModal({
     const [logText, setLogText] = React.useState("");
     const [logFile, setLogFile] = React.useState("");
     const [logError, setLogError] = React.useState("");
+    const [moldUsername, setMoldUsername] = React.useState("admin");
+    const [moldPassword, setMoldPassword] = React.useState("");
+    const [moldApiUrl, setMoldApiUrl] = React.useState("http://ccvm:8080/client/api");
+    React.useEffect(() => { setMoldPassword(""); }, [isOpen, updateType]);
 
     React.useEffect(() => {
         if (!isOpen) return;
@@ -154,6 +167,7 @@ export default function AblestackUpdateModal({
 
     const closeModal = () => {
         if (submitState === "checking" || submitState === "running") return;
+        setMoldPassword("");
         onClose();
     };
 
@@ -204,12 +218,18 @@ export default function AblestackUpdateModal({
             setMessage("업데이트 실행 확인을 활성화해주세요.");
             return;
         }
+        if (updateType !== "tools" && (!moldUsername.trim() || !moldPassword || !moldApiUrl.trim())) {
+            setSubmitState("error");
+            setMessage("Mold API 주소와 관리자 ID, 비밀번호를 입력해주세요.");
+            return;
+        }
 
         setSubmitState("running");
         setMessage("ABLESTACK 업데이트를 실행하는 중입니다.");
 
         try {
-            const result = await runVersionUpdate(updateInfo.mountPath || mountPath.trim(), updateType);
+            const result = await runVersionUpdate(updateInfo.mountPath || mountPath.trim(), updateType,
+                updateType === "tools" ? undefined : { username: moldUsername.trim(), password: moldPassword, api_url: moldApiUrl.trim() });
             const nextMessage = resultMessage(result);
 
             setSubmitState(result.background ? "started" : "success");
@@ -219,13 +239,16 @@ export default function AblestackUpdateModal({
         } catch (error) {
             setSubmitState("error");
             setMessage(errorMessage(error));
+        } finally {
+            setMoldPassword("");
         }
     };
 
     const currentOsVersion = updateInfo?.currentOsVersion || versionInfo.osVersion;
     const currentMoldVersion = updateInfo?.currentMoldVersion || versionInfo.moldVersion;
     const canCheck = mountPath.trim() !== "" && submitState !== "checking" && submitState !== "running";
-    const canExecute = Boolean(updateInfo) && confirmed && submitState !== "running" && submitState !== "checking";
+    const canExecute = Boolean(updateInfo) && confirmed && submitState !== "running" && submitState !== "checking"
+        && (updateType === "tools" || Boolean(moldUsername.trim() && moldPassword && moldApiUrl.trim()));
     const isBusy = submitState === "checking" || submitState === "running";
     const alertVariant = submitState === "error"
         ? "danger"
@@ -245,7 +268,10 @@ export default function AblestackUpdateModal({
             <ModalBody>
                 <div className="ct-ablestack-update-modal__body">
                     <div className="ct-ablestack-update-modal__summary">
-                        {updateType === "tools" ? (
+                        {updateType === "packages" || updateInfo?.rpmOnly ? (
+                            <><div><span>대상</span><strong>호스트 · SCVM(HCI) · 실행 중인 CCVM</strong></div>
+                                <div><span>ISO 패키지</span><strong>{updateInfo ? `${updateInfo.packageCount}개` : "확인 필요"}</strong></div></>
+                        ) : updateType === "tools" ? (
                             <>
                                 <div><span>현재 실행 커널</span><strong>{displayValue(updateInfo?.currentKernel || versionInfo.kernelVersion)}</strong></div>
                                 <div><span>Tools 설치 대상 커널</span><strong>{displayValue(updateInfo?.targetKernel ?? "")}</strong></div>
@@ -275,32 +301,42 @@ export default function AblestackUpdateModal({
                           label="업데이트 방식" isRequired
                           fieldId="ablestack-update-type"
                         >
-                            <div className="ct-ablestack-update-modal__type-grid" id="ablestack-update-type">
+                            <Tabs activeKey={updateType} aria-label="업데이트 종류"
+                              isOverflowHorizontal={{ defaultTitleText: "업데이트 종류", toggleAriaLabel: "다른 업데이트 종류" }}
+                              onSelect={(_event, key) => {
+                                const next = key as VersionUpdateType;
+                                setUpdateType(next);
+                                if (next === "tools" && !mountPath.trim()) setMountPath("/opt/ABLESTACK_UPDATE");
+                                resetCheckedInfo();
+                            }}>
                                 {UPDATE_TYPES.map((item) => (
-                                    <button
+                                    <Tab
                                       key={item.type}
-                                      type="button"
-                                      className={[
-                                          "ct-ablestack-update-modal__type-card",
-                                          updateType === item.type
-                                              ? "ct-ablestack-update-modal__type-card--selected"
-                                              : "",
-                                      ].join(" ")}
-                                      onClick={() => {
-                                          setUpdateType(item.type);
-                                          if (item.type === "tools" && !mountPath.trim()) {
-                                              setMountPath("/opt/ABLESTACK_UPDATE");
-                                          }
-                                          resetCheckedInfo();
-                                      }}
-                                      disabled={isBusy}
-                                    >
-                                        <strong>{item.title}</strong>
-                                        <small>{item.description}</small>
-                                    </button>
+                                      eventKey={item.type}
+                                      title={<TabTitleText>{item.title}</TabTitleText>}
+                                      isDisabled={isBusy}
+                                    />
                                 ))}
-                            </div>
+                            </Tabs>
+                            <Content component="p">{updateInfo?.rpmOnly && updateType === "all"
+                                ? "ISO의 packages.json에 지정된 역할별 패키지만 설치하거나 업데이트합니다."
+                                : UPDATE_TYPES.find((item) => item.type === updateType)?.description}</Content>
                         </FormGroup>
+                        {updateType !== "tools" && <>
+                            <FormGroup label="Mold API 주소" isRequired fieldId="ablestack-update-mold-api">
+                                <TextInput id="ablestack-update-mold-api" aria-label="Mold API 주소" value={moldApiUrl} isDisabled={isBusy}
+                                  onChange={(_event, value) => setMoldApiUrl(value)} />
+                            </FormGroup>
+                            <FormGroup label="Mold 관리자 ID" isRequired fieldId="ablestack-update-mold-user">
+                                <TextInput id="ablestack-update-mold-user" aria-label="Mold 관리자 ID" value={moldUsername} autoComplete="username" isDisabled={isBusy}
+                                  onChange={(_event, value) => setMoldUsername(value)} />
+                            </FormGroup>
+                            <FormGroup label="Mold 관리자 비밀번호" isRequired fieldId="ablestack-update-mold-password">
+                                <TextInput id="ablestack-update-mold-password" type="password" value={moldPassword}
+                                  aria-label="Mold 관리자 비밀번호" autoComplete="off" isDisabled={isBusy} onChange={(_event, value) => setMoldPassword(value)} />
+                            </FormGroup>
+                            <Content component="p">현재 클러스터와 전체 호스트의 HA를 끄고, 업데이트와 검증이 모두 성공한 후 다시 켭니다. 한 호스트씩 순차 실행하세요.</Content>
+                        </>}
 
                         <FormGroup
                           label="마운트 경로" isRequired
@@ -342,6 +378,16 @@ export default function AblestackUpdateModal({
                             </div>
                         </div>
                     )}
+                    {updateInfo?.rolePackages && (
+                        <div className="ct-ablestack-update-modal__details" aria-label="역할별 설치 패키지">
+                            {(["host", "scvm", "ccvm"] as const).map((role) => (
+                                <div key={role}>
+                                    <span>{role.toUpperCase()} 패키지</span>
+                                    <strong>{updateInfo.rolePackages?.[role].join(", ") || "대상 없음 · 생략"}</strong>
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     <div className="ct-ablestack-update-modal__confirm">
                         <div>
@@ -349,7 +395,7 @@ export default function AblestackUpdateModal({
                             <Content component="p">
                                 {updateType === "tools"
                                     ? "재부팅 후 대상 커널로 부팅했는지 확인합니다. 커널이 맞지 않으면 설치를 중단합니다."
-                                    : updateType === "all"
+                                    : updateType === "all" && !updateInfo?.rpmOnly
                                         ? "백그라운드 시작 후 로그에서 완료를 확인하세요. 완료 후 재부팅하고 ABLESTACK Tools 업데이트를 실행하세요."
                                         : "버전 확인이 완료된 마운트 경로와 업데이트 방식으로 실행합니다."}
                             </Content>

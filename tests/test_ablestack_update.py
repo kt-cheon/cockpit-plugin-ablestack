@@ -32,6 +32,20 @@ class UpdateIsoTests(unittest.TestCase):
         patch.object(update, "OS_RELEASE_PATH", os_release).start()
         patch.object(update, "UPDATE_WORK_DIR", self.work).start()
         patch.object(update, "UPDATE_LOCK_PATH", self.root / "update.lock").start()
+        helper = self.root / 'mold-ha.py'
+        helper.write_text('''import json,os,subprocess,sys
+args=sys.argv[1:]
+credentials=json.load(sys.stdin)
+assert credentials == {'username':'admin','password':'private-test-password'}
+script=args[args.index('--script')+1]
+env=dict(os.environ, ABLESTACK_HA_MANAGED='1')
+sys.exit(subprocess.call(['/bin/bash',script],env=env))
+''')
+        patch.object(update, 'HA_HELPER_PATH', helper).start()
+        self.real_update = update.run_update
+        patch.object(update, 'run_update', side_effect=lambda mount, kind='all', credentials=None:
+                     self.real_update(mount, kind, credentials if credentials is not None else
+                                      {'username':'admin','password':'private-test-password'})).start()
         self.commands = []
         self.available = {"rpm"}
         self.blocked = set()
@@ -76,6 +90,109 @@ class UpdateIsoTests(unittest.TestCase):
         (self.script_dir / "update-all.sh").write_text(
             '#!/bin/bash\nset -eu\ntest -f ks/ablestack-ks.cfg\n'
             'printf "all:%s:%s" "$PWD" "$ABLESTACK_UPDATE_TYPE"\n')
+
+    def unified_iso(self):
+        (self.script_dir / 'manifest.json').write_text(json.dumps({'format': 'ablestack-rpm-update', 'version': 2}))
+        (self.script_dir / 'update-all.sh').write_text('printf "unified:%s" "$PWD"\n')
+        (self.script_dir / 'update-mold.sh').write_text('printf "mold-scope:%s" "$PWD"\n')
+        (self.mount / 'rpms/repodata').mkdir(parents=True)
+        (self.mount / 'rpms/repodata/repomd.xml').write_text('<repomd/>')
+        (self.mount / 'SHA256SUMS').write_text('checksums')
+
+    def json_iso(self, host=(), scvm=(), ccvm=()):
+        self.unified_iso()
+        (self.script_dir / 'manifest.json').write_text(json.dumps({'format': 'ablestack-rpm-update', 'version': 3}))
+        (self.mount / 'packages.json').write_text(json.dumps(dict(schema_version=1, host=list(host),
+                                                                scvm=list(scvm), ccvm=list(ccvm))))
+
+    def test_json_iso_shows_role_lists_and_ignores_undeclared_rpms(self):
+        self.json_iso(host=['cloudstack-agent', 'curl'], scvm=['curl'], ccvm=['cloudstack-ui'])
+        for name in ('cloudstack-agent', 'curl', 'cloudstack-ui', 'unlisted'):
+            self.add_rpm(name)
+        info = update.read_update_info(str(self.mount), 'all')
+        self.assertEqual(info['package_count'], 3)
+        self.assertEqual(info['role_packages'], dict(host=['cloudstack-agent.noarch', 'curl.noarch'],
+                                                     scvm=['curl.noarch'], ccvm=['cloudstack-ui.noarch']))
+        self.assertNotIn('unlisted', [row['name'] for row in info['packages']])
+        other = update.read_update_info(str(self.mount), 'packages')
+        self.assertEqual(other['role_packages'], dict(host=['curl.noarch'], scvm=['curl.noarch'], ccvm=[]))
+        self.assertEqual(other['package_count'], 1)
+
+    def test_json_iso_without_cloudstack_can_skip_mold_without_credentials(self):
+        self.json_iso(host=['curl'])
+        self.add_rpm('curl')
+        info = update.read_update_info(str(self.mount), 'mold')
+        self.assertEqual(info['role_packages'], dict(host=[], scvm=[], ccvm=[]))
+        self.assertTrue(self.real_update(str(self.mount), 'mold')['skipped'])
+        self.assertFalse(self.work.exists())
+
+    def test_json_iso_rejects_missing_declared_rpm(self):
+        self.json_iso(host=['missing-rpm'])
+        self.add_rpm('curl')
+        with self.assertRaisesRegex(ValueError, 'missing-rpm'):
+            update.read_update_info(str(self.mount), 'all')
+
+    def test_json_iso_rejects_cloudstack_on_scvm(self):
+        self.json_iso(scvm=['cloudstack-common'])
+        self.add_rpm('cloudstack-common')
+        with self.assertRaisesRegex(ValueError, 'scvm'):
+            update.read_update_info(str(self.mount), 'all')
+
+    def test_json_iso_requires_packages_file(self):
+        self.json_iso(host=['curl'])
+        self.add_rpm('curl')
+        (self.mount / 'packages.json').unlink()
+        with self.assertRaisesRegex(ValueError, 'packages.json'):
+            update.read_update_info(str(self.mount), 'all')
+
+    def test_unified_general_only_iso_does_not_require_cloudstack_or_ks(self):
+        self.unified_iso()
+        self.add_rpm('curl')
+        info = update.read_update_info(str(self.mount), 'all')
+        self.assertTrue(info['rpm_only'])
+        self.assertEqual(info['package_count'], 1)
+        self.assertEqual(info['mold_package_count'], 0)
+        self.assertEqual(info['target_mold_version'], '포함 안 됨')
+        mold = update.read_update_info(str(self.mount), 'mold')
+        self.assertEqual(mold['package_count'], 0)
+        result = self.real_update(str(self.mount), 'mold')
+        self.assertTrue(result['skipped'])
+        self.assertFalse(result['background'])
+        self.assertFalse(self.work.exists())
+        self.assertFalse(any('--credentials-stdin' in command for command in self.commands))
+
+    def test_unified_partial_cloudstack_iso_is_valid_and_each_scope_is_filtered(self):
+        self.unified_iso()
+        self.add_rpm('cloudstack-agent')
+        self.add_rpm('curl')
+        for scope, count in [('all', 2), ('mold', 1), ('packages', 1)]:
+            with self.subTest(scope=scope):
+                self.assertEqual(update.read_update_info(str(self.mount), scope)['package_count'], count)
+        with patch.object(update.subprocess, 'run', wraps=self.run_command) as execute:
+            update.run_update(str(self.mount), 'all')
+        command = next(call.args[0] for call in execute.call_args_list if '--credentials-stdin' in call.args[0])
+        self.assertEqual(command[command.index('--kind') + 1], 'rpms')
+        self.assertIn('--worker-arg=all', command)
+        self.assertNotIn('--worker-arg=--include-cockpit', command)
+
+    def test_unified_other_scope_excludes_optional_cloudstack_rpms(self):
+        self.unified_iso()
+        self.add_rpm('cloudstack-common')
+        self.add_rpm('cloudstack-management')
+        self.add_rpm('curl')
+        info = update.read_update_info(str(self.mount), 'packages')
+        self.assertEqual([row['name'] for row in info['packages']], ['curl'])
+        with patch.object(update.subprocess, 'run', wraps=self.run_command) as execute:
+            update.run_update(str(self.mount), 'packages')
+        command = next(call.args[0] for call in execute.call_args_list if '--credentials-stdin' in call.args[0])
+        self.assertIn('--worker-arg=packages', command)
+
+    def test_unified_mold_only_iso_other_scope_skips_without_authentication(self):
+        self.unified_iso()
+        self.add_rpm('cloudstack-ui')
+        result = self.real_update(str(self.mount), 'packages')
+        self.assertTrue(result['skipped'])
+        self.assertFalse(self.work.exists())
 
     def tools_iso(self):
         (self.script_dir / "update-qemu-exec-tools.sh").write_text(
@@ -235,6 +352,45 @@ class UpdateIsoTests(unittest.TestCase):
         self.assertEqual(len(list((self.work / "rpms").glob("*.rpm"))), 5)
         self.assertFalse((self.work / "ks").exists())
         self.assertFalse((self.work / "AppStream").exists())
+
+    def test_credentials_are_sent_only_on_stdin(self):
+        self.full_iso()
+        with patch.object(update.subprocess, 'run', wraps=self.run_command) as execute:
+            update.run_update(str(self.mount), 'all')
+        call = next(call for call in execute.call_args_list if '--credentials-stdin' in call.args[0])
+        self.assertNotIn('private-test-password', str(call.args[0]))
+        self.assertNotIn('private-test-password', str(call.kwargs['env']))
+        self.assertEqual(json.loads(call.kwargs['input'])['password'], 'private-test-password')
+
+    def test_missing_credentials_do_not_replace_work(self):
+        self.full_iso()
+        self.work.mkdir()
+        marker = self.work / 'keep'
+        marker.write_text('keep')
+        with self.assertRaisesRegex(ValueError, 'Mold 관리자'):
+            self.real_update(str(self.mount), 'all')
+        self.assertTrue(marker.exists())
+
+    def test_credentials_embedded_in_api_url_are_rejected_before_command_execution(self):
+        self.full_iso()
+        with self.assertRaisesRegex(ValueError, 'Mold API 주소'):
+            self.real_update(str(self.mount), 'all', {'username': 'admin', 'password': 'private-test-password',
+                             'api_url': 'https://admin:private-url-password@mold.example/client/api'})
+        self.assertFalse(self.work.exists())
+        self.assertFalse(any('private-url-password' in str(command) for command in self.commands))
+
+    def test_other_packages_iso_uses_rpms_metadata_without_ks(self):
+        (self.script_dir / 'update-all.sh').write_text('#!/bin/bash\n')
+        (self.mount / 'rpms/repodata').mkdir(parents=True)
+        (self.mount / 'rpms/repodata/repomd.xml').write_text('<repomd/>')
+        (self.mount / 'SHA256SUMS').write_text('checksums')
+        self.add_rpm('glibc')
+        info = update.read_update_info(str(self.mount), 'packages')
+        self.assertEqual(info['package_count'], 1)
+        self.assertEqual(info['target_ablestack_version'], 'ABLESTACK Current')
+        self.add_rpm('cloudstack-common')
+        with self.assertRaisesRegex(ValueError, 'CloudStack'):
+            update.read_update_info(str(self.mount), 'packages')
 
     def test_mold_run_revalidates_before_replacing_previous_work(self):
         self.mold_iso()

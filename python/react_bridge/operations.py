@@ -50,7 +50,8 @@ def should_queue(request):
     action = (request.get('body') or {}).get('action', '')
     if path == 'gfs/manage' and action in ('get-gfs-settings', 'set-gfs-settings'):
         return False
-    if path == 'version/update' and action == 'log':
+    # The updater detaches itself. Never persist its credential-bearing request in request.json.
+    if path == 'version/update':
         return False
     if str(action).startswith(('list', 'check')) or action in ('info', 'status', 'overview'):
         return False
@@ -351,10 +352,16 @@ def dispatch(a, request, reporter=None):
         from workflows import monitoring
         return monitoring(a, body)
     if path == 'version/update':
-        return checked(a, 'host/ablestack_update.py',
-                       [choice(action, ('info', 'run', 'log')), '--mount-path',
-                        atom(body.get('mount_path', '/') if action == 'log' else body['mount_path']),
-                        '--update-type', choice(body.get('update_type', 'all'), ('all', 'mold', 'tools'))])
+        update_type = choice(body.get('update_type', 'all'), ('all', 'mold', 'packages', 'tools'))
+        args = [choice(action, ('info', 'run', 'log')), '--mount-path',
+                atom(body.get('mount_path', '/') if action == 'log' else body['mount_path']), '--update-type', update_type]
+        if action == 'run' and update_type != 'tools':
+            credentials = body.get('mold_credentials')
+            if not isinstance(credentials, dict):
+                raise ValueError('Mold 관리자 ID와 비밀번호를 입력하세요.')
+            return a.success(a.tool('host/ablestack_update.py', args + ['--credentials-stdin'],
+                                    stdin=json.dumps(credentials).encode('utf-8'), timeout=21600))
+        return checked(a, 'host/ablestack_update.py', args)
     if request['path'] == '/api/v1/version':
         return {'code': 200, 'os_version': Path('/etc/os-release').read_text().splitlines()[0],
                 'kernel_version': a.command(['uname', '-r']).strip(),

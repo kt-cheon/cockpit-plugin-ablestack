@@ -17,6 +17,19 @@ spec.loader.exec_module(bridge)
 
 
 class ReactBridgeTests(unittest.TestCase):
+    def test_update_credentials_bypass_persistent_task_queue_and_use_stdin(self):
+        credentials = {'username': 'admin', 'password': 'private-update-password'}
+        request = {'path': '/api/v1/cube/version/update', 'method': 'POST',
+                   'body': {'action': 'run', 'mount_path': '/mnt/iso', 'update_type': 'packages',
+                            'mold_credentials': credentials}}
+        from operations import should_queue
+        self.assertFalse(should_queue(request))
+        with patch.object(bridge, 'tool', return_value={'code': 200}) as tool:
+            bridge.route(request)
+        self.assertIn('--credentials-stdin', tool.call_args.args[1])
+        self.assertNotIn('private-update-password', str(tool.call_args.args))
+        self.assertEqual(json.loads(tool.call_args.kwargs['stdin']), credentials)
+
     def request(self, path, body=None, method='GET'):
         return bridge.route({'path': path, 'method': method, 'body': body or {}})
 

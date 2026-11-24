@@ -1,6 +1,11 @@
 import { requestCubeApi } from "./client.ts";
 
-export type VersionUpdateType = "all" | "mold" | "tools";
+export type VersionUpdateType = "all" | "mold" | "packages" | "tools";
+export interface MoldUpdateCredentials {
+  username: string;
+  password: string;
+  api_url: string;
+}
 
 export interface VersionUpdateInfo {
   mountPath: string;
@@ -15,6 +20,9 @@ export interface VersionUpdateInfo {
   updateLabel: string;
   updateScript: string;
   workUpdateScript: string;
+  packageCount: number;
+  rpmOnly: boolean;
+  rolePackages: Record<"host" | "scvm" | "ccvm", string[]> | null;
 }
 
 export interface VersionUpdateRunResult extends VersionUpdateInfo {
@@ -58,6 +66,9 @@ interface VersionUpdateInfoResponse {
   target_kernel?: string;
   background?: boolean;
   log_file?: string;
+  package_count?: number;
+  rpm_only?: boolean;
+  role_packages?: Record<"host" | "scvm" | "ccvm", string[]>;
 }
 
 function normalizeString(value: unknown): string {
@@ -106,7 +117,7 @@ function infoValue(response: VersionUpdateResponse): VersionUpdateInfoResponse {
 
 function normalizeUpdateType(value: unknown): VersionUpdateType {
     const updateType = normalizeString(value).toLowerCase();
-    return updateType === "mold" || updateType === "tools" ? updateType : "all";
+    return updateType === "mold" || updateType === "tools" || updateType === "packages" ? updateType : "all";
 }
 
 function normalizeVersionInfo(response: VersionUpdateResponse): VersionUpdateInfo {
@@ -114,6 +125,9 @@ function normalizeVersionInfo(response: VersionUpdateResponse): VersionUpdateInf
     const updateType = normalizeUpdateType(val.update_type);
 
     return {
+        packageCount: Number(val.package_count) || 0,
+        rpmOnly: val.rpm_only === true,
+        rolePackages: val.role_packages || null,
         mountPath: normalizeString(val.mount_path),
         copyPath: normalizeString(val.copy_path),
         currentOsVersion: normalizeString(val.current_os_version) ||
@@ -177,7 +191,8 @@ export async function fetchVersionUpdateInfo(
 
 export async function runVersionUpdate(
     mountPath: string,
-    updateType: VersionUpdateType
+    updateType: VersionUpdateType,
+    credentials?: MoldUpdateCredentials
 ): Promise<VersionUpdateRunResult> {
     const parsed = await requestCubeApi<VersionUpdateResponse>(
         "/api/v1/cube/version/update",
@@ -189,6 +204,7 @@ export async function runVersionUpdate(
                 action: "run",
                 mount_path: mountPath,
                 update_type: updateType,
+                ...(updateType !== "tools" && credentials ? { mold_credentials: credentials } : {}),
             },
         }
     );

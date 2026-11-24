@@ -10,7 +10,11 @@ URL: https://github.com/ablecloud-team/ablestack-cockpit-plugin.git
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 BuildRequires: /bin/bash
+BuildRequires: /usr/bin/python3
 Requires: /bin/bash
+Requires: /usr/bin/python3
+Requires(pre): /usr/bin/python3
+Requires(post): /usr/bin/python3
 Requires: ablecube-agent = %{version}-%{release}
 
 %description
@@ -50,7 +54,12 @@ cp -a {README.md,node_modules,images,main.html,manifest.json,sample,shell,src,to
 # 디렉터리에는 탐색 권한을 주고, 설정 파일은 실행 파일로 설치하지 않는다.
 plugin_root="$RPM_BUILD_ROOT/usr/share/cockpit/ablestack"
 # 등록 JSON은 운영 중 생성한 개인키이므로 빌드 결과에 포함하지 않는다.
-find "$plugin_root/tools/properties" \( -name '*.cube-agent.json*' -o -name '.cube-setup-*' \) -exec rm -f -- {} +
+find "$plugin_root/tools/properties" \( -name '*.cube-agent.json*' -o -name '.cube-setup-*' -o -name '.properties-merge-*' \) -exec rm -f -- {} +
+# 새 기본값은 일반 payload로 별도 배포한다. 운영 JSON은 키 단위로 병합한다.
+rm -rf "$plugin_root/tools/makerpm/property-defaults"
+/usr/bin/python3 "$plugin_root/tools/makerpm/properties_config.py" stage-defaults \
+    --properties-dir "$plugin_root/tools/properties" \
+    --defaults-dir "$plugin_root/tools/makerpm/property-defaults"
 find "$plugin_root" -type d -exec chmod 0755 {} +
 find "$plugin_root/tools/properties" -type f -exec chmod 0644 {} +
 
@@ -96,6 +105,7 @@ install -d "$RPM_BUILD_ROOT/etc/NetworkManager/dispatcher.d"
 install -m 0755 tools/node-agent/90-cube-agent-setup "$RPM_BUILD_ROOT/etc/NetworkManager/dispatcher.d/"
 
 %post
+/usr/bin/python3 /usr/share/cockpit/ablestack/tools/makerpm/properties_config.py merge || exit 1
 /bin/sh /usr/share/cockpit/ablestack/tools/makerpm/ablestack.sh "$1"
 
 %post agent
@@ -118,6 +128,9 @@ fi
 if command -v systemctl >/dev/null 2>&1; then
     systemctl daemon-reload >/dev/null 2>&1 || :
 fi
+
+# -f는 빌드 때 본문을 RPM에 포함하므로 기존 버전에 helper가 없어도 동작한다.
+%pre -p /usr/bin/python3 -f tools/makerpm/properties_config.py
 
 %clean
 rm -rf "$RPM_BUILD_ROOT"

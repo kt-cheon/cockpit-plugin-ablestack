@@ -29,17 +29,19 @@ await build({
 });
 await writeFile(path.join(output, 'index.html'), `<!doctype html><html lang="ko"><head><meta charset="utf-8"><link rel="stylesheet" href="app.css"></head><body>
 <div id="app"></div><script>
-window.__completed=[]; window.__requests=[]; window.__kernelMismatch=false;
+window.__completed=[]; window.__requests=[]; window.__kernelMismatch=false; window.__jsonPlan=false;
 window.__fixtureCockpit={spawn(){let resolve;const process=new Promise(done=>resolve=done);process.input=function(payload){
   const request=JSON.parse(payload);window.__requests.push(request);const type=request.body?.update_type||'all';
   if(request.path==='/api/v1/version'){resolve(JSON.stringify({code:200,kernel_version:'5.14.0-new',os_version:'ABLESTACK Current'}));return;}
   if(request.body.action==='log'){resolve(JSON.stringify({code:200,val:{log_file:'/var/log/ablestack-update.log',
     text:'[2026-11-17 09:45:33] 호스트 업데이트 완료\\n[2026-11-17 09:46:04] ERROR: 호스트 업데이트 후 커널 로그에 스토리지 오류가 감지되었습니다.'}}));return;}
   if(type==='tools'&&window.__kernelMismatch){resolve(JSON.stringify({code:500,val:'현재 커널 버전(5.14.0-old)이 맞지 않아 설치할 수 없습니다. 대상 커널: 5.14.0-new'}));return;}
-  const background=type==='all'&&request.body.action==='run';
+  const background=type!=='tools'&&request.body.action==='run';
   resolve(JSON.stringify({code:200,val:{mount_path:request.body.mount_path,copy_path:'/opt/ABLESTACK_UPDATE',
     current_ablestack_version:'ABLESTACK Current',target_ablestack_version:'ABLESTACK Next',
-    current_kernel:'5.14.0-new',target_kernel:'5.14.0-new',update_type:type,
+    current_kernel:'5.14.0-new',target_kernel:'5.14.0-new',update_type:type,package_count:window.__jsonPlan?3:37,
+    rpm_only:window.__jsonPlan,role_packages:window.__jsonPlan?{
+      host:['cloudstack-agent.x86_64','curl.x86_64'],scvm:[],ccvm:['cloudstack-management.noarch']}:null,
     work_update_script:'/opt/ABLESTACK_UPDATE/update/'+(type==='tools'?'update-qemu-exec-tools.sh':'update-all.sh'),
     background,log_file:'/var/log/ablestack-update.log',
     message:background?'전체 업데이트를 백그라운드에서 시작했습니다.':'ABLESTACK Tools 업데이트 실행이 완료되었습니다.'}}));
@@ -58,9 +60,9 @@ try {
     await page.getByRole('dialog', {name: 'ABLESTACK 업데이트'}).waitFor();
   };
   await open();
-  assert.equal(await page.locator('.ct-ablestack-update-modal__type-card').count(), 3);
+  assert.equal(await page.getByRole('tab').count(), 4);
   await page.getByRole('region', {name: '업데이트 로그'}).getByText(/호스트 업데이트 후 커널 로그에 스토리지 오류/).waitFor();
-  await page.getByRole('button', {name: /^ABLESTACK Tools 업데이트/}).click();
+  await page.getByRole('tab', {name: /^ABLESTACK Tools 업데이트/}).click();
   assert.equal(await page.locator('#ablestack-update-mount-path').inputValue(), '/opt/ABLESTACK_UPDATE');
   await page.getByRole('button', {name: '버전 확인', exact: true}).click();
   await page.locator('.pf-v6-c-alert__title').filter({hasText: '업데이트 버전 확인이 완료되었습니다.'}).waitFor();
@@ -73,7 +75,7 @@ try {
 
   await open();
   await page.evaluate(() => window.__kernelMismatch = true);
-  await page.getByRole('button', {name: /^ABLESTACK Tools 업데이트/}).click();
+  await page.getByRole('tab', {name: /^ABLESTACK Tools 업데이트/}).click();
   await page.getByRole('button', {name: '버전 확인', exact: true}).click();
   await page.locator('.pf-v6-c-alert__title').filter({hasText: '현재 커널 버전'}).waitFor();
   assert.equal(await page.getByRole('button', {name: '실행', exact: true}).isDisabled(), true);
@@ -88,12 +90,49 @@ try {
   await page.getByRole('button', {name: '버전 확인', exact: true}).click();
   await page.locator('.pf-v6-c-alert__title').filter({hasText: '업데이트 버전 확인이 완료되었습니다.'}).waitFor();
   await page.getByRole('switch', {name: '업데이트 실행 확인'}).press('Space');
+  assert.equal(await page.getByRole('button', {name: '실행', exact: true}).isDisabled(), true);
+  assert.equal(await page.locator('#ablestack-update-mold-password').getAttribute('type'), 'password');
+  await page.getByLabel('Mold 관리자 비밀번호', {exact:true}).fill('private-ui-password');
   await page.getByRole('button', {name: '실행', exact: true}).click();
   await page.locator('.pf-v6-c-alert__title').filter({hasText: '백그라운드에서 시작'}).waitFor();
   assert.equal(await page.locator('.ct-ablestack-update-modal__alert.pf-m-success').count(), 0);
   await page.screenshot({path: path.join(output, 'background-started.png')});
+  assert.equal(await page.locator('#ablestack-update-mold-password').inputValue(), '');
+  const fullRun = await page.evaluate(() => window.__requests.find(r=>r.body?.action==='run'&&r.body.update_type==='all'));
+  assert.equal(fullRun.body.mold_credentials.password, 'private-ui-password');
+  assert.equal(await page.evaluate(() => window.__requests.filter(r=>r.body?.action!=='run').some(r=>r.body?.mold_credentials)), false);
+  await open();
+  await page.getByRole('tab', {name:'기타 패키지 업데이트',exact:true}).click();
+  await page.locator('#ablestack-update-mount-path').fill('/mnt/rpm-update');
+  await page.getByRole('button', {name:'버전 확인',exact:true}).click();
+  await page.getByText('37개',{exact:true}).waitFor();
+  await page.getByLabel('Mold 관리자 비밀번호',{exact:true}).fill('private-other-password');
+  await page.getByRole('switch',{name:'업데이트 실행 확인'}).press('Space');
+  await page.getByRole('button',{name:'실행',exact:true}).click();
+  await page.locator('.pf-v6-c-alert__title').filter({hasText:'백그라운드에서 시작'}).waitFor();
+  const otherRun = await page.evaluate(() => window.__requests.find(r=>r.body?.action==='run'&&r.body.update_type==='packages'));
+  assert.equal(otherRun.body.mold_credentials.password,'private-other-password');
+  await page.screenshot({path:path.join(output,'other-packages-started.png')});
+  await page.setViewportSize({width:390,height:844});
+  assert.equal(await page.evaluate(()=>document.body.scrollWidth<=window.innerWidth),true);
+  await page.screenshot({path:path.join(output,'other-packages-mobile.png'),fullPage:true});
+  await page.setViewportSize({width:1280,height:1100});
+  await open();
+  await page.evaluate(()=>window.__jsonPlan=true);
+  await page.locator('#ablestack-update-mount-path').fill('/mnt/unified');
+  await page.getByRole('button',{name:'버전 확인',exact:true}).click();
+  const plan = page.getByLabel('역할별 설치 패키지',{exact:true});
+  await plan.getByText('cloudstack-agent.x86_64, curl.x86_64',{exact:true}).waitFor();
+  await plan.getByText('대상 없음 · 생략',{exact:true}).waitFor();
+  await page.getByText('3개',{exact:true}).waitFor();
+  await page.getByText('ISO의 packages.json에 지정된 역할별 패키지만 설치하거나 업데이트합니다.',{exact:true}).waitFor();
+  await page.screenshot({path:path.join(output,'json-plan-desktop.png'),fullPage:true});
+  await page.setViewportSize({width:390,height:844});
+  assert.equal(await page.evaluate(()=>document.body.scrollWidth<=window.innerWidth),true);
+  await plan.scrollIntoViewIfNeeded();
+  await page.screenshot({path:path.join(output,'json-plan-mobile.png'),fullPage:true});
   assert.deepEqual(errors, []);
-  console.log('Update modal: Tools install, kernel mismatch, background start, and mobile layout passed.');
+  console.log('Update modal: Tools, background start, credentials, JSON role plan, and mobile layout passed.');
   console.log('Screenshots: ' + output);
 } catch (error) {
   if (page) {

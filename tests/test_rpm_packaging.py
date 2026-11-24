@@ -1,4 +1,5 @@
 """RPM source/post-install checks, plus an isolated RPM upgrade test on Linux."""
+import json
 import os
 from pathlib import Path
 import platform
@@ -6,6 +7,7 @@ import shlex
 import shutil
 import stat
 import subprocess
+import sys
 import tarfile
 import tempfile
 import unittest
@@ -114,6 +116,7 @@ esac
                      "tools/properties/cluster.json.rpmorig", "rpmbuild/SOURCES/ablecube-1.0/stale",
                      "tools/properties/cube2.cube-agent.json", "tools/properties/cube2.cube-agent.json.bak",
                      "tools/properties/.cube-setup-private", "frontend/node_modules/cached-package/private-data")
+        artifacts += ("tools/properties/.properties-merge-private", "tools/makerpm/property-defaults/stale.json")
         for filename in artifacts:
             path = self.source / filename
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -278,6 +281,13 @@ esac
                          "tools/makerpm/ablestack.sh"):
             self.assertEqual(entries["/" + str(PLUGIN / filename)], ["%attr(0755,root,root)"])
         self.assertEqual(stat.S_IMODE((plugin / "index.js").stat().st_mode), 0o644)
+        defaults = plugin / 'tools/makerpm/property-defaults'
+        for path in (plugin / 'tools/properties').glob('*.json'):
+            self.assertEqual(json.loads((defaults / path.name).read_text()), json.loads(path.read_text()))
+            self.assertEqual(entries['/' + str((defaults / path.name).relative_to(buildroot))], [])
+        self.assertIn('%pre -p /usr/bin/python3 -f tools/makerpm/properties_config.py', (MAKERPM / 'ablestack.spec').read_text())
+        post = (MAKERPM / 'ablestack.spec').read_text().split('\n%post\n', 1)[1].split('\n%post agent\n', 1)[0]
+        self.assertIn('properties_config.py merge || exit 1', post)
         for executable in ("node-remote", "node-copy", "node-setup"):
             path = buildroot / "usr/libexec/ablestack" / executable
             self.assertTrue(path.is_file())
@@ -368,9 +378,24 @@ class RpmUpgradeTests(unittest.TestCase):
             run([*rpm, "--initdb"])
             live = install_root / PLUGIN
 
-            def upgrade(package):
+            merge_state = root / 'property-state/pending.json'
+
+            def upgrade(package, merge_properties=False):
+                if merge_properties:
+                    # Run the actual pre body embedded by RPM, with only its paths relocated.
+                    pre = run([*rpm, '-qp', '--qf', '%{PREIN}', str(package)]).stdout
+                    self.assertIn('def capture(', pre)
+                    pre = pre.replace('/usr/share/cockpit/ablestack/tools/properties', str(live / 'tools/properties'))
+                    pre = pre.replace('/var/lib/ablestack/properties-upgrade/pending.json', str(merge_state))
+                    run([sys.executable, '-B', '-c', pre, '2'])
                 run([*rpm, "-U", "--nodeps", "--noscripts", "--ignorearch", "--relocate",
                      f"/usr/share/cockpit/ablestack={live}", str(package)])
+                if merge_properties:
+                    # Exercise the installed post helper without touching real services or files.
+                    run([sys.executable, '-B', str(live / 'tools/makerpm/properties_config.py'), 'merge',
+                         '--properties-dir', str(live / 'tools/properties'),
+                         '--defaults-dir', str(live / 'tools/makerpm/property-defaults'),
+                         '--state-file', str(merge_state)])
 
             upgrade(legacy)
             configs = [path for path in (live / "tools/properties").glob("*.json")
@@ -390,7 +415,7 @@ class RpmUpgradeTests(unittest.TestCase):
             (source / "tools/properties/new.json").write_text('{"new": true}\n')
             for version in ("2.0", "3.0"):
                 with self.subTest(version=version):
-                    new_default = '{"new_default": "' + version + '"}\n'
+                    new_default = json.dumps({'new_default': version, 'added_in_' + version: True}) + '\n'
                     for config in (source / "tools/properties").glob("*.json"):
                         if config.name != "new.json":
                             config.write_text(new_default)
@@ -402,12 +427,20 @@ class RpmUpgradeTests(unittest.TestCase):
                         name, value = line.split("\t")
                         if "/tools/properties/" in name:
                             self.assertEqual(int(value) & 17, 17)  # CONFIG | NOREPLACE
-                    upgrade(package)
+                    upgrade(package, merge_properties=True)
                     for config in configs:
-                        self.assertEqual(config.read_text(), '{"production": true}\n')
+                        expected = {'production': True, 'new_default': '2.0', 'added_in_2.0': True}
+                        if version == '3.0':
+                            expected['added_in_3.0'] = True
+                        self.assertEqual(json.loads(config.read_text()), expected)
                         self.assertEqual(Path(str(config) + ".rpmnew").read_text(), new_default)
                     for name in ("defaults.json", "missing.json"):
-                        self.assertEqual((live / "tools/properties" / name).read_text(), new_default)
+                        expected = {'new_default': '2.0', 'added_in_2.0': True}
+                        if name == 'defaults.json':
+                            expected['old_default'] = True
+                        if version == '3.0':
+                            expected['added_in_3.0'] = True
+                        self.assertEqual(json.loads((live / "tools/properties" / name).read_text()), expected)
                     self.assertEqual((live / "index.js").read_text(), f"code {version}\n")
                     self.assertEqual((live / "tools/properties/new.json").read_text(),
                                      '{"new": true}\n')

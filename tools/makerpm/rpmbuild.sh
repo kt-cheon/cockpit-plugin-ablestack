@@ -60,6 +60,10 @@ for required_source in agent.py client.py config.py cli.py transfer.py operation
     exit 1
   fi
 done
+if [ ! -f "$BUILD_PATH/tools/makerpm/properties_config.py" ]; then
+  echo "Missing property merge helper: $BUILD_PATH/tools/makerpm/properties_config.py" >&2
+  exit 1
+fi
 if [ "$SOURCE_ONLY" -eq 0 ]; then
   for build_tool in rpmbuild rpm; do
     if ! command -v "$build_tool" >/dev/null 2>&1; then
@@ -107,9 +111,11 @@ mkdir -p "$SOURCE_PATH"
 tar -C "$BUILD_PATH" \
   --exclude='tools/vmconfig' \
   --exclude='tools/makerpm/rpmbuild' \
+  --exclude='tools/makerpm/property-defaults' \
   --exclude='tools/node-agent/ablecube-agent.rpm' \
   --exclude='tools/properties/*.cube-agent.json*' \
   --exclude='tools/properties/.cube-setup-*' \
+  --exclude='tools/properties/.properties-merge-*' \
   --exclude='.DS_Store' \
   --exclude='__pycache__' \
   --exclude='*.pyc' \

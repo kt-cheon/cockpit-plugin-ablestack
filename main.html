@@ -2420,14 +2420,19 @@
                                 <label class="pf-v6-c-radio ablestack-update-type-option" for="radio-system-update-type-all">
                                     <input class="pf-v6-c-radio__input" type="radio" id="radio-system-update-type-all"
                                         name="radio-system-update-type" value="all" checked />
-                                    <span class="pf-v6-c-radio__label">전체 업데이트</span>
+                                    <span class="pf-v6-c-radio__label">전체 패키지 업데이트</span>
                                     <span class="pf-v6-c-radio__description">백그라운드 실행. 완료 후 재부팅하고 Tools를 별도 업데이트합니다.</span>
                                 </label>
                                 <label class="pf-v6-c-radio ablestack-update-type-option" for="radio-system-update-type-mold">
                                     <input class="pf-v6-c-radio__input" type="radio" id="radio-system-update-type-mold"
                                         name="radio-system-update-type" value="mold" />
-                                    <span class="pf-v6-c-radio__label">Mold 업데이트</span>
+                                    <span class="pf-v6-c-radio__label">Mold 패키지 업데이트</span>
                                     <span class="pf-v6-c-radio__description">Mold RPM 전용 ISO 사용</span>
+                                </label>
+                                <label class="pf-v6-c-radio ablestack-update-type-option" for="radio-system-update-type-packages">
+                                    <input class="pf-v6-c-radio__input" type="radio" id="radio-system-update-type-packages" name="radio-system-update-type" value="packages" />
+                                    <span class="pf-v6-c-radio__label">기타 패키지 업데이트</span>
+                                    <span class="pf-v6-c-radio__description">rpms/ 저장소가 포함된 RPM 전용 ISO 사용</span>
                                 </label>
                                 <label class="pf-v6-c-radio ablestack-update-type-option" for="radio-system-update-type-tools">
                                     <input class="pf-v6-c-radio__input" type="radio" id="radio-system-update-type-tools"
@@ -2438,7 +2443,16 @@
                             </div>
                         </div>
                     </div>
-                </form>
+                                    <div id="system-update-ha-credentials" class="pf-v6-c-form__group">
+                        <label class="pf-v6-c-form__label" for="input-system-update-mold-api">Mold API 주소</label>
+                        <input class="pf-v6-c-form-control" id="input-system-update-mold-api" type="url" value="http://ccvm:8080/client/api" />
+                        <label class="pf-v6-c-form__label" for="input-system-update-mold-user">Mold 관리자 ID</label>
+                        <input class="pf-v6-c-form-control" id="input-system-update-mold-user" type="text" value="admin" autocomplete="username" />
+                        <label class="pf-v6-c-form__label" for="input-system-update-mold-password">Mold 관리자 비밀번호</label>
+                        <input class="pf-v6-c-form-control" id="input-system-update-mold-password" type="password" autocomplete="off" />
+                        <p>클러스터와 전체 호스트 HA를 끄고 업데이트·검증 후 다시 켭니다. 한 호스트씩 순차 실행하세요.</p>
+                    </div>
+</form>
             </div>
             <div class="pf-v6-c-modal-box__body">
                 <div class="ablestack-update-version-panel">
@@ -2461,6 +2475,7 @@
                     </table>
                 </div>
 
+                <p id="system-update-role-packages" aria-label="역할별 설치 패키지" style="display:none; white-space:pre-wrap; overflow-wrap:anywhere;"></p>
                 <section class="ablestack-update-log" aria-label="업데이트 로그">
                     <strong>업데이트 로그</strong>
                     <div><small><span id="system-update-log-path"></span> · 5초마다 갱신</small></div>

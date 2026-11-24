@@ -4944,12 +4944,14 @@ $(document).on('click', '#button-cloud-vm-snap-rollback', function () {
 let systemUpdateInfo = null;
 const SYSTEM_UPDATE_COPY_PATH = "/opt/ABLESTACK_UPDATE";
 const SYSTEM_UPDATE_TYPE_LABELS = {
-  all: "전체 업데이트",
-  mold: "Mold 업데이트",
+  all: "전체 패키지 업데이트",
+  mold: "Mold 패키지 업데이트",
+  packages: "기타 패키지 업데이트",
   tools: "ABLESTACK Tools 업데이트"
 };
 const SYSTEM_UPDATE_SCRIPT_NAMES = {
   all: "update/update-all.sh",
+  packages: "update/update-all.sh",
   mold: "update/update-mold.sh",
   tools: "update/update-qemu-exec-tools.sh"
 };
@@ -5061,6 +5063,8 @@ function refreshSystemUpdateButton() {
 function resetSystemUpdateModal() {
   systemUpdateInfo = null;
   $('#input-system-update-mount-path').val('');
+  $('#input-system-update-mold-password').val('');
+  $('#system-update-ha-credentials').css('display', '');
   $('#radio-system-update-type-all').prop('checked', true);
   $('#system-update-mount-helper').text('').removeAttr('style');
   clearSystemUpdateLoadedInfo();
@@ -5072,6 +5076,7 @@ function clearSystemUpdateLoadedInfo() {
   $('#system-update-version-label').text(updateType == 'tools' ? 'Tools 대상 커널' : updateType == 'mold' ? 'Mold' : 'ABLESTACK');
   $('#system-update-current-ablestack-version').text('N/A');
   $('#system-update-target-ablestack-version').text('N/A');
+  $('#system-update-role-packages').text('').css('display', 'none');
   $('#button-open-modal-system-update-confirm').prop('disabled', true).attr('aria-disabled', 'true');
 }
 
@@ -5095,9 +5100,14 @@ function updateSystemUpdateInfo(info) {
   $('#input-system-update-mount-path').val(info.mount_path);
   const isMold = updateType == 'mold';
   const isTools = updateType == 'tools';
-  $('#system-update-version-label').text(isTools ? 'Tools 대상 커널' : isMold ? 'Mold' : 'ABLESTACK');
-  $('#system-update-current-ablestack-version').text((isTools ? info.current_kernel : isMold ? info.current_mold_version : info.current_ablestack_version) || 'N/A');
-  $('#system-update-target-ablestack-version').text((isTools ? info.target_kernel : isMold ? info.target_mold_version : info.target_ablestack_version) || 'N/A');
+  const rpmScope = updateType == 'packages' || (info.rpm_only && !isMold);
+  $('#system-update-version-label').text(rpmScope ? 'RPM' : isTools ? 'Tools 대상 커널' : isMold ? 'Mold' : 'ABLESTACK');
+  $('#system-update-current-ablestack-version').text(rpmScope ? '역할별 목록 참조' : (isTools ? info.current_kernel : isMold ? info.current_mold_version : info.current_ablestack_version) || 'N/A');
+  $('#system-update-target-ablestack-version').text(rpmScope ? String(info.package_count || 0) + '개' : (isTools ? info.target_kernel : isMold ? info.target_mold_version : info.target_ablestack_version) || 'N/A');
+  const roleText = info.role_packages ? ['host', 'scvm', 'ccvm'].map(function (role) {
+    return role.toUpperCase() + ': ' + (info.role_packages[role].join(', ') || '대상 없음 · 생략');
+  }).join('\n') : '';
+  $('#system-update-role-packages').text(roleText).css('display', roleText ? '' : 'none');
   $('#button-open-modal-system-update-confirm').prop('disabled', false).attr('aria-disabled', 'false');
 }
 
@@ -5285,6 +5295,7 @@ function loadSystemUpdateInfoFallback(mountPath, updateType) {
 }
 
 function runSystemUpdateFallback(mountPath, updateType) {
+  if (updateType !== 'tools') return Promise.reject(new Error('HA 제어를 위해 최신 업데이트 도우미가 필요합니다. Cockpit 플러그인을 업데이트하세요.'));
   const normalizedMountPath = normalizeSystemUpdatePath(mountPath);
   const scriptName = getSystemUpdateScriptName(updateType);
   const validation = updateType == 'mold' || updateType == 'tools' ? loadSystemUpdateInfoFallback(mountPath, updateType) : Promise.resolve();
@@ -5443,6 +5454,7 @@ function openSystemUpdateModal() {
 }
 
 function closeSystemUpdateModal() {
+  $('#input-system-update-mold-password').val('');
   stopSystemUpdateLog();
   $('#div-modal-system-update').hide();
 }
@@ -5493,6 +5505,8 @@ $(document).on('input', '#input-system-update-mount-path', function () {
 
 $(document).on('change', 'input[name="radio-system-update-type"]', function () {
   startSystemUpdateLog();
+  $('#input-system-update-mold-password').val('');
+  $('#system-update-ha-credentials').css('display', getSelectedSystemUpdateType() == 'tools' ? 'none' : '');
   if (getSelectedSystemUpdateType() == 'tools' && !$.trim($('#input-system-update-mount-path').val())) {
     $('#input-system-update-mount-path').val(SYSTEM_UPDATE_COPY_PATH);
   }
@@ -5544,6 +5558,13 @@ $(document).on('click', '#button-execution-modal-system-update', function () {
 
   const updateType = systemUpdateInfo.update_type || getSelectedSystemUpdateType();
   const updateLabel = systemUpdateInfo.update_label || getSystemUpdateTypeLabel(updateType);
+  const credentials = { username: $.trim($('#input-system-update-mold-user').val()),
+    password: $('#input-system-update-mold-password').val(), api_url: $.trim($('#input-system-update-mold-api').val()) };
+  if (updateType !== 'tools' && (!credentials.username || !credentials.password || !credentials.api_url)) {
+    setSystemUpdateHelper('Mold API 주소와 관리자 ID, 비밀번호를 입력하세요.', true);
+    closeSystemUpdateConfirmModal();
+    return;
+  }
   closeSystemUpdateConfirmModal();
   closeSystemUpdateModal();
   $('#div-modal-spinner-header-txt').text('ABLESTACK Version 업데이트');
@@ -5557,7 +5578,9 @@ $(document).on('click', '#button-execution-modal-system-update', function () {
       const result = retVal.val || {};
       $('#div-modal-system-update').show();
       startSystemUpdateLog();
-      const completionText = result.background
+      const completionText = result.rpm_only
+        ? (result.background ? '진행/완료 여부: ' + result.log_file : '')
+        : result.background
         ? '진행/완료 여부: /var/log/ablestack-update.log. 완료 후 재부팅하고 ABLESTACK Tools 업데이트를 실행하세요.'
         : updateType == 'tools' ? 'ABLESTACK Tools 업데이트가 완료되었습니다.'
           : updateType == 'mold' ? '업데이트 대상의 Mold 서비스 상태를 확인했습니다.'
@@ -5578,13 +5601,17 @@ $(document).on('click', '#button-execution-modal-system-update', function () {
     $('#div-modal-status-alert').show();
   }
 
-  ablestack.spawn(["python3", pluginpath + "/python/host/ablestack_update.py", "run", "--mount-path", systemUpdateInfo.mount_path, "--update-type", updateType], { superuser: true })
+  const args = ["python3", pluginpath + "/python/host/ablestack_update.py", "run", "--mount-path", systemUpdateInfo.mount_path, "--update-type", updateType];
+  if (updateType !== 'tools') args.push('--credentials-stdin');
+  const updateProcess = ablestack.spawn(args, { superuser: true });
+  if (updateType !== 'tools') updateProcess.input(JSON.stringify(credentials));
+  updateProcess
     .then(function (data) {
       const retVal = JSON.parse(data);
       showSystemUpdateResult(retVal);
     })
     .catch(function (err) {
-      if (isSystemUpdateHelperMissing(err)) {
+      if (updateType === 'tools' && isSystemUpdateHelperMissing(err)) {
         return runSystemUpdateFallback(systemUpdateInfo.mount_path, updateType)
           .then(function (retVal) {
             showSystemUpdateResult(retVal);

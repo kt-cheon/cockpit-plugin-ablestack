@@ -68,6 +68,15 @@ test('background update start retains launch state and existing log path', async
   assert.match(result.message, /시작/);
 });
 
+test('unified RPM metadata preserves role-specific package lists', async () => {
+  const roles = {host:['cloudstack-agent.x86_64','curl.noarch'],scvm:[],ccvm:['curl.noarch']};
+  handler = () => ({code:200,val:{update_type:'all',rpm_only:true,package_count:2,role_packages:roles}});
+  const info = await services.fetchVersionUpdateInfo('/mnt/unified', 'all');
+  assert.equal(info.rpmOnly, true);
+  assert.equal(info.packageCount, 2);
+  assert.deepEqual(info.rolePackages, roles);
+});
+
 test('update log is read separately and keeps the Korean display returned by the helper', async () => {
   handler = (request) => {
     assert.equal(request.body.action, 'log');
