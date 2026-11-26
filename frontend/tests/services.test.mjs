@@ -75,6 +75,20 @@ test('missing cluster profile and backend read errors are not downloaded as empt
   await assert.rejects(services.fetchClusterConfigDocument(), /saved profile read failed/);
 });
 
+test('cluster profile download rejects missing cluster type or hosts', async () => {
+  const hosts = [{ hostname: 'cube1', ablecube: '192.0.2.1' }];
+  for (const clusterConfig of [
+    { hosts },
+    { type: '  ', hosts },
+    { type: 'ablestack-hci' },
+    { type: 'ablestack-hci', hosts: 'cube1' },
+    { type: 'ablestack-hci', hosts: [] },
+  ]) {
+    handler = () => ({ code: 200, val: JSON.stringify({ clusterConfig }) });
+    await assert.rejects(services.fetchClusterConfigDocument(), /클러스터 종류 또는 호스트 정보/);
+  }
+});
+
 test('GFS stripe choice loads, saves numerically and follows the selected disks into creation', async () => {
   let saved = 128;
   handler = (request) => {

@@ -52,7 +52,13 @@ function unwrapClusterConfig(value: unknown): RecordValue {
 function unwrapClusterDocument(value: unknown): RecordValue {
   const parsed = parseMaybeJson(value);
   if (isRecord(parsed)) {
-    if (isRecord(parsed.clusterConfig)) return parsed;
+    const config = parsed.clusterConfig;
+    if (isRecord(config)) {
+      if (!readString(config, ["type"]) || !Array.isArray(config.hosts) || config.hosts.length === 0) {
+        throw new Error("저장된 클러스터 구성 파일에 클러스터 종류 또는 호스트 정보가 없습니다.");
+      }
+      return parsed;
+    }
     if (parsed.val !== undefined) return unwrapClusterDocument(parsed.val);
     if (parsed.data !== undefined) return unwrapClusterDocument(parsed.data);
   }
