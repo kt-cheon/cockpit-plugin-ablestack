@@ -137,6 +137,22 @@
   padding: 4px 0;
 }
 
+.ct-storage-vm-wizard__disk-reason {
+  display: block;
+  margin: 6px 0 0 12px;
+  overflow-wrap: anywhere;
+  color: var(--pf-t--global--text--color--subtle);
+}
+
+.ct-storage-vm-wizard__disk-item--unavailable .pf-v6-c-check {
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
+.ct-storage-vm-wizard__disk-item--unavailable .pf-v6-c-check__label {
+  cursor: not-allowed;
+}
+
 .ct-storage-vm-wizard__inline-field {
   display: flex;
   align-items: center;

@@ -14,6 +14,10 @@ import sys
 import os
 import time
 import subprocess
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'common'))
+from deployment_progress import convert_to_rbd, progress, run_step
 
 from ablestack import *
 from sh import python3
@@ -78,29 +82,23 @@ def ccvmIsRunning(host_names):
 
 def prepareCcvmDisk():
     """Stop before creating a PCS resource when its RBD disk could not be prepared."""
-    commands = [
-        ("CCVM Ceph 디스크 이미지 변환 실패", [
-            "qemu-img", "convert", "-f", "qcow2", "-O", "rbd",
-            "/var/lib/libvirt/images/ablestack-template-back.qcow2", "rbd:rbd/ccvm"]),
-        ("CCVM Ceph 디스크 크기 변경 실패", ["rbd", "resize", "-s", "500G", "ccvm"]),
-    ]
-    for description, command in commands:
-        try:
-            result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        except OSError as error:
-            return createReturn(code=500, val=description + ": " + str(error))
-        if result.returncode != 0:
-            detail = result.stderr.strip() or result.stdout.strip() or "exit code " + str(result.returncode)
-            return createReturn(code=500, val=description + ": " + detail[-8192:])
+    try:
+        progress('CCVM OS 이미지를 스토리지에 적재합니다. 이미지 적재 후 디스크 크기 설정, 고가용성 리소스 등록, VM 시작을 진행합니다.')
+        convert_to_rbd('/var/lib/libvirt/images/ablestack-template-back.qcow2', 'rbd:rbd/ccvm')
+        run_step('CCVM RBD 디스크 크기를 500 GiB로 설정합니다.', ['rbd', 'resize', '-s', '500G', 'ccvm'])
+    except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
+        return createReturn(code=500, val='CCVM 디스크 이미지 변환 또는 크기 변경 실패: ' + str(error))
     return None
 
 
 def setupPcsCluster(args):
 
     success_bool = True
+    progress('각 호스트에 클라우드센터 백업 예약을 등록합니다.')
 
     # psc 구성한 3대의 호스트 crontab에 ccvm 스냅샷 기능 추가
     for host in args.host_names[0].split():
+        progress('클라우드센터 백업 예약을 등록합니다: ' + host)
         check_err = 0
 
         check_err = os.system("/usr/libexec/ablestack/node-remote root@"+host+" \"rm -f /var/spool/cron/tmpfile\"")
@@ -132,7 +130,7 @@ def setupPcsCluster(args):
             os.system("rbd rm --no-progress rbd/ccvm")
             result = json.loads(python3(pluginpath+'/python/pcs/main.py', 'remove', '--resource', 'cloudcenter_res'))
             if result['code'] not in [200]:
-                success_bool = False
+                return createReturn(code=500, val='기존 CCVM 리소스 정리에 실패했습니다. 이미지 변환을 시작하지 않았습니다.')
             else :
                 os.system("pcs constraint order start glue-gfs-clone then cloudcenter_res")
 
@@ -143,32 +141,42 @@ def setupPcsCluster(args):
     host_names = args.host_names[0].split()
     # 클러스터 구성
     if os_type == "ablestack-hci":
+        progress('클라우드센터 고가용성 클러스터를 설정합니다.')
         result = json.loads(python3(pluginpath + '/python/pcs/main.py', 'config', '--cluster', 'cloudcenter_cluster', '--hosts', host_names[0], host_names[1], host_names[2] ))
         if result['code'] not in [200]:
-            success_bool = False
+            return createReturn(code=500, val='클라우드센터 고가용성 클러스터 설정에 실패했습니다.')
 
     # 리소스 생성
+    progress('클라우드센터 가상머신을 고가용성 리소스에 등록합니다. 다음으로 VM의 실행 상태를 확인합니다.')
     result = json.loads(python3(pluginpath+'/python/pcs/main.py', 'create', '--resource', 'cloudcenter_res', '--xml', pluginpath+'/tools/vmconfig/ccvm/ccvm.xml' ))
     if result['code'] not in [200]:
-        success_bool = False
+        return createReturn(code=500, val='CCVM 고가용성 리소스 등록에 실패했습니다. VM 시작 대기는 실행하지 않았습니다.')
     else :
         os.system("pcs constraint order start glue-gfs-clone then cloudcenter_res")
 
     #ccvm이 정상적으로 생성 되었는지 확인
     domid_check = 0
     cnt_num = 0
+    wait_started = time.monotonic()
+    last_notice = wait_started
+    progress('클라우드센터 VM이 시작되기를 기다립니다. 시작 후 초기 설정 확인과 라이선스 등록을 진행합니다.')
     while True:
         time.sleep(5)
         cnt_num += 1
         domid_check = 0 if ccvmIsRunning(host_names) else 1
         if domid_check == 0 or cnt_num > 300:
             break
+        current = time.monotonic()
+        if current - last_notice >= 30:
+            progress('클라우드센터 VM 시작 대기 중 · 경과 ' + str(int(current - wait_started)) + '초. 각 후보 호스트의 실행 상태를 확인하고 있습니다.')
+            last_notice = current
 
     if domid_check != 0:
         success_bool = False
 
     # 결과값 리턴
     if success_bool:
+        progress('클라우드센터 이미지 적재와 VM 시작이 완료되었습니다.')
         return createReturn(code=200, val="cloud center setup success")
     else:
         return createReturn(code=500, val="cloud center setup fail")

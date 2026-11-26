@@ -77,14 +77,17 @@ export async function startCCVM(): Promise<void> {
     const response = await requestCubeApi<CubeActionResponse>("/api/v1/cube/ccvm/lifecycle", {
         method: "POST",
         body: { action: "start" },
-        maxTimeSeconds: 1800,
+        maxTimeSeconds: 3700,
     });
     assertActionSuccess(response, "클라우드센터 가상머신 배포에 실패했습니다.");
 }
 
 export async function startAndRegisterCCVMLicense(): Promise<void> {
     await startCCVM();
+    await registerCCVMLicense();
+}
 
+export async function registerCCVMLicense(): Promise<void> {
     const response = await requestCubeApi<CubeActionResponse>("/api/v1/cube/license/apply", {
         method: "POST",
         body: {

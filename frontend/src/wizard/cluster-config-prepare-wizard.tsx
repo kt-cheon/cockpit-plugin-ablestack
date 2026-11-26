@@ -23,13 +23,13 @@ import {
   DescriptionListDescription,
 } from "@patternfly/react-core";
 import { CheckCircleIcon, InfoCircleIcon } from "@patternfly/react-icons";
-import cockpit from "cockpit";
 
 import ValidationErrorModal from "../components/common/ValidationErrorModal";
 import RegistrationInput from "../components/common/RegistrationInput";
 import FileAttachControl, { type FileAttachControlProps } from "../components/common/FileAttachControl";
 import ClusterManagementNetworkHelp from "../components/common/ClusterManagementNetworkHelp";
 import RegistrationDownloads from "../components/common/RegistrationDownloads";
+import { fetchClusterConfigDocument } from "../services/api/cluster-config";
 import WizardStepStatusLabel, { wizardStatusRowClass } from "../components/common/WizardStepStatus";
 import {
   fetchDeployRunJobs,
@@ -138,10 +138,6 @@ const DEFAULT_HOSTS: ClusterHostRow[] = [
 const SSH_KEY_BUNDLE_MAGIC = [0x41, 0x53, 0x4b, 0x31];
 const SSH_KEY_ENCRYPTION_CONTEXT = "ablestack-api:ssh-key-bundle:v1";
 const SSH_KEY_BUNDLE_DEFAULT_SECRET = "ablestack-api-ssh-key-bundle-default-secret-v1";
-const CLUSTER_JSON_DOWNLOAD_PATHS = [
-  "/etc/ablestack/properties/cluster.json",
-  "/etc/ablestack/cluster.json",
-];
 const EMPTY_SSH_KEY_PREVIEW: SSHKeyPreview = {
   status: "empty",
   privateKey: "",
@@ -951,25 +947,14 @@ export default function ClusterConfigPrepareWizardModal({
   const downloadHref = (content: string) => `data:attachment/text;charset=utf-8,${encodeURIComponent(content)}`;
 
   const refreshClusterJsonDownloadHref = React.useCallback(async () => {
-    let lastError = "";
-
-    for (const path of CLUSTER_JSON_DOWNLOAD_PATHS) {
-      try {
-        const content = await cockpit.file(path).read();
-
-        if (content) {
-          setClusterJsonDownloadHref(downloadHref(content));
-          setClusterJsonDownloadError("");
-          return;
-        }
-        lastError = `${path} 파일이 비어 있습니다.`;
-      } catch (error) {
-        lastError = error instanceof Error ? error.message : String(error);
-      }
+    try {
+      const document = await fetchClusterConfigDocument();
+      setClusterJsonDownloadHref(downloadHref(JSON.stringify(document, null, 2)));
+      setClusterJsonDownloadError("");
+    } catch (error) {
+      setClusterJsonDownloadHref("");
+      setClusterJsonDownloadError(errorMessage(error));
     }
-
-    setClusterJsonDownloadHref("");
-    setClusterJsonDownloadError(lastError || "저장된 cluster.json 파일을 읽을 수 없습니다.");
   }, []);
 
   const validateClusterConfigPrepare = () => {
@@ -1277,7 +1262,7 @@ export default function ClusterConfigPrepareWizardModal({
         setDeployPhase("success");
         onCompleted?.();
         window.setTimeout(() => deployNextStepRef.current?.(), 700);
-      } else if (job.status === "failed") {
+      } else if (job.status === "failed" || job.status === "cancelled") {
         setDeployPhase("error");
         setDeployMessage(job.message || "클러스터 구성 Job이 실패했습니다.");
       }
@@ -1312,7 +1297,7 @@ export default function ClusterConfigPrepareWizardModal({
                   if (!disposed) deployNextStepRef.current?.();
                 }, 700);
               });
-          } else if (nextJob.status === "failed") {
+          } else if (nextJob.status === "failed" || nextJob.status === "cancelled") {
             setDeployPhase("error");
             setDeployMessage(nextJob.message || "클러스터 구성 Job이 실패했습니다.");
           }
@@ -1699,8 +1684,7 @@ export default function ClusterConfigPrepareWizardModal({
                   />
                 </div>
               </FormGroup>
-              {hostsFileMode === "existing" && <RegistrationInput onChange={setRegistration} />}
-              <FormGroup label="클러스터 구성 파일" isRequired fieldId="hosts-file-mode">
+              <FormGroup label="구성 파일 준비 방식" isRequired fieldId="hosts-file-mode">
                 <div className="ct-cluster-config-wizard__inline">
                   <Radio
                     id="hosts-file-new"
@@ -1720,8 +1704,9 @@ export default function ClusterConfigPrepareWizardModal({
                 </div>
               </FormGroup>
 
+              {hostsFileMode === "existing" && <RegistrationInput onChange={setRegistration} />}
               {hostsFileMode === "existing" && (
-                <FormGroup label="클러스터 구성 파일" fieldId="hosts-file">
+                <FormGroup label="클러스터 구성 파일 (cluster.json)" fieldId="hosts-file">
                   {renderFileAttachControl({
                     id: "hosts-file",
                     inputRef: clusterConfigFileInputRef,
@@ -1762,8 +1747,8 @@ export default function ClusterConfigPrepareWizardModal({
                     value={pcsNodeIpSource}
                     onChange={(_event, value) => setPcsNodeIpSource(value as PcsNodeIpSource)}
                   >
-                    <FormSelectOption value="ablecube" label="Ablecube IP (관리망)" />
-                    <FormSelectOption value="ablecubePn" label="HOST PN (HPN)" />
+                    <FormSelectOption value="ablecube" label="관리 네트워크" />
+                    <FormSelectOption value="ablecubePn" label="스토리지 네트워크" />
                   </FormSelect>
                 </FormGroup>
               )}
@@ -1984,7 +1969,7 @@ export default function ClusterConfigPrepareWizardModal({
                         <DescriptionListGroup>
                           <DescriptionListTerm>클러스터 관리 네트워크</DescriptionListTerm>
                           <DescriptionListDescription>
-                            {pcsNodeIpSource === "ablecube" ? "Ablecube IP (관리망)" : "HOST PN (HPN)"}
+                            {pcsNodeIpSource === "ablecube" ? "관리 네트워크" : "스토리지 네트워크"}
                           </DescriptionListDescription>
                         </DescriptionListGroup>
                       )}

@@ -338,7 +338,9 @@ export default function StatusPage() {
                             <option value="configure_cloud_vm">클라우드센터 구성</option>
                             <option value="configure_cloud_resource">클라우드 리소스 구성</option>
                             <option value="configure_monitoring">모니터링센터 구성</option>
-                            <option value="run_security_patch">보안 업데이트</option>
+                            {isDeploymentComplete(deployStatus) && (
+                                <option value="run_security_patch">보안 업데이트</option>
+                            )}
                             <option value="security_evidence">보안 증적 자료</option>
                             <option value="ablestack_update">ABLESTACK 업데이트</option>
                         </>}

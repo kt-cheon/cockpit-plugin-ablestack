@@ -64,7 +64,7 @@ try {
     responses['/api/v1/cube/glue/catalog'] = { code: 200, services: catalog };
     responses['/api/v1/cube/deploy/jobs'] = { code: 200, jobs: [] };
     responses['/api/v1/cube/deploy/run'] = {code: 202, job_id: 'fixture-scvm-defaults', status: 'queued'};
-    responses['/api/v1/version'] = { code: 200, os_version: 'Europa' };
+    responses['/api/v1/version'] = { code: 200, os_version: 'ABLESTACK Europa v4.10.0', kernel_version:'5.14.0-741.24.1' };
     responses['/api/v1/cube/system/config'] = { code: 200, val: { bootstrap: { ccvm: 'true', scvm: 'true' }, ui: { scvm_lun_passthrough: false } } };
     for (const suffix of ['/api/v1/cube/nics?action=detail', '/api/v1/cube/disk?action=list', '/api/v1/cube/disk?action=gfs', '/api/v1/cube/cluster/config']) {
       responses[suffix] = preview.getPreviewCubeApiResponse(suffix);
@@ -99,6 +99,13 @@ try {
             const request = JSON.parse(payload);
             window.__requests.push({ argv, options, request });
             let response = window.__responses[request.path];
+            if (request.path.endsWith('/cancel') && request.method === 'POST') {
+              const id = request.path.split('/').at(-2);
+              const task = window.__responses['/api/v1/cube/_tasks'].jobs.find(task => task.job_id === id);
+              task.status = 'cancelling'; task.message = '작업 중단을 요청했습니다.';
+              window.__responses['/api/v1/cube/_tasks/' + id] = {code:200, job:{...task}};
+              response = {code:200, job:{...task}};
+            }
             if (request.path === '/api/v1/cube/license' && request.body.action === 'register') response = { code: 200, val: 'registered' };
             if (request.path === '/api/v1/cube/system/config' && request.method === 'POST') response = { code: 200 };
             if (request.path === '/api/v1/cube/local/manage') response = {code: 200, val: 'fixture local storage configured'};
@@ -118,6 +125,79 @@ try {
     await page.getByText('라이선스가 성공적으로 등록되었습니다.', { exact: true }).waitFor();
     await page.getByRole('button', { name: '취소', exact: true }).click();
     await page.locator('.ct-license-management-modal').waitFor({ state: 'hidden' });
+    if (product !== 'scvm') {
+      if (!await page.locator('.ct-deploy-details').evaluate(node=>node.open)) {
+        await page.locator('.ct-deploy-details > summary').click();
+      }
+      const securityPatch = page.locator('.ct-deploy-ribbon__workflow-zone').getByRole('button', {name:'취약점 조치',exact:true});
+      await securityPatch.waitFor();
+      await page.getByText('실행 가능한 작업',{exact:true}).waitFor();
+      for (const missing of ['wall_monitoring_status', 'ccvm_bootstrap_status']) {
+        await page.evaluate(missing=>{
+          const status=window.__responses['/api/v1/cube/deploy/status'];
+          status.data.raw[missing]='false';
+          // Keep the old API action to verify the screen also checks completion itself.
+          if (!status.data.available_actions.includes('run_security_patch')) status.data.available_actions.push('run_security_patch');
+        },missing);
+        await page.getByRole('button',{name:'상태 새로고침',exact:true}).click();
+        await securityPatch.waitFor({state:'hidden'});
+        assert.equal(await page.locator('option[value="run_security_patch"]').count(),0,'security menu waits for all configuration through monitoring');
+        if (product === 'hci' && missing === 'wall_monitoring_status') {
+          const current = page.locator('.ct-deploy-ribbon__stage--current').filter({hasText: '모니터링센터 구성'});
+          await current.waitFor();
+          const completed = page.locator('.ct-deploy-ribbon__stage--done');
+          assert.equal(await completed.count(), 7);
+          const requestOffset = await page.evaluate(() => window.__requests.length);
+          for (const stage of await completed.all()) {
+            const label = await stage.locator('strong').innerText();
+            await stage.click();
+            const dialog = page.getByRole('dialog', {name: label + ' 완료', exact: true});
+            await dialog.getByText('이 단계는 이미 완료되었습니다.', {exact: true}).waitFor();
+            await dialog.getByRole('button', {name: '확인', exact: true}).click();
+            await dialog.waitFor({state: 'hidden'});
+          }
+          assert.ok(await page.evaluate(offset => window.__requests.slice(offset).every(call => call.request.method === 'GET'), requestOffset), 'opening completed stages does not change configuration');
+          assert.equal(page.context().pages().length, 1, 'completed stages do not open a management console');
+
+          await current.click();
+          const wizard = page.getByRole('dialog', {name: 'Wall 모니터링 구성 마법사', exact: true});
+          await wizard.getByRole('button', {name: 'Close', exact: true}).click();
+          await page.getByRole('dialog', {name: 'Wall 모니터링센터 VM 구성 취소', exact: true})
+            .getByRole('button', {name: '예', exact: true}).click();
+          await wizard.waitFor({state: 'hidden'});
+        }
+        await page.evaluate(missing=>{window.__responses['/api/v1/cube/deploy/status'].data.raw[missing]='true';},missing);
+        await page.getByRole('button',{name:'상태 새로고침',exact:true}).click();
+        await page.locator('option[value="run_security_patch"]').waitFor({state:'attached'});
+        if (!await page.locator('.ct-deploy-details').evaluate(node=>node.open)) {
+          await page.locator('.ct-deploy-details > summary').click();
+        }
+        await securityPatch.waitFor();
+        assert.equal(await page.locator('option[value="run_security_patch"]').count(),1,'security action appears after all configuration is complete');
+      }
+      await page.locator('.ct-deploy-details > summary').click();
+    }
+    if (product === 'hci') {
+      const osLabel = page.locator('.ct-deploy-ribbon__meta > div').filter({has:page.getByText('OS 버전',{exact:true})}).locator('strong');
+      await page.evaluate(()=>{window.__responses['/api/v1/version']={code:200,os_version:'ABLESTACK Europa v4.10.0',kernel_version:'5.14.0-741.24.1',errors:{cockpit_version:'RPM query failed'}};});
+      await page.getByRole('button',{name:'상태 새로고침',exact:true}).click();
+      await osLabel.filter({hasText:'ABLESTACK Europa'}).waitFor({state:'attached'});
+      assert.equal(await osLabel.getAttribute('title'), null, 'an optional RPM failure does not hide or mark the OS version');
+      const kernelLabel=osLabel.locator('small');
+      assert.equal(await kernelLabel.textContent().then(text=>text.trim()),'(5.14.0-741.24.1)');
+      await page.locator('.ct-deploy-details > summary').click();
+      assert.equal(await kernelLabel.evaluate(node=>getComputedStyle(node).display),'block','kernel version appears on a separate line');
+      await page.screenshot({path:path.join(captures,'os-and-kernel-version.png'),fullPage:true});
+      await page.locator('.ct-deploy-details > summary').click();
+      await page.evaluate(()=>{window.__responses['/api/v1/version']={code:200,os_version:'',kernel_version:'5.14.0-741.24.1',errors:{os_version:'OS 버전 파일을 읽지 못했습니다.'}};});
+      await page.getByRole('button',{name:'상태 새로고침',exact:true}).click();
+      await osLabel.filter({hasText:'확인 불가'}).waitFor({state:'attached'});
+      assert.equal(await osLabel.getAttribute('title'),'OS 버전 파일을 읽지 못했습니다.','OS read errors remain available on the version label');
+      await page.evaluate(()=>{window.__responses['/api/v1/version']={code:200,os_version:'ABLESTACK Europa v4.10.0',kernel_version:'5.14.0-741.24.1'};});
+      await page.getByRole('button',{name:'상태 새로고침',exact:true}).click();
+      await osLabel.filter({hasText:'Europa'}).waitFor({state:'attached'});
+      assert.equal(await osLabel.getAttribute('title'),null,'successful refresh clears the previous error');
+    }
     assert.ok(await page.evaluate(() => window.__requests.every((call) => call.options.superuser === 'require')));
     if (product !== 'scvm') assert.ok(await page.evaluate(() => window.__requests.some((call) => call.request.path === '/api/v1/cube/system/config')));
     assert.equal(await page.locator('option[value="open_deploy_run"]').count(), 0, 'all-in-one toolbar entry is suspended');
@@ -202,14 +282,14 @@ try {
           assert.equal(await registration.locator('.ct-file-attach__surface').evaluate((node) => getComputedStyle(node).borderRadius),
             await clusterFile.locator('.ct-file-attach__surface').evaluate((node) => getComputedStyle(node).borderRadius), 'both uploads share the same control');
           const prepareLabel = dialog.locator('.pf-v6-c-form__group').filter({has: page.locator('#hosts-file-new')}).locator('.pf-v6-c-form__label-text');
-          assert.equal(await prepareLabel.innerText(), '클러스터 구성 파일');
+          assert.equal(await prepareLabel.innerText(), '구성 파일 준비 방식');
           for (const text of ['현재 호스트', '클러스터 구성 호스트 수']) {
             const group = dialog.locator('.pf-v6-c-form__group').filter({has: page.getByText(text, {exact: true})});
             assert.equal(await group.locator('.pf-v6-c-form__label-text').innerText(), text);
             assert.equal(await group.locator('.pf-v6-c-form__group-label').evaluate((node) => getComputedStyle(node).justifyContent), 'center', 'form labels are centered in their column');
           }
           assert.equal(await dialog.getByText('노드 IP 기준', {exact: true}).count(), 0);
-          const helpText = 'PCS 클러스터 노드 주소로 사용할 IP 항목을 선택합니다.';
+          const helpText = '클러스터 노드 간 통신에 사용할 네트워크를 선택합니다.';
           assert.equal(await page.getByText(helpText, {exact: true}).count(), 0, 'help text stays out of the form until requested');
           await dialog.getByRole('button', {name: '클러스터 관리 네트워크 도움말', exact: true}).hover();
           await page.getByRole('tooltip').filter({hasText: helpText}).waitFor();
@@ -227,14 +307,23 @@ try {
         }
         if (action === 'deploy_storage_vm') {
           await next.click();
-          await dialog.getByRole('radio', {name: 'Disk Passthrough', exact: true}).check();
+          await dialog.getByRole('button',{name:'건너뛰기',exact:true}).click();
           const disks = dialog.locator('.ct-storage-vm-wizard__disk-list');
+          await disks.getByRole('checkbox').first().waitFor();
+          assert.equal(await disks.locator('input:checked').count(), 0, 'PCI devices require an explicit selection');
+          await page.screenshot({path: path.join(captures, 'storage-pci-no-defaults.png')});
+          await disks.getByRole('checkbox').first().check();
+          await dialog.getByRole('radio', {name: 'Disk Passthrough', exact: true}).check();
           await disks.getByRole('checkbox', {name: '/dev/sdb · 900G · ATA Fixture SSD', exact: true}).waitFor();
           assert.equal(await dialog.getByText('디바이스 장치', {exact: true}).count(), 1);
           assert.deepEqual(await disks.locator('label').allTextContents(), ['/dev/sda · 240G', '/dev/sdb · 900G · ATA Fixture SSD', '/dev/nvme0n1 · 1.8T · Fixture NVMe']);
           assert.equal(await disks.getByRole('checkbox', {name: '/dev/sda · 240G', exact: true}).isDisabled(), true, 'the OS disk with partitions cannot be selected');
           assert.equal(await disks.getByRole('checkbox', {name: '/dev/sda · 240G', exact: true}).isChecked(), false);
-          assert.equal(await disks.getByRole('checkbox', {name: '/dev/sdb · 900G · ATA Fixture SSD', exact: true}).isChecked(), true, 'only an eligible disk is selected automatically');
+          assert.equal(await disks.locator('input:checked').count(), 0, 'physical disks require an explicit selection');
+          await page.screenshot({path: path.join(captures, 'storage-disks-no-defaults.png')});
+          await disks.getByRole('checkbox', {name: '/dev/sdb · 900G · ATA Fixture SSD', exact: true}).check();
+          await disks.getByRole('checkbox', {name: '/dev/sdb · 900G · ATA Fixture SSD', exact: true}).uncheck();
+          assert.equal(await disks.locator('input:checked').count(), 0, 'clearing a selection does not choose another disk');
           await disks.getByRole('checkbox', {name: '/dev/nvme0n1 · 1.8T · Fixture NVMe', exact: true}).check();
           await page.screenshot({path: path.join(captures, 'storage-disk-passthrough.png')});
           await page.evaluate(() => {
@@ -251,7 +340,10 @@ try {
           await page.evaluate((response) => { window.__responses['/api/v1/cube/disk?action=list'] = response; }, responses['/api/v1/cube/disk?action=list']);
           await dialog.getByRole('radio', {name: 'PCI Passthrough', exact: true}).check();
           await dialog.getByRole('radio', {name: 'Disk Passthrough', exact: true}).check();
-          await page.waitForFunction(() => document.querySelector('.ct-storage-vm-wizard__disk-list input:checked') !== null);
+          await disks.getByRole('checkbox', {name: '/dev/sdb · 900G · ATA Fixture SSD', exact: true}).waitFor({state:'visible'});
+          await page.waitForFunction(() => document.querySelector('.ct-storage-vm-wizard__disk-list input:not(:disabled)') !== null);
+          assert.equal(await disks.locator('input:checked').count(), 0, 'switching modes never restores a default selection');
+          await disks.getByRole('checkbox', {name: '/dev/sdb · 900G · ATA Fixture SSD', exact: true}).check();
           await next.click();
           for (const [id, prompt] of [
             ['storage-vm-mgmt-bridge', '관리 NIC용 Bridge를 선택하세요'],
@@ -309,6 +401,7 @@ try {
           assert.deepEqual(submitted.target_hostnames, ['ablecube1']);
           assert.equal(submitted.scvm_by_host.ablecube1.cpu, 8, 'default CPU is included in the deployment request');
           assert.equal(submitted.scvm_by_host.ablecube1.memory, 16, 'default memory is included in the deployment request');
+          assert.equal(submitted.scvm_by_host.ablecube1.disk_passthrough_list.length, 1, 'only the explicitly selected disk is submitted');
           assert.equal(submitted.scvm_by_host.ablecube1.management_network_bridge, 'bridge0');
           assert.equal(submitted.scvm_by_host.ablecube1.server_nic_passthrough, '0000:18:00.0');
           assert.equal(submitted.scvm_by_host.ablecube1.replication_nic_passthrough, '0000:18:00.1');
@@ -319,8 +412,24 @@ try {
           assert.equal(await dialog.getByRole('button', {name: '로그 새로고침', exact: true}).count(), 0);
           assert.equal(await dialog.getByRole('button', {name: '진행 로그', exact: true}).count(), 0);
           const log = dialog.locator('pre');
-          await page.evaluate(() => { window.__responses['/api/v1/cube/_tasks'].jobs[0].logs.push('새 로그가 자동으로 갱신되었습니다.'); });
+          await page.evaluate(() => {
+            window.__responses['/api/v1/cube/_tasks'].jobs[0].logs = [
+              ...Array.from({length:199}, (_,index)=>'구성 진행 로그 ' + (index+1)),
+              '새 로그가 자동으로 갱신되었습니다.',
+            ];
+          });
           await log.filter({hasText: '새 로그가 자동으로 갱신되었습니다.'}).waitFor();
+          const atLogBottom = () => log.evaluate(node => node.scrollHeight > node.clientHeight &&
+            Math.abs(node.scrollHeight - node.clientHeight - node.scrollTop) <= 1);
+          assert.equal(await atLogBottom(), true, 'long logs automatically show their last line');
+          await log.evaluate(node => { node.scrollTop = 0; });
+          await page.evaluate(() => {
+            const logs = window.__responses['/api/v1/cube/_tasks'].jobs[0].logs;
+            logs.shift(); logs.push('200줄 제한에서도 마지막 줄을 표시합니다.');
+          });
+          await log.filter({hasText:'200줄 제한에서도 마지막 줄을 표시합니다.'}).waitFor();
+          assert.equal(await atLogBottom(), true, 'the last line follows updates even when the log count stays at 200');
+          await log.evaluate(node => { node.scrollTop = 0; });
           await logToggle.click();
           const showLog = dialog.getByRole('button', {name: '로그 표시', exact: true});
           await showLog.waitFor();
@@ -330,6 +439,7 @@ try {
           await showLog.click();
           await logToggle.waitFor();
           await log.filter({hasText: '접힌 상태에서도 로그를 갱신합니다.'}).waitFor();
+          assert.equal(await atLogBottom(), true, 'reopening the log shows the latest line');
           await page.mouse.move(0, 0);
           for (const dark of [false, true]) {
             await page.evaluate((dark) => document.documentElement.classList.toggle('pf-v6-theme-dark', dark), dark);
@@ -361,6 +471,27 @@ try {
           await dialog.locator('#cloud-vm-mgmt-bridge').selectOption('br-storage');
           await page.waitForFunction(() => document.getElementById('cloud-vm-svc-bridge').value === '');
           assert.equal(await dialog.locator('#cloud-vm-svc-bridge option:checked').innerText(), '서비스네트워크 Bridge를 선택하세요', 'a service bridge excluded by the management choice is cleared');
+          await next.click();
+          const profile=dialog.getByRole('table',{name:'클러스터 구성 프로파일',exact:true});
+          await profile.waitFor();
+          assert.equal(await dialog.locator('.pf-v6-c-wizard__main-body').innerText().then(text=>text.trim().startsWith('클러스터 구성 프로파일')),true,'CCVM network information starts with the saved cluster profile');
+          assert.equal(await dialog.locator('#cloud-vm-hosts-file-existing, #cloud-vm-hosts-file-new, #cloud-vm-current-host, #cloud-vm-host-count').count(),0,'CCVM deployment does not show file selection, current host or host-count controls');
+          assert.equal(await dialog.getByText('cluster.json의 호스트 정보를 자동으로 적용했습니다.',{exact:true}).count(),0);
+          assert.equal(await dialog.getByText('추가 네트워크 정보',{exact:true}).count(),0);
+          await dialog.getByText('클러스터 및 네트워크 정보',{exact:true}).first().waitFor();
+          const savedProfile=await page.evaluate(()=>{
+            const document=window.__responses['/api/v1/cube/cluster/config'];
+            return document.clusterConfig || document;
+          });
+          assert.equal(await profile.locator('tbody tr').count(),savedProfile.hosts.length,'all saved cluster hosts remain visible');
+          assert.equal(await profile.getByRole('textbox',{name:'호스트명 1',exact:true}).inputValue(),savedProfile.hosts[0].hostname);
+          assert.equal(await profile.getByRole('textbox',{name:'호스트명 1',exact:true}).isDisabled(),true,'the saved profile stays read-only');
+          assert.equal(await dialog.locator('#cloud-vm-mgmt-ip').inputValue(),savedProfile.ccvm.ip+'/'+savedProfile.mngtNic.cidr);
+          assert.equal(await dialog.locator('#cloud-vm-mgmt-ip').isDisabled(),true);
+          await page.screenshot({path:path.join(captures,'cloud-cluster-network-profile.png')});
+          await next.click();
+          await dialog.locator('.ct-cloud-vm-wizard__review-header').filter({hasText:'클러스터 및 네트워크 정보'}).waitFor();
+          await dialog.getByText('저장된 cluster.json 사용',{exact:true}).waitFor();
         }
         await dialog.getByRole('button', { name: 'Close', exact: true }).click();
         if (action !== 'prepare_cluster_config') {
@@ -373,13 +504,25 @@ try {
         if (action === 'deploy_storage_vm') {
           await page.getByLabel('배포·운영 작업', {exact: true}).selectOption(action);
           await dialog.waitFor();
-          for (let step = 0; step < 5; step += 1) await next.click();
+          for (let step = 0; step < 2; step += 1) await next.click();
+          await dialog.getByRole('button',{name:'건너뛰기',exact:true}).click();
+          for (let step = 0; step < 3; step += 1) await next.click();
           assert.equal(await dialog.getByText('8 vCore', {exact: true}).count(), 1, 'reopening restores the CPU default in React state');
           assert.equal(await dialog.getByText('16 GiB', {exact: true}).count(), 1, 'reopening restores the memory default in React state');
           const before = await page.evaluate(() => window.__requests.filter((call) => call.request.path === '/api/v1/cube/deploy/run').length);
           await dialog.getByRole('button', {name: '구성', exact: true}).click();
           await page.getByRole('dialog', {name: '스토리지센터 가상머신 배포 진행 확인', exact: true}).getByRole('button', {name: '실행', exact: true}).click();
           const validation = page.getByRole('dialog', {name: '입력값을 확인해주세요', exact: true});
+          await validation.getByText('디스크를 입력해주세요.', {exact: true}).waitFor();
+          assert.equal(await page.evaluate(() => window.__requests.filter((call) => call.request.path === '/api/v1/cube/deploy/run').length), before, 'unselected devices cannot start deployment');
+          await validation.getByRole('button', {name: '확인', exact: true}).click();
+          for (let step = 0; step < 3; step += 1) await dialog.getByRole('button', {name:'이전',exact:true}).click();
+          await dialog.locator('.ct-storage-vm-wizard__disk-list input[type="checkbox"]').first().waitFor();
+          assert.equal(await dialog.locator('.ct-storage-vm-wizard__disk-list input:checked').count(),0);
+          await dialog.locator('.ct-storage-vm-wizard__disk-list input[type="checkbox"]').first().check();
+          for (let step = 0; step < 3; step += 1) await next.click();
+          await dialog.getByRole('button', {name: '구성', exact: true}).click();
+          await page.getByRole('dialog', {name: '스토리지센터 가상머신 배포 진행 확인', exact: true}).getByRole('button', {name: '실행', exact: true}).click();
           await validation.getByText('관리 NIC용 Bridge를 입력해주세요.', {exact: true}).waitFor();
           assert.equal(await page.evaluate(() => window.__requests.filter((call) => call.request.path === '/api/v1/cube/deploy/run').length), before, 'unselected networking cannot start deployment');
           await validation.getByRole('button', {name: '확인', exact: true}).click();
@@ -426,24 +569,69 @@ try {
       for (const kind of ['scvm', 'ccvm']) {
         await page.evaluate((kind) => {
           const id = 'a'.repeat(32);
+          window.__responses['/api/v1/cube/deploy/status'].data.raw[kind + '_bootstrap_status'] = 'false';
           window.__responses['/api/v1/cube/' + kind + '/bootstrap'] = {code: 202, bridge_job: id};
           window.__responses['/api/v1/cube/_tasks/' + id] = {code: 200, job: {status: 'running'}};
-          window.__responses['/api/v1/cube/_tasks'] = {code: 200, jobs: [{job_id: id, status: 'running', message: '구성 작업을 진행합니다.', logs: ['Glue 구성 스크립트를 실행합니다.']}]};
+          window.__responses['/api/v1/cube/_tasks'] = {code: 200, jobs: [{job_id: id, status: 'running', cancellable:true, message: '구성 작업을 진행합니다.', logs: ['Glue 구성 스크립트를 실행합니다.']}]};
         }, kind);
+        await page.getByRole('button', {name: '상태 새로고침', exact: true}).click();
         if (!await page.locator('.ct-deploy-details').evaluate((node) => node.open)) {
           await page.locator('.ct-deploy-details > summary').click();
         }
         const title = kind === 'scvm' ? '스토리지센터 구성' : '클라우드센터 구성';
-        await page.locator('.ct-deploy-ribbon__stage').filter({has: page.getByText(title, {exact: true})}).click();
+        await page.locator('.ct-deploy-ribbon__stage--current').filter({has: page.getByText(title, {exact: true})}).click();
         const dialog = page.getByRole('dialog', { name: title, exact: true });
         await dialog.getByRole('button', { name: '구성', exact: true }).click();
         await dialog.locator('pre').filter({hasText: 'Glue 구성 스크립트를 실행합니다.'}).waitFor();
         assert.ok(await page.evaluate((kind) => window.__requests.some((call) =>
           call.request.path === '/api/v1/cube/' + kind + '/bootstrap' && call.request.body.run_script === true), kind), 'center configuration starts its bootstrap');
+        if (kind === 'scvm') {
+          await page.evaluate(() => {
+            const task = window.__responses['/api/v1/cube/_tasks'].jobs[0];
+            task.status = 'failed'; task.message = '초기 설정에 실패했습니다. cloud-init-output.log를 확인해 주세요.';
+            window.__responses['/api/v1/cube/_tasks/' + task.job_id] = {code:200,job:{...task}};
+          });
+          await dialog.getByText('초기 설정에 실패했습니다. cloud-init-output.log를 확인해 주세요.', {exact:true}).waitFor();
+          assert.equal(await dialog.getByRole('button',{name:'구성',exact:true}).isEnabled(),true);
+          await page.evaluate(() => {
+            const task = window.__responses['/api/v1/cube/_tasks'].jobs[0];
+            task.status='running'; task.message='구성 작업을 진행합니다.';
+            window.__responses['/api/v1/cube/_tasks/' + task.job_id] = {code:200,job:{...task}};
+          });
+          await dialog.getByRole('button',{name:'구성',exact:true}).click();
+          await dialog.getByRole('button',{name:'작업 중단',exact:true}).click();
+          const stopDialog=page.getByRole('dialog',{name:'실행 중인 작업 중단',exact:true});
+          await stopDialog.getByText(/이미 적용된 설정은 되돌리지 않습니다/).waitFor();
+          await stopDialog.getByRole('button',{name:'계속 진행',exact:true}).click();
+          assert.equal(await page.evaluate(() => window.__requests.filter(call=>call.request.path.endsWith('/cancel')).length),0);
+          await dialog.getByRole('button',{name:'작업 중단',exact:true}).click();
+          await stopDialog.getByRole('button',{name:'작업 중단',exact:true}).click();
+          await stopDialog.waitFor({state:'hidden'});
+          await dialog.getByRole('button',{name:'중단 요청됨',exact:true}).waitFor();
+          assert.equal(await dialog.getByRole('button',{name:'중단 요청됨',exact:true}).isDisabled(),true);
+          await page.screenshot({path:path.join(captures,'scvm-task-cancelling.png')});
+          await page.evaluate(() => {
+            const task=window.__responses['/api/v1/cube/_tasks'].jobs[0];
+            task.status='cancelled';task.message='작업이 중단되었습니다. 실제 구성을 확인한 후 다시 시도해 주세요.';
+            window.__responses['/api/v1/cube/_tasks/'+task.job_id]={code:200,job:{...task}};
+          });
+          await dialog.getByText('작업이 중단되었습니다. 실제 구성을 확인한 후 다시 시도해 주세요.',{exact:true}).waitFor();
+          assert.equal(await dialog.getByRole('button',{name:'취소',exact:true}).isEnabled(),true);
+          await page.screenshot({path:path.join(captures,'scvm-task-cancelled-retry.png')});
+          await page.evaluate(() => {
+            const task=window.__responses['/api/v1/cube/_tasks'].jobs[0];
+            task.status='running';task.message='구성 작업을 진행합니다.';
+            window.__responses['/api/v1/cube/_tasks/'+task.job_id]={code:200,job:{...task}};
+          });
+          await dialog.getByRole('button',{name:'구성',exact:true}).click();
+        }
         await page.evaluate(() => { window.__responses['/api/v1/cube/_tasks/' + 'a'.repeat(32)] = {code: 200, job: {status: 'succeeded', result: {code: 200}}}; });
         await dialog.getByRole('button', { name: '닫기', exact: true }).click();
         await dialog.waitFor({state: 'hidden'});
-        await page.evaluate(() => { window.__responses['/api/v1/cube/_tasks'] = {code: 200, jobs: []}; });
+        await page.evaluate((kind) => {
+          window.__responses['/api/v1/cube/_tasks'] = {code: 200, jobs: []};
+          window.__responses['/api/v1/cube/deploy/status'].data.raw[kind + '_bootstrap_status'] = 'true';
+        }, kind);
       }
       const completedStatus = structuredClone(responses['/api/v1/cube/deploy/status']);
       const taskTitle = (message) => page.locator('.pf-v6-c-alert__title').filter({hasText: message});
@@ -496,6 +684,13 @@ try {
         const wizard = page.getByRole('dialog', {name: label + ' 마법사', exact: true});
         await wizard.waitFor();
         assert.equal(await page.getByRole('dialog', {name: kind === 'scvm' ? '스토리지센터 구성' : '클라우드센터 구성', exact: true}).count(), 0, 'deployment opens the VM wizard, not the bootstrap confirmation');
+        if (kind === 'scvm') {
+          await wizard.getByRole('button', {name:'다음',exact:true}).click();
+          await wizard.getByRole('button', {name:'다음',exact:true}).click();
+          await wizard.getByRole('button',{name:'건너뛰기',exact:true}).click();
+          await wizard.locator('.ct-storage-vm-wizard__disk-list input[type="checkbox"]').first().waitFor();
+          assert.equal(await wizard.locator('.ct-storage-vm-wizard__disk-list input:checked').count(), 0, 'reopening the wizard clears previous disk selections');
+        }
         await wizard.getByRole('button', {name: 'Close', exact: true}).click();
         const cancel = page.getByRole('dialog', {name: /배포 취소 확인/});
         await cancel.getByRole('button', {name: '실행', exact: true}).click();
@@ -569,6 +764,16 @@ try {
       await page.getByText('라이선스가 등록되어 있습니다.', {exact: true}).waitFor();
       await page.getByRole('button', {name: '취소', exact: true}).click();
       await page.locator('.ct-license-management-modal').waitFor({state: 'hidden'});
+      const connectionError = '클라우드센터에 정상적으로 연결되지 않습니다.\n클라우드센터 서비스 상태를 확인하거나, 잠시 후에 다시 시도해주십시오.';
+      await page.evaluate((message) => {
+        window.__responses['/api/v1/cube/url?option=cloudCenter'] = {
+          code: 500, bridge_error: true, message: message.replace('\n', ' <br>'),
+        };
+      }, connectionError);
+      await page.getByRole('button', {name: '클라우드센터 연결', exact: true}).click();
+      const connectionNotice = page.locator('.ct-status-action-notice');
+      await connectionNotice.waitFor();
+      assert.equal(await connectionNotice.innerText(), connectionError, 'the connection error renders on two lines');
       await page.evaluate(() => { window.__permission.allowed = false; window.__permission.callbacks.forEach((callback) => callback()); });
       await page.getByText('Cockpit에서 관리자 접근을 활성화해 주세요.').waitFor();
       assert.equal(await page.locator('.ct-status-card').count(), 0, 'revoked access removes all status cards');

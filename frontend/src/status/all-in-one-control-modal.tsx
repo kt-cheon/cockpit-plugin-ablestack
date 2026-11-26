@@ -688,7 +688,7 @@ export default function AllInOneControlModal({
                             setPhase("success");
                             setMessage(`올인원 구성 Job이 완료되었습니다. ${cloudCenterWaitText}`);
                             onCompleted?.();
-                        } else if (nextJob.status === "failed") {
+                        } else if (nextJob.status === "failed" || nextJob.status === "cancelled") {
                             setPhase("error");
                             setMessage(nextJob.message || "올인원 구성 Job이 실패했습니다.");
                         }
@@ -1098,8 +1098,8 @@ export default function AllInOneControlModal({
                                       value={pcsNodeIpSource}
                                       onChange={(_event, value) => setPcsNodeIpSource(value as "ablecube" | "ablecubePn")}
                                     >
-                                        <FormSelectOption value="ablecube" label="Ablecube IP (관리망)" />
-                                        <FormSelectOption value="ablecubePn" label="HOST PN (HPN)" />
+                                        <FormSelectOption value="ablecube" label="관리 네트워크" />
+                                        <FormSelectOption value="ablecubePn" label="스토리지 네트워크" />
                                     </FormSelect>
                                 </div>
                             )}
@@ -1779,7 +1779,7 @@ export default function AllInOneControlModal({
                 <Alert
                   variant="danger"
                   isInline
-                  title={connectionNotice}
+                  title={<span className="ct-all-in-one-connection-notice">{connectionNotice}</span>}
                 />
             )}
         </div>

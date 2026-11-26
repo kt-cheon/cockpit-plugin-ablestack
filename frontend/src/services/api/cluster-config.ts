@@ -49,6 +49,21 @@ function unwrapClusterConfig(value: unknown): RecordValue {
   return parsed;
 }
 
+function unwrapClusterDocument(value: unknown): RecordValue {
+  const parsed = parseMaybeJson(value);
+  if (isRecord(parsed)) {
+    if (isRecord(parsed.clusterConfig)) return parsed;
+    if (parsed.val !== undefined) return unwrapClusterDocument(parsed.val);
+    if (parsed.data !== undefined) return unwrapClusterDocument(parsed.data);
+  }
+  throw new Error("저장된 클러스터 구성 프로파일을 읽을 수 없습니다.");
+}
+
+// Download the saved document, including custom fields outside clusterConfig.
+export async function fetchClusterConfigDocument(): Promise<RecordValue> {
+  return unwrapClusterDocument(await requestCubeApi<unknown>("/api/v1/cube/cluster/config"));
+}
+
 function readString(source: RecordValue, keys: string[]): string {
   for (const key of keys) {
     const value = source[key];

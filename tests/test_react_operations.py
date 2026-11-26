@@ -2,6 +2,7 @@
 import importlib.util
 import json
 import os
+import signal
 from pathlib import Path
 import subprocess
 import io
@@ -146,6 +147,60 @@ class OperationTests(unittest.TestCase):
             operations.dispatch(a, request('ssh/key', {'action': 'generate'}, 'GET'))
         a.command.assert_not_called()
 
+    def test_generating_ssh_keys_registers_the_public_key_and_repairs_existing_hosts(self):
+        a = adapter()
+        a.command.side_effect = lambda argv: subprocess.run(
+            argv, check=True, capture_output=True, text=True, stdin=subprocess.DEVNULL).stdout
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / '.ssh'
+            with patch.object(operations, 'SSH_KEY_DIR', root):
+                operations.dispatch(a, request('ssh/key', {'action': 'generate'}))
+                key = ' '.join((root / 'id_rsa.pub').read_text().split()[:2])
+                authorized = root / 'authorized_keys'
+                self.assertEqual(authorized.read_text(), key + '\n')
+
+                private = (root / 'id_rsa').read_bytes()
+                old_entry = 'ssh-ed25519 fixture-key existing administrator'
+                authorized.write_text(old_entry)
+                for _ in range(2):
+                    operations.dispatch(a, request('ssh/key', {'action': 'generate'}))
+                self.assertEqual((root / 'id_rsa').read_bytes(), private)
+                self.assertEqual(authorized.read_text().splitlines(), [old_entry, key])
+                self.assertEqual(authorized.stat().st_mode & 0o777, 0o600)
+
+                restricted = 'from="192.0.2.1" ' + key + ' administrator policy\n'
+                authorized.write_text(restricted)
+                operations.dispatch(a, request('ssh/key', {'action': 'generate'}))
+                self.assertEqual(authorized.read_text(), restricted)
+
+    def test_importing_a_shared_ssh_bundle_only_authorizes_the_validated_key(self):
+        try:
+            import cryptography.hazmat.primitives.ciphers.aead  # noqa: F401
+        except ImportError:
+            self.skipTest('cryptography is required for the SSH bundle format')
+
+        a = adapter()
+        a.command.side_effect = lambda argv: subprocess.run(
+            argv, check=True, capture_output=True, text=True, stdin=subprocess.DEVNULL).stdout
+        with tempfile.TemporaryDirectory() as directory:
+            first = Path(directory) / 'first'
+            peer = Path(directory) / 'peer'
+            with patch.object(operations, 'SSH_KEY_DIR', first):
+                operations.dispatch(a, request('ssh/key', {'action': 'generate'}))
+                bundle = operations.dispatch(a, request('ssh/key', {'action': 'download'}))
+                public = first / 'id_rsa.pub'
+                public.write_text(public.read_text() + 'ssh-ed25519 unexpected-key\n')
+                invalid_bundle = operations.dispatch(a, request('ssh/key', {'action': 'download'}))
+
+            with patch.object(operations, 'SSH_KEY_DIR', peer):
+                for _ in range(2):
+                    operations.dispatch(a, request('ssh/key', {'action': 'upload', 'content': bundle['content']}))
+                self.assertEqual((peer / 'id_rsa').read_bytes(), (first / 'id_rsa').read_bytes())
+                self.assertEqual((peer / 'authorized_keys').read_text(), (first / 'authorized_keys').read_text())
+                with self.assertRaisesRegex(ValueError, 'SSH KEY 내용'):
+                    operations.dispatch(a, request('ssh/key', {'action': 'upload', 'content': invalid_bundle['content']}))
+                self.assertEqual((peer / 'authorized_keys').read_text(), (first / 'authorized_keys').read_text())
+
     def test_shared_storage_redeployment_preserves_gfs(self):
         a = adapter()
         a.cluster.return_value['type'] = 'ablestack-vm'
@@ -240,6 +295,26 @@ class OperationTests(unittest.TestCase):
         ready.assert_called_once_with(a, 'scvm-mngt')
         self.assertEqual(a.command.call_args.args[0][-3:], [str(ROOT / 'python/bootstrap/center_bootstrap.py'), 'scvm', 'ablestack'])
 
+    def test_cloud_init_terminal_errors_do_not_retry_for_twenty_minutes(self):
+        for status in ('error', 'degraded', 'disabled', 'done'):
+            a = adapter()
+            a.tool.return_value = {'code': 500, 'val': ['status: ' + status]}
+            with self.subTest(status=status), patch.object(workflows.time, 'sleep') as sleep:
+                with self.assertRaisesRegex(ValueError, 'cloud-init-output.log'):
+                    workflows.wait_ready(a, 'scvm-mngt')
+                sleep.assert_not_called()
+                self.assertEqual(a.tool.call_count, 1)
+
+    def test_cloud_init_running_is_retried_until_done_and_transient_failure_has_a_deadline(self):
+        a = adapter()
+        a.tool.side_effect = [{'code': 200, 'val': ['status: running']}, {'code': 200, 'val': ['status: done']}]
+        with patch.object(workflows.time, 'sleep'):
+            self.assertEqual(workflows.wait_ready(a, 'scvm-mngt'), {'code': 200})
+        a.tool.side_effect = OSError('connection unavailable')
+        with patch.object(workflows.time, 'monotonic', side_effect=range(100)), patch.object(workflows.time, 'sleep'):
+            with self.assertRaisesRegex(RuntimeError, '초과'):
+                workflows.wait_ready(a, 'scvm-mngt', timeout=10)
+
 
 class ProgressTests(unittest.TestCase):
     def setUp(self):
@@ -293,6 +368,12 @@ class ProgressTests(unittest.TestCase):
                 a.parse_output.return_value = {'code': 200}
                 workflows.monitoring(a, {'smtp': {'enabled': email, 'host': 'smtp.example', 'port': 25,
                                                   'user': 'private-mail-user', 'password': 'private-mail-password'}})
+                service_script = '/usr/share/ablestack/ablestack-wall/python/start_services.py'
+                services = ['blackbox-exporter', 'node-exporter', 'grafana-server', 'process-exporter',
+                            'prometheus', 'netdive-analyzer']
+                for action in ('stop', 'start'):
+                    a.command.assert_any_call(['python3', service_script, action, '--service', *services],
+                                              target='ccvm-mngt', timeout=900)
                 labels = ['기존 모니터링 서비스 중지', '모니터링 대상 및 지표 수집 설정 적용', '모니터링 서비스 시작',
                           *(['모니터링 알림 메일 설정 적용'] if email else []), '클러스터 호스트의 구성 상태 저장']
                 positions = [self.logs().index(label + ' 작업을 시작합니다.') for label in labels]
@@ -395,6 +476,89 @@ class TaskTests(unittest.TestCase):
         folder = next(self.directory.iterdir())
         self.assertEqual(json.loads((folder / 'state.json').read_text())['status'], 'failed')
         self.assertFalse((folder / 'request.json').exists())
+
+    def test_zombie_or_reused_pid_is_terminal_and_running_steps_are_failed(self):
+        for info in ({'state': 'Z', 'start_time': 'old'}, {'state': 'S', 'start_time': 'different'}):
+            with self.subTest(info=info):
+                state, _ = self.start()
+                folder = self.directory / state['job_id']
+                tasks.save(folder / 'worker.json', {'pid': os.getpid(), 'boot_id': tasks.boot_id(), 'start_time': 'old'})
+                tasks.save(folder / 'state.json', dict(state, steps=[{'name': 'execute', 'status': 'running'}]))
+                with patch.object(tasks, 'process_info', return_value=info):
+                    result = tasks.snapshot(state['job_id'])
+                self.assertEqual(result['status'], 'failed')
+                self.assertEqual(result['steps'][0]['status'], 'failed')
+
+    def test_missing_worker_metadata_recovers_only_after_startup_grace_period(self):
+        state, _ = self.start()
+        folder = self.directory / state['job_id']
+        (folder / 'worker.json').unlink()
+        self.assertEqual(tasks.snapshot(state['job_id'])['status'], 'queued')
+        tasks.save(folder / 'state.json', dict(state, created_at='2000-01-01T00:00:00+00:00'))
+        self.assertEqual(tasks.snapshot(state['job_id'])['status'], 'failed')
+
+    def test_cancel_verifies_process_and_does_not_unlock_an_active_worker(self):
+        state, _ = self.start()
+        folder = self.directory / state['job_id']
+        tasks.save(folder / 'state.json', dict(state, status='running', worker_version=2))
+        command = b'python3\0' + str(ROOT / 'python/react_bridge/bridge.py').encode() + b'\0--worker\0' + state['job_id'].encode() + b'\0'
+        with patch.object(Path, 'read_bytes', return_value=command), patch.object(tasks.os, 'kill') as kill:
+            result = tasks.cancel(state['job_id'])
+        self.assertEqual(result['status'], 'cancelling')
+        kill.assert_any_call(os.getpid(), signal.SIGTERM)
+        self.assertTrue((folder / 'request.json').exists())
+        with patch.object(tasks.os, 'kill', side_effect=ProcessLookupError):
+            self.assertEqual(tasks.snapshot(state['job_id'])['status'], 'cancelled')
+        self.assertFalse((folder / 'request.json').exists())
+
+    def test_cancel_never_signals_an_unrelated_command_or_running_disk_initialization(self):
+        state, _ = self.start()
+        with patch.object(Path, 'read_bytes', return_value=b'python3\0unrelated.py\0'), patch.object(tasks.os, 'kill') as kill:
+            with self.assertRaisesRegex(RuntimeError, '신원'):
+                tasks.cancel(state['job_id'])
+        self.assertTrue(all(call.args[1] == 0 for call in kill.call_args_list))
+        disk, _ = self.start(request('disk/initialize'))
+        with patch.object(tasks.os, 'kill') as kill, self.assertRaisesRegex(ValueError, '초기화'):
+            tasks.cancel(disk['job_id'])
+        self.assertTrue(all(call.args[1] == 0 for call in kill.call_args_list))
+
+    def test_cancellation_is_terminal_and_operation_lock_is_reusable(self):
+        state, _ = self.start()
+        folder = self.directory / state['job_id']
+        def cancel_during_execution(*_args):
+            tasks.save(folder / 'cancel.json', {'requested_at': tasks.now()})
+            raise tasks.TaskCancelled()
+        with patch.object(operations, 'dispatch', side_effect=cancel_during_execution):
+            tasks.worker(state['job_id'], adapter())
+        result = tasks.snapshot(state['job_id'])
+        self.assertEqual(result['status'], 'cancelled')
+        self.assertEqual(result['steps'][0]['status'], 'cancelled')
+        self.assertFalse((folder / 'request.json').exists())
+        next_state, _ = self.start()
+        with patch.object(operations, 'dispatch', return_value={'code': 200}):
+            tasks.worker(next_state['job_id'], adapter())
+        self.assertEqual(tasks.snapshot(next_state['job_id'])['status'], 'succeeded')
+
+    def test_cancel_endpoint_requires_post_and_runs_outside_mutation_queue(self):
+        state = {'status': 'cancelling'}
+        req = request('_tasks/' + 'a' * 32 + '/cancel')
+        self.assertFalse(operations.should_queue(req))
+        with patch.object(tasks, 'cancel', return_value=state) as cancel:
+            self.assertEqual(operations.dispatch(adapter(), req)['job'], state)
+            cancel.assert_called_once_with('a' * 32)
+            req['method'] = 'GET'
+            with self.assertRaises(ValueError):
+                operations.dispatch(adapter(), req)
+
+    def test_failure_response_marks_the_step_failed_before_releasing_lock(self):
+        state, _ = self.start()
+        a = adapter()
+        a.success.side_effect = RuntimeError('설정 실패')
+        with patch.object(operations, 'dispatch', return_value={'code': 500}):
+            tasks.worker(state['job_id'], a)
+        result = tasks.snapshot(state['job_id'])
+        self.assertEqual(result['status'], 'failed')
+        self.assertEqual(result['steps'][0]['status'], 'failed')
 
 
 class MoldTests(unittest.TestCase):

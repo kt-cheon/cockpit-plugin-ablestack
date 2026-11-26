@@ -252,6 +252,10 @@ function getApiErrorMessage(
     return fallbackMessage;
 }
 
+function normalizeDeployUrlError(message: string): string {
+    return message.replace(/[ \t]*<br\s*\/?>[ \t]*/gi, "\n");
+}
+
 function isLicenseRequiredError(error: unknown): boolean {
     const message = (error instanceof Error ? error.message : String(error)).toLowerCase();
 
@@ -416,10 +420,18 @@ export async function startDeployRun(
 export async function fetchDeployUrl(option: DeployUrlOption): Promise<string> {
     const parsed = await requestCubeApi<DeployUrlResponse>(
         `/api/v1/cube/url?option=${encodeURIComponent(option)}`
-    );
+    ).catch((error: unknown) => {
+        if (!(error instanceof Error)) throw error;
+
+        const message = normalizeDeployUrlError(error.message);
+        if (message === error.message) throw error;
+
+        throw new Error(message, { cause: error });
+    });
 
     if (!isSuccessCode(parsed.code)) {
-        throw new Error(getApiErrorMessage(parsed, "연결 주소 조회에 실패했습니다."));
+        const message = getApiErrorMessage(parsed, "연결 주소 조회에 실패했습니다.");
+        throw new Error(normalizeDeployUrlError(message));
     }
 
     const targetUrl = normalizeString(parsed.val?.[option]);

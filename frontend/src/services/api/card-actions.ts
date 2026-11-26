@@ -18,7 +18,7 @@ export interface GfsHost {
 
 export interface HostRemoveStep {
   name: string;
-  status: "pending" | "running" | "succeeded" | "failed";
+  status: "pending" | "running" | "succeeded" | "failed" | "cancelled";
   message?: string;
 }
 
@@ -26,7 +26,7 @@ export interface HostRemoveJob {
   job_id: string;
   hostname: string;
   cluster_type: string;
-  status: "queued" | "running" | "succeeded" | "failed";
+  status: "queued" | "running" | "succeeded" | "failed" | "cancelling" | "cancelled";
   current_step?: string;
   message?: string;
   steps: HostRemoveStep[];
@@ -192,7 +192,7 @@ export async function removeClusterHost(
     if (job.status === "succeeded") {
       return job;
     }
-    if (job.status === "failed") {
+    if (job.status === "failed" || job.status === "cancelled") {
       const failedStep = job.steps?.find((step) => step.status === "failed");
       throw new Error(failedStep?.message || job.message || `${currentLabel} 단계에서 호스트 제거에 실패했습니다.`);
     }

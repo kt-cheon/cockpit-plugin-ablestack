@@ -269,6 +269,8 @@ const JOB_STATUS_LABELS: Record<string, string> = {
     running: "실행중",
     succeeded: "성공",
     failed: "실패",
+    cancelling: "중단 중",
+    cancelled: "중단",
 };
 
 const STEP_STATUS_LABELS: Record<string, string> = {
@@ -277,6 +279,7 @@ const STEP_STATUS_LABELS: Record<string, string> = {
     succeeded: "성공",
     failed: "실패",
     skipped: "건너뜀",
+    cancelled: "중단",
 };
 
 const HCI_STAGES: StageItem[] = [
@@ -593,12 +596,14 @@ function flowWarnings(status: DeployStatusData): DeployStatusWarning[] {
 }
 
 function securityPatchAction(status: DeployStatusData, isFlowComplete: boolean): string[] {
+    if (!isFlowComplete) return [];
+
     const isSecurityPatchIncomplete = status.raw.securityPatchStatus !== "" &&
         !isTrueStatus(status.raw.securityPatchStatus);
 
     if (
         status.availableActions.includes("run_security_patch") ||
-        (isFlowComplete && isSecurityPatchIncomplete)
+        isSecurityPatchIncomplete
     ) {
         return ["run_security_patch"];
     }
@@ -703,14 +708,6 @@ function actionClassName(action: string): string {
     return "ct-deploy-ribbon__action ct-deploy-ribbon__action--workflow";
 }
 
-function stageClickAction(stage: string, state: "done" | "current" | "pending"): string {
-    if (state === "pending") {
-        return "";
-    }
-
-    return STAGE_CLICK_ACTION[stage] ?? "";
-}
-
 function ribbonMessage(isFlowComplete: boolean, currentStageLabel: string, data: DeployStatusData): string {
     if (isFlowComplete && data.warnings.length === 0) {
         return "ABLESTACK 클라우드센터 VM 배포되었으며 모니터링센터 구성이 완료되었습니다. 가상어플라이언스 상태가 정상입니다.";
@@ -806,9 +803,13 @@ export default function DeploymentOverview({
     const [jobs, setJobs] = React.useState<DeployRunJob[]>([]);
     const [jobsError, setJobsError] = React.useState("");
     const [osVersion, setOsVersion] = React.useState("확인 중");
+    const [osVersionError, setOsVersionError] = React.useState("");
+    const [kernelVersion, setKernelVersion] = React.useState("");
+    const [kernelVersionError, setKernelVersionError] = React.useState("");
     const [isManagementActionsOpen, setIsManagementActionsOpen] = React.useState(false);
     const [isLicenseInfoOpen, setIsLicenseInfoOpen] = React.useState(false);
     const [licenseInfo, setLicenseInfo] = React.useState<LicenseStatus>({ kind: "loading" });
+    const [completedStage, setCompletedStage] = React.useState<StageItem | null>(null);
 
     const handleStatusSuccess = React.useCallback((nextStatus: DeployStatusData) => {
         setStatusError("");
@@ -854,10 +855,16 @@ export default function DeploymentOverview({
                     .then((version) => {
                         if (!isMounted) return;
                         setOsVersion(version.osVersion || "확인 불가");
+                        setOsVersionError(version.osVersion ? "" : version.osVersionError || "OS 버전 정보가 비어 있습니다.");
+                        setKernelVersion(version.kernelVersion);
+                        setKernelVersionError(version.kernelVersion ? "" : version.kernelVersionError || "커널 버전 정보가 비어 있습니다.");
                     })
-                    .catch(() => {
+                    .catch((error) => {
                         if (!isMounted) return;
                         setOsVersion("확인 불가");
+                        setOsVersionError(error instanceof Error ? error.message : "OS 버전 조회에 실패했습니다.");
+                        setKernelVersion("");
+                        setKernelVersionError("");
                     });
         };
 
@@ -946,6 +953,74 @@ export default function DeploymentOverview({
         currentStage === LICENSE_STAGE ||
         currentStage === "cluster_prepare" ||
         currentStage === PRODUCT_FLOW_PENDING_STAGE);
+
+    const renderStageList = (layout: "ribbon" | "overview") => {
+        const prefix = `ct-deploy-${layout}`;
+
+        return (
+            <div className={`${prefix}__stage-list`}>
+                {stages.map((item, index) => {
+                    const state = stepState(item, index, currentIndex, currentStage, data);
+                    const action = state === "current" ? STAGE_CLICK_ACTION[item.id] : undefined;
+                    const isInteractive = state === "done" || Boolean(action);
+
+                    return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className={[
+                              `${prefix}__stage`,
+                              `${prefix}__stage--${state}`,
+                              isInteractive && layout === "ribbon" ? `${prefix}__stage--clickable` : "",
+                          ].filter(Boolean).join(" ")}
+                          aria-haspopup={state === "done" ? "dialog" : undefined}
+                          disabled={!isInteractive}
+                          onClick={() => {
+                              if (state === "done") {
+                                  setCompletedStage(item);
+                              } else if (action) {
+                                  onAction(action);
+                              }
+                          }}
+                        >
+                            {layout === "ribbon" ? (
+                                <>
+                                    <span>{index + 1}</span>
+                                    <strong>{item.label}</strong>
+                                    {stepLabel(state)}
+                                </>
+                            ) : (
+                                <>
+                                    <div className="ct-deploy-overview__stage-marker">{index + 1}</div>
+                                    <div className="ct-deploy-overview__stage-body">
+                                        <span>{item.label}</span>
+                                        {stepLabel(state)}
+                                    </div>
+                                </>
+                            )}
+                        </button>
+                    );
+                })}
+            </div>
+        );
+    };
+
+    const closeCompletedStage = () => setCompletedStage(null);
+    const completedStageDialog = completedStage && (
+        <Modal
+          isOpen
+          onClose={closeCompletedStage}
+          variant="small"
+          aria-label={`${completedStage.label} 완료`}
+        >
+            <ModalHeader title={`${completedStage.label} 완료`} />
+            <ModalBody>이 단계는 이미 완료되었습니다.</ModalBody>
+            <ModalFooter>
+                <Button variant="primary" onClick={closeCompletedStage}>확인</Button>
+            </ModalFooter>
+        </Modal>
+    );
+
     // 다중 호스트의 사전 구성 검증을 정비할 때 올인원 진입 버튼과 함께 복원합니다.
     // const isLicenseReady = data.raw.licenseStatus.toLowerCase() === "true";
     // const showDeployRunControl = !useStatusPlaceholder && isLicenseReady &&
@@ -982,7 +1057,14 @@ export default function DeploymentOverview({
                                 </div>
                                 <div>
                                     <span>OS 버전</span>
-                                    <strong>{osVersionLabel}</strong>
+                                    <strong title={useStatusPlaceholder ? undefined : osVersionError || undefined}>
+                                        {osVersionLabel}
+                                        {!useStatusPlaceholder && (kernelVersion || kernelVersionError) && (
+                                            <small className="ct-deploy-ribbon__kernel-version" title={kernelVersionError || undefined}>
+                                                ({kernelVersion || "커널 확인 불가"})
+                                            </small>
+                                        )}
+                                    </strong>
                                 </div>
                                 <div>
                                     <span>라이선스 상태</span>
@@ -1039,35 +1121,10 @@ export default function DeploymentOverview({
                                           message={summaryMessage}
                                         />
                                     )
-                                    : (
-                                        <div className="ct-deploy-ribbon__stage-list">
-                                            {stages.map((item, index) => {
-                                                const state = stepState(item, index, currentIndex, currentStage, data);
-                                                const clickAction = stageClickAction(item.id, state);
-
-                                                return (
-                                                    <button
-                                                      key={item.id}
-                                                      type="button"
-                                                      className={[
-                                                          "ct-deploy-ribbon__stage",
-                                                          `ct-deploy-ribbon__stage--${state}`,
-                                                          clickAction ? "ct-deploy-ribbon__stage--clickable" : "",
-                                                      ].join(" ")}
-                                                      onClick={() => clickAction && onAction(clickAction)}
-                                                      disabled={!clickAction}
-                                                    >
-                                                        <span>{index + 1}</span>
-                                                        <strong>{item.label}</strong>
-                                                        {stepLabel(state)}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
+                                    : renderStageList("ribbon")}
                             </div>
                             <div className="ct-deploy-ribbon__workflow-zone">
-                                <span>단계 작업</span>
+                                <span>실행 가능한 작업</span>
                                 <div className="ct-deploy-ribbon__workflow-controls">
                                     <div className="ct-deploy-ribbon__actions ct-deploy-ribbon__actions--primary">
                                         {ribbonPrimaryActions.length === 0 && ribbonManagementActions.length === 0
@@ -1075,7 +1132,7 @@ export default function DeploymentOverview({
                                                 <span className="ct-deploy-overview__muted">
                                                     {useStatusPlaceholder
                                                         ? "상태 확인 후 가능한 작업이 표시됩니다."
-                                                        : "현재 단계에서 표시할 작업이 없습니다."}
+                                                        : "현재 실행 가능한 작업이 없습니다."}
                                                 </span>
                                             )
                                             : ribbonPrimaryActions.map((action) => (
@@ -1195,6 +1252,7 @@ export default function DeploymentOverview({
                         </Button>
                     </ModalFooter>
                 </Modal>
+                {completedStageDialog}
             </Card>
         );
     }
@@ -1250,30 +1308,7 @@ export default function DeploymentOverview({
                                   compact
                                 />
                             )
-                            : (
-                                <div className="ct-deploy-overview__stage-list">
-                                    {stages.map((item, index) => {
-                                        const state = stepState(item, index, currentIndex, currentStage, data);
-                                        const clickAction = stageClickAction(item.id, state);
-
-                                        return (
-                                            <button
-                                              key={item.id}
-                                              type="button"
-                                              className={`ct-deploy-overview__stage ct-deploy-overview__stage--${state}`}
-                                              onClick={() => clickAction && onAction(clickAction)}
-                                              disabled={!clickAction}
-                                            >
-                                                <div className="ct-deploy-overview__stage-marker">{index + 1}</div>
-                                                <div className="ct-deploy-overview__stage-body">
-                                                    <span>{item.label}</span>
-                                                    {stepLabel(state)}
-                                                </div>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                            : renderStageList("overview")}
                     </div>
 
                     <div className="ct-deploy-overview__current-panel">
@@ -1373,6 +1408,7 @@ export default function DeploymentOverview({
                     </div>
                 )}
             </CardBody>
+            {completedStageDialog}
         </Card>
     );
 }

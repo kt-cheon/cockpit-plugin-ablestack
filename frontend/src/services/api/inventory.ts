@@ -284,7 +284,14 @@ function physicalDiskOption(device: RecordValue): DiskSelectOption | null {
   const disk = diskOption(device);
   if (!name || !disk.value) return null;
   const hasPartitions = readRecordArray(device, "children").length > 0;
-  const isDisabled = hasPartitions || disk.inUse;
+  const family = flattenDisks([device]);
+  const mounted = family.some(row=>Array.isArray(row.mountpoints) && row.mountpoints.some(Boolean));
+  const fileSystem = family.some(row=>Boolean(readOptionalString(row,"fstype")));
+  const readOnly = readBoolean(device,"ro");
+  const isDisabled = hasPartitions || disk.inUse || mounted || fileSystem || readOnly;
+  const reason = mounted ? "마운트된 디스크는 사용할 수 없습니다." : readOnly ? "읽기 전용 디스크입니다."
+    : hasPartitions || fileSystem ? "파티션·LVM 또는 파일시스템이 있습니다. 디스크 초기화 후 사용할 수 있습니다."
+      : "현재 사용 중인 디스크입니다.";
   const devicePath = name.startsWith("/dev/") ? name : `/dev/${name}`;
   const hardware = [disk.vendor, disk.model].filter(Boolean).join(" ");
   return {
@@ -292,7 +299,7 @@ function physicalDiskOption(device: RecordValue): DiskSelectOption | null {
     value: disk.value,
     label: [devicePath, disk.size, hardware].filter(Boolean).join(" · "),
     isDisabled,
-    disabledReason: isDisabled ? disk.inUseReason || "파티션이 있거나 사용 중인 디스크는 선택할 수 없습니다." : undefined,
+    disabledReason: isDisabled ? disk.inUseReason || reason : undefined,
   };
 }
 

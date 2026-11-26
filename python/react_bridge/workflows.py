@@ -3,6 +3,7 @@ import base64
 import ipaddress
 import json
 import os
+import re
 from pathlib import Path
 import socket
 import time
@@ -61,18 +62,26 @@ def cloudinit(a, kind, options, target=None):
 def wait_ready(a, target, timeout=1200):
     deadline = time.monotonic() + timeout
     last_error = ''
+    next_progress = 0
     while time.monotonic() < deadline:
         try:
             result = a.tool('cloudinit_status/cloudinit_status.py', ['status', '--target', atom(target)], timeout=30)
             value = result.get('val', '')
             status = '\n'.join(map(str, value)) if isinstance(value, list) else str(value)
-            if 'status: error' in status:
+            match = re.search(r'(?im)^\s*status:\s*([\w-]+)', status)
+            cloud_status = match.group(1).lower() if match else ''
+            if cloud_status in ('error', 'degraded', 'disabled') or (cloud_status == 'done' and str(result.get('code')) != '200'):
                 raise ValueError(target + ' 초기 설정에 실패했습니다. VM의 /var/log/cloud-init-output.log를 확인해 주세요.')
-            if str(result.get('code')) == '200' and 'status: done' in status:
+            if str(result.get('code')) == '200' and cloud_status == 'done':
                 return {'code': 200}
             last_error = status
         except (OSError, RuntimeError) as error:
             last_error = str(error)
+        if time.monotonic() >= next_progress:
+            remaining = max(0, int(deadline - time.monotonic()))
+            emit(a, '가상머신 초기 설정 완료를 기다리고 있습니다. 남은 대기 시간: ' + str(remaining) +
+                 '초. 연결 상태와 cloud-init 진행 상태를 확인 중입니다.')
+            next_progress = time.monotonic() + 30
         time.sleep(3)
     raise RuntimeError(target + ' 초기 설정 완료를 기다리는 시간이 초과되었습니다. ' + last_error[-500:])
 
@@ -285,10 +294,11 @@ def monitoring(a, payload):
     if storage:
         args += ['--scvm', *map(atom, storage)]
     services = ['--service', 'blackbox-exporter', 'node-exporter', 'grafana-server', 'process-exporter', 'prometheus', 'netdive-analyzer']
+    service_script = 'start_services.py'
     for label, script, options in [
-        ('기존 모니터링 서비스 중지', 'stop_services.py', ['stop', *services]),
+        ('기존 모니터링 서비스 중지', service_script, ['stop', *services]),
         ('모니터링 대상 및 지표 수집 설정 적용', 'config_wall.py', args),
-        ('모니터링 서비스 시작', 'start_services.py', ['start', *services]),
+        ('모니터링 서비스 시작', service_script, ['start', *services]),
     ]:
         run(a, label, lambda: a.success(a.parse_output(a.command(
             ['python3', root + script, *options], target='ccvm-mngt', timeout=900))))

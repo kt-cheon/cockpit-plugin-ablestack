@@ -17,6 +17,26 @@ spec.loader.exec_module(bridge)
 
 
 class ReactBridgeTests(unittest.TestCase):
+    def test_version_endpoint_returns_os_despite_an_optional_rpm_query_failure(self):
+        import system_version
+        with patch.object(system_version, 'os_version', return_value='ABLESTACK Europa'), \
+             patch.object(bridge, 'command', side_effect=['5.14.0-fixture\n', RuntimeError('RPM query failed')]):
+            result = self.request('/api/v1/version')
+        self.assertEqual(result['os_version'], 'ABLESTACK Europa')
+        self.assertEqual(result['errors'], {'cockpit_version': 'RPM query failed'})
+
+    def test_disk_initialization_uses_local_helper_and_requires_a_write_request(self):
+        from operations import should_queue, dispatch
+        with patch.object(bridge,'tool',return_value={'code':200,'disks':[]}) as tool:
+            self.request('/api/v1/cube/disk/initialize')
+        tool.assert_called_once_with('disk/disk_initialize.py',['list'])
+        body={'confirmation':'확인했습니다.','devices':[{'path':'/dev/sdb','identity':'fixture'}]}
+        with patch.object(bridge,'tool',return_value={'code':200,'success':True,'results':[]}) as tool:
+            dispatch(bridge,{'path':'/api/v1/cube/disk/initialize','body':body,'method':'POST'})
+        self.assertEqual(tool.call_args.args,('disk/disk_initialize.py',['initialize']))
+        self.assertEqual(json.loads(tool.call_args.kwargs['stdin']),body)
+        self.assertTrue(should_queue({'path':'/api/v1/cube/disk/initialize','method':'POST','body':body}))
+
     def test_update_credentials_bypass_persistent_task_queue_and_use_stdin(self):
         credentials = {'username': 'admin', 'password': 'private-update-password'}
         request = {'path': '/api/v1/cube/version/update', 'method': 'POST',
@@ -152,6 +172,23 @@ class ReactBridgeTests(unittest.TestCase):
         self.assertEqual(response['stage'], 'cloud_center_configure')
         self.assertEqual(response['raw']['ccvm_status'], 'running')
         self.assertIn('configure_cloud_vm', response['available_actions'])
+
+    def test_security_patch_is_offered_only_after_center_and_monitoring_configuration(self):
+        for kind in ('ablestack-hci', 'ablestack-hci-filesystem', 'powerflex', 'ablestack-vm', 'ablestack-standalone'):
+            for monitoring, ccvm, expected in (('', 'true', False), ('false', 'true', False),
+                                               ('true', 'false', False), ('true', 'true', True)):
+                settings = {'bootstrap': {'scvm': 'true', 'ccvm': ccvm, 'gfs_configure': 'true', 'local_configure': 'true'},
+                            'monitoring': {'wall': monitoring}}
+                with self.subTest(kind=kind, monitoring=monitoring, ccvm=ccvm), \
+                     patch.object(bridge, 'cluster', return_value={'type': kind}), \
+                     patch.object(bridge, 'props', return_value=settings), \
+                     patch.object(bridge, 'configuration_prepared', return_value=True), \
+                     patch.object(bridge, 'license_status', return_value={'code': 200, 'val': {'status': 'active'}}), \
+                     patch.object(bridge, 'vm_state', return_value='running'), \
+                     patch.object(bridge, 'pcs_status', return_value={'code': 200, 'val': {'ccvm_running_node': 'cube1'}}), \
+                     patch.object(bridge, 'tool', return_value={'code': 200, 'val': {'cluster_status': 'HEALTH_OK'}}):
+                    actions = bridge.deployment_status()['data']['available_actions']
+                self.assertEqual('run_security_patch' in actions, expected)
 
     def test_status_queries_preserve_completed_configuration_even_when_preparation_check_fails(self):
         settings = {'bootstrap': {'scvm': 'true', 'ccvm': 'true', 'gfs_configure': 'true', 'local_configure': 'true'},

@@ -9,6 +9,8 @@ before(async () => {
   globalThis.window = { location: { search: '' }, btoa: (value) => Buffer.from(value, 'binary').toString('base64'), setTimeout: (fn) => setTimeout(fn, 0) };
   services = await bundleModule(`
     export * from './src/services/api/client.ts';
+    export { fetchVersionInfo } from './src/services/api/version.ts';
+    export { startCCVM, registerCCVMLicense, startAndRegisterCCVMLicense } from './src/services/api/cloud-vm-deploy.ts';
     export * from './src/services/api/license.ts';
     export { fetchCloudClusterStatus } from './src/services/api/cloud-cluster-status.ts';
     export { fetchDeployStatus } from './src/services/api/deploy-status.ts';
@@ -16,7 +18,61 @@ before(async () => {
     export { fetchUiFeatures, isClusterTypeVisible } from './src/services/api/system-config.ts';
     export { fetchVersionUpdateInfo, runVersionUpdate, fetchVersionUpdateLog } from './src/services/api/version-update.ts';
     export { fetchGfsStripeSize, saveGfsStripeSize, createGfsStorage } from './src/services/api/gfs-manage.ts';
+    export { fetchClusterConfigDocument } from './src/services/api/cluster-config.ts';
+    export { fetchDiskInitializationInventory, initializeDisks } from './src/services/api/disk-initialize.ts';
   `);
+});
+
+test('CCVM image preparation and guest readiness/license registration are separate awaited steps', async () => {
+  const operations=[];
+  handler=request=>{operations.push(request.path);return {code:200};};
+  await services.startCCVM();
+  assert.deepEqual(operations,['/api/v1/cube/ccvm/lifecycle']);
+  await services.registerCCVMLicense();
+  assert.deepEqual(operations,['/api/v1/cube/ccvm/lifecycle','/api/v1/cube/license/apply']);
+  operations.length=0;
+  handler=request=>{operations.push(request.path);return {code:500,message:'이미지 적재 실패'};};
+  await assert.rejects(services.startAndRegisterCCVMLicense(),/이미지 적재 실패/);
+  assert.deepEqual(operations,['/api/v1/cube/ccvm/lifecycle']);
+});
+
+test('OS version is retained when optional package metadata is unavailable', async () => {
+  handler = request => {
+    assert.equal(request.path, '/api/v1/version');
+    return {code:200,os_version:'ABLESTACK Europa',kernel_version:'5.14.0-fixture',cockpit_version:'',
+      errors:{cockpit_version:'RPM query failed'}};
+  };
+  const info = await services.fetchVersionInfo();
+  assert.equal(info.osVersion, 'ABLESTACK Europa');
+  assert.equal(info.osVersionError, '');
+  handler = () => ({code:200,os_version:'',errors:{os_version:'OS release metadata is missing'}});
+  assert.equal((await services.fetchVersionInfo()).osVersionError, 'OS release metadata is missing');
+  handler = () => ({code:200,os_version:'ABLESTACK Europa v4.10.0',kernel_version:'',errors:{kernel_version:'uname failed'}});
+  const partial = await services.fetchVersionInfo();
+  assert.equal(partial.osVersion, 'ABLESTACK Europa v4.10.0');
+  assert.equal(partial.kernelVersionError, 'uname failed');
+});
+
+test('cluster profile download reads the saved document through the backend API', async () => {
+  const document = {clusterConfig:{type:'ablestack-hci',hosts:[{hostname:'cube1',ablecube:'192.0.2.1'}]},
+    security:{internal_token:'fixture-only-token'},custom:{site:'기존 구성'}};
+  for (const response of [document, {code:200,val:JSON.stringify(document)}, {data:document}]) {
+    handler = (request) => {
+      assert.equal(request.path, '/api/v1/cube/cluster/config');
+      assert.equal(request.method, 'GET');
+      return response;
+    };
+    assert.deepEqual(await services.fetchClusterConfigDocument(), document);
+  }
+});
+
+test('missing cluster profile and backend read errors are not downloaded as empty documents', async () => {
+  for (const response of [{}, {clusterConfig:null}, {code:500,val:'profile unavailable'}]) {
+    handler = () => response;
+    await assert.rejects(services.fetchClusterConfigDocument(), /프로파일/);
+  }
+  handler = () => ({code:500,bridge_error:true,message:'saved profile read failed'});
+  await assert.rejects(services.fetchClusterConfigDocument(), /saved profile read failed/);
 });
 
 test('GFS stripe choice loads, saves numerically and follows the selected disks into creation', async () => {
@@ -40,6 +96,23 @@ test('GFS stripe choice loads, saves numerically and follows the selected disks 
   await services.createGfsStorage(['/dev/sdb', '/dev/sdc', '/dev/sdd'], 512);
   handler = () => ({code: 500, val: 'GFS settings write failed'});
   await assert.rejects(services.saveGfsStripeSize(256), /GFS settings write failed/);
+});
+
+test('disk initialization sends each selected identity and requires the exact warning phrase', async () => {
+  const devices=[{path:'/dev/sdb',identity:'one',label:'disk one'},{path:'/dev/sdc',identity:'two',label:'disk two'}];
+  const before=fixture.calls.length;
+  await assert.rejects(services.initializeDisks(devices,'확인했습니다'),/정확히/);
+  assert.equal(fixture.calls.length,before);
+  handler=request=>{
+    assert.equal(request.path,'/api/v1/cube/disk/initialize');
+    assert.equal(request.method,'POST');
+    assert.deepEqual(request.body,{confirmation:'확인했습니다.',devices:[{path:'/dev/sdb',identity:'one'},{path:'/dev/sdc',identity:'two'}]});
+    return {code:200,success:false,results:[{path:'/dev/sdb',status:'completed',message:'done'},
+      {path:'/dev/sdc',status:'failed',message:'busy'}]};
+  };
+  const response=await services.initializeDisks(devices,'확인했습니다.');
+  assert.equal(response.success,false);
+  assert.equal(response.results[1].status,'failed');
 });
 
 test('Tools update checks and executes the separate Tools action', async () => {
@@ -155,6 +228,15 @@ test('failed bootstrap jobs propagate the server guidance', async () => {
     ? { job: { status: 'failed', message: '스토리지 네트워크 구성을 확인해 주세요.' } }
     : { code: 202, bridge_job: 'fixture' };
   await assert.rejects(services.requestCubeApi('/api/v1/cube/scvm/bootstrap', { method: 'POST' }), /스토리지 네트워크/);
+});
+
+test('cancelled jobs stop polling and report the server guidance', async () => {
+  let polls = 0;
+  handler = (request) => request.path.includes('/_tasks/')
+    ? {job: ++polls === 1 ? {status:'cancelling'} : {status:'cancelled',message:'작업을 중단했습니다. 실제 구성을 확인해 주세요.'}}
+    : {code:202,bridge_job:'fixture'};
+  await assert.rejects(services.requestCubeApi('/api/v1/cube/scvm/bootstrap',{method:'POST'}), /작업을 중단/);
+  assert.equal(polls,2);
 });
 
 test('every wizard receives only user bridges and preserves carrier state', async () => {

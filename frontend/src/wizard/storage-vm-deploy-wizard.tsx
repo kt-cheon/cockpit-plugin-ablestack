@@ -27,6 +27,7 @@ import {
 import { InfoCircleIcon } from "@patternfly/react-icons";
 
 import ValidationErrorModal from "../components/common/ValidationErrorModal";
+import StorageDiskPreparation, {type DiskPreparationHandle} from "../components/common/StorageDiskPreparation";
 import WizardStepStatusLabel, { wizardStatusRowClass } from "../components/common/WizardStepStatus";
 import { fetchClusterConfigProfile } from "../services/api/cluster-config";
 import { fetchNicInventory, fetchStorageVmDiskInventory } from "../services/api/inventory";
@@ -117,6 +118,20 @@ export default function StorageVmDeployWizardModal({
   const [lunDiskOptions, setLunDiskOptions] = React.useState<SelectOption[]>([]);
   const [diskLoadState, setDiskLoadState] = React.useState<InventoryLoadState>("idle");
   const [diskLoadError, setDiskLoadError] = React.useState("");
+  const [diskInventoryRevision, setDiskInventoryRevision] = React.useState(0);
+  const [diskPreparationPassed, setDiskPreparationPassed] = React.useState(false);
+  const [activeStepId, setActiveStepId] = React.useState("storage-vm-overview");
+  const [diskPreparationStatus, setDiskPreparationStatus] = React.useState({busy:false,canInitialize:false});
+  const diskPreparation = React.useRef<DiskPreparationHandle>(null);
+  const diskPreparationNext = React.useRef<(() => void) | null>(null);
+  const onDiskPreparationStatus = React.useCallback((value:{busy:boolean;canInitialize:boolean})=>setDiskPreparationStatus(value),[]);
+  const continueAfterDiskPreparation = React.useCallback(()=>{
+    setDiskPreparationPassed(true);
+    setDiskPreparationStatus({busy:false,canInitialize:false});
+    setSelectedDisks([]);
+    setDiskInventoryRevision(value=>value+1);
+    window.setTimeout(()=>diskPreparationNext.current?.(),0);
+  },[]);
   const [mgmtBridge, setMgmtBridge] = React.useState("");
   const [storageTrafficMode, setStorageTrafficMode] = React.useState<StorageTrafficMode>("np");
   const [storageNic1, setStorageNic1] = React.useState("");
@@ -175,6 +190,9 @@ export default function StorageVmDeployWizardModal({
     setLunDiskOptions([]);
     setDiskLoadState("idle");
     setDiskLoadError("");
+    setDiskPreparationPassed(false);
+    setDiskPreparationStatus({busy:false,canInitialize:false});
+    setActiveStepId("storage-vm-overview");
     setMgmtBridge("");
     setStorageTrafficMode("np");
     setStorageNic1("");
@@ -221,6 +239,7 @@ export default function StorageVmDeployWizardModal({
   };
 
   const requestClose = () => {
+    if (diskPreparationStatus.busy) return;
     if (isDeployFinished) {
       handleClose();
       return;
@@ -231,6 +250,7 @@ export default function StorageVmDeployWizardModal({
   React.useEffect(() => {
     if (!isOpen) return;
 
+    setSelectedDisks([]);
     fetchCurrentHostname()
       .then(applyCurrentHostname)
       .catch(() => undefined);
@@ -293,11 +313,7 @@ export default function StorageVmDeployWizardModal({
             .filter((option) => !option.isDisabled);
           const validSelection = prev.filter((disk) => currentOptions.some((option) => option.value === disk));
 
-          return validSelection.length > 0
-            ? validSelection
-            : currentOptions[0]?.value
-              ? [currentOptions[0].value]
-              : [];
+          return validSelection;
         });
         setDiskLoadState("success");
       })
@@ -314,7 +330,7 @@ export default function StorageVmDeployWizardModal({
     return () => {
       isActive = false;
     };
-  }, [diskMode, isOpen]);
+  }, [diskMode, isOpen, diskInventoryRevision]);
 
   React.useEffect(() => {
     if (!isOpen || hostsFileMode !== "existing") return;
@@ -397,10 +413,9 @@ export default function StorageVmDeployWizardModal({
     .filter(Boolean);
 
   const handleDiskModeChange = (nextMode: DiskMode) => {
+    if (nextMode === diskMode) return;
     setDiskMode(nextMode);
-    const nextOptions = nextMode === "rp" ? raidDiskOptions : nextMode === "dp" ? physicalDiskOptions : lunDiskOptions;
-    const firstSelectable = nextOptions.find((option) => !option.isDisabled);
-    setSelectedDisks(firstSelectable ? [firstSelectable.value] : []);
+    setSelectedDisks([]);
   };
 
   const toggleSelectedDisk = (diskValue: string, checked: boolean) => {
@@ -540,7 +555,7 @@ export default function StorageVmDeployWizardModal({
     if (duplicateProfileIpMessage) return duplicateProfileIpMessage;
     const duplicateVmIpMessage = duplicateMessage(
       [getIpFromCidr(mgmtIp), getIpFromCidr(storageIp), getIpFromCidr(replicaIp), ccvmMgmtIp],
-      "추가 네트워크 정보에 중복된 IP가 존재합니다."
+      "가상머신 네트워크 정보에 중복된 IP가 존재합니다."
     );
     if (duplicateVmIpMessage) return duplicateVmIpMessage;
 
@@ -612,7 +627,7 @@ export default function StorageVmDeployWizardModal({
 		setDeployJob(job);
 		setDeployJobId(job.jobId);
 		if (job.status === "succeeded") setIsDeployFinished(true);
-		if (job.status === "failed") setDeployError(job.message || "SCVM 배포 Job이 실패했습니다.");
+		if (job.status === "failed" || job.status === "cancelled") setDeployError(job.message || "SCVM 배포 Job이 중단되었습니다.");
 	} catch (error) {
 		setDeployError(error instanceof Error ? error.message : String(error));
 	}
@@ -628,7 +643,7 @@ export default function StorageVmDeployWizardModal({
 				if (!job) return;
 				setDeployJob(job);
 				if (job.status === "succeeded") setIsDeployFinished(true);
-				if (job.status === "failed") setDeployError(job.message || "SCVM 배포 Job이 실패했습니다.");
+				if (job.status === "failed" || job.status === "cancelled") setDeployError(job.message || "SCVM 배포 Job이 중단되었습니다.");
 			}).catch((error) => {
 				if (!disposed) setDeployError(error instanceof Error ? error.message : String(error));
 			});
@@ -649,6 +664,15 @@ export default function StorageVmDeployWizardModal({
     close: (event?: React.MouseEvent<HTMLButtonElement>) => void | Promise<void>
   ) => {
     if (!activeStep) return null;
+    if (String(activeStep.id) === "storage-vm-disk-initialize") {
+      diskPreparationNext.current = goToNextStep;
+      return <div className="ct-storage-vm-wizard__footer">
+        <Button variant="danger" isDisabled={!diskPreparationStatus.canInitialize} onClick={()=>diskPreparation.current?.confirm()}>선택한 디스크 초기화</Button>
+        <Button variant="secondary" isDisabled={diskPreparationStatus.busy} onClick={continueAfterDiskPreparation}>건너뛰기</Button>
+        <Button variant="secondary" isDisabled={diskPreparationStatus.busy} onClick={goToPrevStep}>이전</Button>
+        <Button variant="link" isDisabled={diskPreparationStatus.busy} onClick={requestClose}>취소</Button>
+      </div>;
+    }
     const stepId = String(activeStep.id);
     const isFirst = stepId === "storage-vm-overview";
     const isReview = stepId === "storage-vm-review";
@@ -721,13 +745,14 @@ export default function StorageVmDeployWizardModal({
         isVisitRequired
         className={[
           "ct-storage-vm-wizard",
-          disableNav ? "ct-storage-vm-wizard--nav-locked" : "",
+          disableNav || diskPreparationStatus.busy ? "ct-storage-vm-wizard--nav-locked" : "",
           isDeployStarted ? "ct-wizard--execution-visible" : "",
           isDeployFinished ? "ct-wizard--complete-visible" : "",
         ].join(" ")}
         footer={wizardFooter}
         onStepChange={(_event, currentStep) => {
           const stepId = String(currentStep.id);
+          setActiveStepId(stepId);
           setDisableNav(stepId === "storage-vm-finish");
         }}
         header={
@@ -834,7 +859,13 @@ export default function StorageVmDeployWizardModal({
                 </Alert>
               </div>
             </WizardStep>,
-            <WizardStep name="디스크" id="storage-vm-disk" key="storage-vm-disk">
+            <WizardStep name="디스크 초기화" id="storage-vm-disk-initialize" key="storage-vm-disk-initialize">
+              <div className="ct-storage-vm-wizard__content">
+                <StorageDiskPreparation ref={diskPreparation} isActive={isOpen && activeStepId === "storage-vm-disk-initialize"}
+                  onStatus={onDiskPreparationStatus} onContinue={continueAfterDiskPreparation} />
+              </div>
+            </WizardStep>,
+            <WizardStep name="디스크" id="storage-vm-disk" key="storage-vm-disk" isDisabled={!diskPreparationPassed}>
               <div className="ct-storage-vm-wizard__content">
                 <Content>
                   <Content component="p">
@@ -895,7 +926,7 @@ export default function StorageVmDeployWizardModal({
 	                    ) : (
 	                      <div className="ct-storage-vm-wizard__disk-list">
 	                        {currentDiskOptions.map((disk) => (
-	                          <div key={disk.value} className="ct-storage-vm-wizard__disk-item" title={disk.disabledReason}>
+	                          <div key={disk.value} className={`ct-storage-vm-wizard__disk-item ${disk.isDisabled ? "ct-storage-vm-wizard__disk-item--unavailable" : ""}`} title={disk.disabledReason}>
 	                            <Checkbox
 	                              id={`storage-vm-disk-${disk.value.replace(/[^a-zA-Z0-9_-]/g, "-")}`}
 	                              label={disk.label}
@@ -903,6 +934,7 @@ export default function StorageVmDeployWizardModal({
 	                              isDisabled={disk.isDisabled}
 	                              onChange={(_event, checked) => toggleSelectedDisk(disk.value, checked)}
 	                            />
+                            {disk.isDisabled && <small className="ct-storage-vm-wizard__disk-reason">사용 불가 · {disk.disabledReason}</small>}
 	                          </div>
 	                        ))}
 	                      </div>
@@ -1090,7 +1122,7 @@ export default function StorageVmDeployWizardModal({
           ]}
         />
 
-        <WizardStep name="추가 네트워크 정보" id="storage-vm-additional">
+        <WizardStep name="클러스터 및 네트워크 정보" id="storage-vm-additional">
           <div className="ct-storage-vm-wizard__content">
             <Form className="ct-storage-vm-wizard__form-horizontal" isHorizontal>
               <div className="ct-storage-vm-wizard__table-wrap">
@@ -1301,7 +1333,7 @@ export default function StorageVmDeployWizardModal({
                   className="ct-storage-vm-wizard__review-header"
                   onClick={() => setReviewOpen((prev) => ({ ...prev, additional: !prev.additional }))}
                 >
-                  <span>추가 네트워크 정보</span>
+                  <span>클러스터 및 네트워크 정보</span>
                   <span className={reviewOpen.additional ? "ct-storage-chevron ct-storage-chevron--open" : "ct-storage-chevron"}>▾</span>
                 </button>
                 {reviewOpen.additional && (
@@ -1310,7 +1342,7 @@ export default function StorageVmDeployWizardModal({
 	                      <DescriptionListGroup>
 	                        <DescriptionListTerm>클러스터 구성 준비</DescriptionListTerm>
 	                        <DescriptionListDescription>
-	                          해당 호스트 파일 사용
+	                          저장된 cluster.json 사용
 	                        </DescriptionListDescription>
 	                      </DescriptionListGroup>
 	                      <DescriptionListGroup>

@@ -41,6 +41,34 @@ SCVM 서비스 관리               -> SCVM의 기존 Glue API (loopback HTTPS)
 프로세스 종료로 중단된 작업은 실패로 표시합니다. 동시에 여러 구성 작업을 실행하지
 않도록 잠금을 사용합니다.
 
+진행 로그의 **작업 중단**은 확인 팝업 후 해당 작업의 실행 명령을 종료합니다.
+`중단 요청됨` 동안에는 프로세스 종료를 기다리며, 종료되면 실패/중단 안내를 닫거나
+다시 구성할 수 있습니다. 이미 적용된 설정은 자동 복구하지 않습니다. 디스크 초기화는
+실행 중 중단을 허용하지 않으며 디스크별 결과를 기다립니다. 종료된 프로세스, 좀비
+프로세스, 재사용된 PID, worker 생성 실패로 남은 대기 상태는 조회할 때 실패로 정리합니다.
+`operation.lock` 파일을 삭제하여 복구하지 않습니다. 잠금은 실행 프로세스가 종료될 때
+반납됩니다.
+
+cloud-init의 `error`, `degraded`, `disabled` 및 실패 코드의 `done`은 즉시 실패로 표시합니다.
+아직 실행 중이거나 연결을 준비하는 경우 최대 20분 동안 대기하며 30초마다 남은
+시간을 표시합니다. 원격 명령의 연결 종료 시 프로세스 정리도 포함하므로 실제 적용 시
+호스트와 VM의 Cube Agent 코드도 함께 갱신하고 `cube-agent.service`를 재시작해야 합니다.
+이전 Agent가 실행 중인 원격 명령은 기존 제한 시간까지 계속 실행될 수 있으므로
+중단 후 실제 상태를 확인하고 재시도해야 합니다.
+
+이미지 적재는 HCI의 `qemu-img convert -p` 변환율, VM의 GFS2 및 Standalone/SCVM의
+파일 복사 바이트 수를 기준으로 진행률·경과 시간·예상 남은 시간을 기록합니다.
+표시된 %는 이미지 적재 작업에만 해당하며 전체 배포 진행률이 아닙니다. 저장장치 반영과
+명령 종료를 확인하기 전에는 최대 99%로 표시합니다. 남은 시간은 현재 처리 속도를
+기준으로 한 추정치이며 스토리지 부하에 따라 달라집니다. 새 출력이 없어도 10초마다
+실제 진행률과 경과 시간을 표시합니다. 파일 복사는 sparse 형식을 유지하며 동기화 후
+정상 완료된 파일만 최종 이미지 경로에 반영합니다. 원격에서 실행하는 도구에도 새
+진행 로그 코드가 설치되어 있어야 합니다.
+
+CCVM 마법사는 이미지 적재/VM 시작과 VM 초기 설정/라이선스 등록을 각각 표시합니다.
+후속 작업과 대기 이유를 단계별로 안내하며, GFS2가 마운트되지 않았거나 이미지
+전송에 실패하면 고가용성 리소스 생성으로 넘어가지 않습니다.
+
 SCVM·CCVM 구성은 기존 `center_bootstrap.py`와 각각의 bootstrap Shell을 실행합니다.
 SCVM 구성 전 점보 프레임 검사와 실패 안내, NIC의 실제 링크 상태 조회,
 SSD·NVMe에만 적용하는 `rotation_rate`, 라이선스 검증은 기존 동작을 사용합니다.
@@ -69,6 +97,9 @@ npm --prefix frontend run build
 npm --prefix frontend test
 python3 -m unittest discover -s tests -p 'test_react_*.py'
 npm --prefix frontend run test:browser
+npm --prefix frontend run test:cluster-profile-browser
+npm --prefix frontend run test:disk-initialize-browser
+npm --prefix frontend run test:deployment-progress-browser
 ```
 
 JS·CSS·폰트와 라이선스는 `src/react/`에 생성됩니다. Git에서 제외되며 RPM 빌드 시
@@ -78,6 +109,24 @@ JS·CSS·폰트와 라이선스는 `src/react/`에 생성됩니다. Git에서 �
 배포 마법사와 SCVM 서비스 폼·확인·생성 흐름을 검사합니다. 실제 VM·라이선스·
 스토리지는 변경하지 않습니다. macOS 기본 Chrome 외에는 `CHROME_PATH`,
 스크린샷 저장 위치는 `REACT_SCREENSHOTS`를 지정합니다.
+
+클러스터 프로파일 전용 검사는 기존 `cluster.json` 등록, 파일 선택 방식과 첨부 항목의
+표시 순서, 완료 화면에서 저장된 프로파일 다운로드 및 조회 실패 표시를 확인합니다.
+완료 화면은 `/api/v1/cube/cluster/config`로 실제 플러그인의 `tools/properties/cluster.json`을
+조회하며 `/etc/ablestack/`의 별도 파일을 요구하지 않습니다.
+
+스토리지센터 마법사는 컴퓨트 설정 다음에 디스크 초기화 단계를 제공합니다.
+초기화할 디스크를 여러 개 선택하고 경고 창에 `확인했습니다.`를 정확히 입력하면
+각 디스크에 `ceph-volume lvm zap --destroy <장치>`를 순차 실행합니다.
+운영체제·마운트·스왑·실행 중인 VM의 디스크는 제외하며, 공유 LVM 볼륨그룹의
+선택하지 않은 디스크가 영향을 받는 경우에도 실행을 거부합니다.
+커널 파티션 테이블과 udev 정보를 갱신하고 파티션·파일시스템 해제를 검증한 후
+새 목록으로 디스크 구성 단계에 진입합니다. 일부 실패 시 디스크별 결과를 표시하고
+해당 단계에 남습니다. 초기화가 필요 없으면 건너뛰기를 사용합니다.
+구성 단계의 사용 불가 디스크에는 파티션 등 사유를 항상 표시합니다.
+
+초기화 브라우저 검사는 모의 API만 사용합니다. 실제 장치 초기화는 실행하지 않습니다.
+명령의 동작은 [Ceph zap 공식 문서](https://docs.ceph.com/en/latest/ceph-volume/lvm/zap/)를 참고합니다.
 
 ## RPM 없이 시험 적용
 

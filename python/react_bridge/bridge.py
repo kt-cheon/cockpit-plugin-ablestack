@@ -16,6 +16,8 @@ sys.path.insert(0, str(NODE_TOOLS))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 TASK_LOG = None
 
+from processes import run as run_local
+
 
 def parse_output(output):
     if isinstance(output, bytes):
@@ -42,7 +44,7 @@ def command(argv, target=None, timeout=120, stdin=None, record=True):
                 from client import Client
                 result = Client().execute(target, argv, stdout=output, stderr=output, timeout=timeout, stdin=stdin)
             else:
-                result = subprocess.run(argv, input=stdin, stdout=output, stderr=output, timeout=timeout,
+                result = run_local(argv, stdin=stdin, stdout=output, stderr=output, timeout=timeout,
                                         cwd=str(ROOT), env=dict(os.environ, LC_ALL='C'))
             output.flush()
             output.seek(offset)
@@ -54,7 +56,7 @@ def command(argv, target=None, timeout=120, stdin=None, record=True):
         from client import Client
         result = Client().execute(target, argv, timeout=timeout, stdin=stdin)
     else:
-        result = subprocess.run(argv, input=stdin, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        result = run_local(argv, stdin=stdin, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                 timeout=timeout, cwd=str(ROOT), env=dict(os.environ, LC_ALL='C'))
     if result.returncode:
         message = result.stderr.decode('utf-8', 'replace') if isinstance(result.stderr, bytes) else result.stderr
@@ -188,7 +190,8 @@ def deployment_status():
             actions.append('open_storage_center')
         if raw['wall_monitoring_status'] == 'true':
             actions.append('open_monitoring_center')
-        actions.append('run_security_patch')
+        if stage == 'ready' and raw['wall_monitoring_status'] == 'true':
+            actions.append('run_security_patch')
     polling = {name: {'enabled': licensed and prepared, 'reason': ''} for name in
                ('storage_vm', 'storage_cluster', 'gfs_resource', 'gfs_disk', 'cloud_vm', 'cloud_cluster', 'mold')}
     return {'code': 200, 'data': {'os_type': kind, 'stage': stage, 'stage_order': order,

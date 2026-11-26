@@ -12,6 +12,10 @@ import logging
 import json
 import sys
 import os
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'common'))
+from deployment_progress import copy_image, progress
 
 from ablestack import *
 from sh import python3
@@ -60,14 +64,13 @@ def setupStorageVm(args):
     success_bool = True
 
     # 스토리지 가상머신용 qcow2 이미지 생성
-    if os_type == "powerflex":
-        check_err = os.system("/usr/bin/cp -f /var/lib/libvirt/images/powerflex-scvm-template.qcow2 /var/lib/libvirt/images/scvm.qcow2")
-        if check_err != 0 :
-            success_bool = False
-    else:
-        check_err = os.system("/usr/bin/cp -f /var/lib/libvirt/images/ablestack-template-back.qcow2 /var/lib/libvirt/images/scvm.qcow2")
-        if check_err != 0 :
-            success_bool = False
+    source = ('/var/lib/libvirt/images/powerflex-scvm-template.qcow2' if os_type == 'powerflex' else
+              '/var/lib/libvirt/images/ablestack-template-back.qcow2')
+    try:
+        copy_image(source, '/var/lib/libvirt/images/scvm.qcow2', 'SCVM 이미지 로컬 디스크 복사')
+    except (OSError, RuntimeError, ValueError) as error:
+        return createReturn(code=500, val='SCVM 이미지 복사 실패: ' + str(error))
+    progress('SCVM 이미지 복사가 완료되었습니다. 파일 권한 설정과 가상머신 등록 및 시작을 진행합니다.')
     # scvm.qcow2 파일 권한 설정
     check_err = os.system("chmod 666 /var/lib/libvirt/images/scvm.qcow2")
     if check_err != 0 :

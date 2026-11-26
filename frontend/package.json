@@ -14,6 +14,9 @@
     "typecheck": "tsc --noEmit",
     "test:browser": "node tests/browser-check.mjs",
     "test:update-browser": "node tests/update-browser-check.mjs",
+    "test:cluster-profile-browser": "node tests/cluster-profile-browser-check.mjs",
+    "test:disk-initialize-browser": "node tests/disk-initialize-browser-check.mjs",
+    "test:deployment-progress-browser": "node tests/deployment-progress-browser-check.mjs",
     "test:gfs-browser": "node tests/gfs-stripe-browser-check.mjs"
   },
   "devDependencies": {

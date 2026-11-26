@@ -1,6 +1,11 @@
 import argparse
 import os
 import subprocess
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'common'))
+from deployment_progress import copy_image, progress, run_step
 from ablestack import *
 
 def createArgumentParser():
@@ -60,24 +65,24 @@ def define_and_start_ccvm():
     qcow_file = "/var/lib/libvirt/images/ablestack-template-back.qcow2"
     ccvm_file = "/mnt/glue/ccvm.qcow2"
     cmds = [
-        f"cp {qcow_file} {ccvm_file}",
-        f"cp {old_xml_path} {new_xml_path}",
-        f"qemu-img resize {ccvm_file} +350G",
-        f"virsh define --file {new_xml_path}",
-        "virsh autostart ccvm",
-        "virsh start ccvm",
-        "virsh dominfo ccvm"
+        ('CCVM 가상머신 설정 파일을 저장합니다.', ['cp', old_xml_path, new_xml_path]),
+        ('CCVM 가상디스크 크기를 350 GiB 확장합니다.', ['qemu-img', 'resize', ccvm_file, '+350G']),
+        ('로컬 CCVM 가상머신을 등록합니다.', ['virsh', 'define', '--file', new_xml_path]),
+        ('호스트 부팅 시 CCVM이 자동으로 시작되도록 설정합니다.', ['virsh', 'autostart', 'ccvm']),
+        ('CCVM 가상머신을 시작합니다.', ['virsh', 'start', 'ccvm']),
+        ('CCVM 가상머신의 실행 상태를 확인합니다.', ['virsh', 'dominfo', 'ccvm']),
     ]
 
     try:
-        for cmd in cmds:
-            subprocess.run(cmd, shell=True, check=True,
-                           capture_output=True, text=True)
+        copy_image(qcow_file, ccvm_file, 'CCVM 이미지 로컬 볼륨 복사')
+        for message, argv in cmds:
+            run_step(message, argv)
+        progress('로컬 CCVM 이미지 적재와 가상머신 시작이 완료되었습니다. 다음으로 초기 설정과 라이선스를 확인합니다.')
         # 모든 단계가 성공했을 때
         return createReturn(code=200, val="CloudCenter VM created successfully.")
-    except subprocess.CalledProcessError as e:
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as e:
         # 어느 한 단계라도 실패 시
-        return createReturn(code=500, val="Failed to create CloudCenter VM.")
+        return createReturn(code=500, val="Failed to create CloudCenter VM: " + str(e))
 
 def local_ccvm_start():
     try:

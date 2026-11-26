@@ -1,5 +1,6 @@
 """React contracts mapped to the existing Europa command entry points."""
 import base64
+import fcntl
 import hashlib
 import io
 import json
@@ -7,12 +8,13 @@ import os
 from pathlib import Path
 import re
 import socket
+import tempfile
 import zipfile
 from urllib.parse import parse_qs, urlsplit
 from progress import run, tool_label
 
 PATHS = {
-    'nics', 'disk', 'ssh/key', 'downloads', 'cluster/health', 'cluster/apply-local',
+    'nics', 'disk', 'disk/initialize', 'ssh/key', 'downloads', 'cluster/health', 'cluster/apply-local',
     'scvm/lifecycle', 'scvm/bootstrap', 'ccvm/lifecycle', 'ccvm/edit', 'ccvm/create',
     'ccvm/bootstrap', 'ccvm/secondary/resize', 'ccvm/service/control', 'ccvm/snap', 'db/dump',
     'cloudinit/ccvm/generate', 'license/apply', 'pcs/control', 'gluecluster/update',
@@ -25,6 +27,7 @@ PATHS = {
 }
 SSH_CONTEXT = b'ablestack-api:ssh-key-bundle:v1'
 SSH_SECRET = b'ablestack-api-ssh-key-bundle-default-secret-v1'
+SSH_KEY_DIR = Path('/root/.ssh')
 
 
 def split_request(request):
@@ -106,16 +109,44 @@ def flag(a, section, key, value='true', all_hosts=False):
     return run(a, '클러스터 호스트의 구성 상태 저장' if all_hosts else '현재 호스트의 구성 상태 저장', update)
 
 
+def authorize_ssh_key(root, public_key):
+    identity = public_key.encode().split()[:2]
+    if len(identity) != 2:
+        raise ValueError('SSH 공개키를 확인할 수 없습니다.')
+
+    path = root / 'authorized_keys'
+    with os.fdopen(os.open(path, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o600), 'a+b') as authorized:
+        fcntl.flock(authorized, fcntl.LOCK_EX)
+        os.fchmod(authorized.fileno(), 0o600)
+        authorized.seek(0)
+        existing = authorized.read()
+        for line in existing.splitlines():
+            fields = line.split()
+            # Keep an existing entry for the same key, including any restrictions on it.
+            if fields and not fields[0].startswith(b'#') and any(
+                    fields[index:index + 2] == identity for index in range(len(fields) - 1)):
+                return
+        if existing and not existing.endswith(b'\n'):
+            authorized.write(b'\n')
+        authorized.write(b' '.join(identity) + b'\n')
+
+
 def ssh_keys(a, body):
-    root = Path('/root/.ssh')
+    root = SSH_KEY_DIR
     private, public = root / 'id_rsa', root / 'id_rsa.pub'
     action = body.get('action', 'status')
     if action == 'generate':
         root.mkdir(mode=0o700, exist_ok=True)
+        root.chmod(0o700)
         if not private.exists():
             a.command(['ssh-keygen', '-q', '-t', 'rsa', '-b', '3072', '-N', '', '-f', str(private)])
-        if not public.exists():
-            public.write_text(a.command(['ssh-keygen', '-y', '-f', str(private)]).strip() + '\n')
+        private.chmod(0o600)
+        derived = a.command(['ssh-keygen', '-y', '-P', '', '-f', str(private)]).strip()
+        existing = public.read_text().strip() if public.exists() else ''
+        if len(existing.splitlines()) != 1 or existing.split()[:2] != derived.split()[:2]:
+            public.write_text(derived + '\n')
+        public.chmod(0o644)
+        authorize_ssh_key(root, derived)
         return {'code': 200}
     if action == 'upload':
         from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -126,22 +157,26 @@ def ssh_keys(a, body):
         archive = AESGCM(key).decrypt(incoming[4:16], incoming[16:], SSH_CONTEXT)
         with zipfile.ZipFile(io.BytesIO(archive)) as bundle:
             contents = {name: bundle.read(name) for name in ('id_rsa', 'id_rsa.pub')}
-        if not contents['id_rsa'].startswith(b'-----BEGIN ') or not contents['id_rsa.pub'].startswith(b'ssh-'):
+        public_key = contents['id_rsa.pub'].decode('utf-8').strip()
+        if (not contents['id_rsa'].startswith(b'-----BEGIN ') or not public_key.startswith('ssh-') or
+                len(public_key.splitlines()) != 1):
             raise ValueError('SSH KEY 내용이 올바르지 않습니다.')
         root.mkdir(mode=0o700, exist_ok=True)
+        root.chmod(0o700)
         # Validate the pair before replacing the currently installed keys.
-        import tempfile
         with tempfile.TemporaryDirectory(dir=root) as work:
-            staged = Path(work) / 'id_rsa'
-            staged.write_bytes(contents['id_rsa'])
-            staged.chmod(0o600)
-            derived = a.command(['ssh-keygen', '-y', '-f', str(staged)]).split()[:2]
-            if derived != contents['id_rsa.pub'].decode().split()[:2]:
+            staged_private = Path(work) / 'id_rsa'
+            staged_private.write_bytes(contents['id_rsa'])
+            staged_private.chmod(0o600)
+            derived = a.command(['ssh-keygen', '-y', '-P', '', '-f', str(staged_private)])
+            if derived.split()[:2] != public_key.split()[:2]:
                 raise ValueError('개인키와 공개키가 일치하지 않습니다.')
-            for name, value in contents.items():
-                destination = root / name
-                destination.write_bytes(value)
-                destination.chmod(0o600 if name == 'id_rsa' else 0o644)
+            staged_public = Path(work) / 'id_rsa.pub'
+            staged_public.write_text(public_key + '\n')
+            staged_public.chmod(0o644)
+            staged_private.replace(private)
+            staged_public.replace(public)
+        authorize_ssh_key(root, derived)
         return {'code': 200}
     if action == 'download':
         from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -184,7 +219,7 @@ def dispatch(a, request, reporter=None):
     if not isinstance(body, dict) or method not in ('GET', 'POST'):
         raise ValueError('유효하지 않은 요청입니다.')
     action = body.get('action', '')
-    if method == 'GET' and not (path in {'_tasks', 'deploy/jobs', 'nics', 'disk', 'ssh/key', 'cluster/health',
+    if method == 'GET' and not (path in {'_tasks', 'deploy/jobs', 'nics', 'disk', 'disk/initialize', 'ssh/key', 'cluster/health',
            'system/config', 'security/evidence', 'security/evidence/download', 'url', 'gluecluster/url', 'powerflex/status',
            'system/context', 'glue/catalog'} or
            path.startswith(('_tasks/', 'hosts/remove/jobs/')) or request['path'] == '/api/v1/version'):
@@ -204,8 +239,13 @@ def dispatch(a, request, reporter=None):
         from glue_service import execute
         return execute(a, body)
     if path.startswith('_tasks/'):
-        from tasks import snapshot
-        return {'code': 200, 'job': snapshot(path.split('/')[-1])}
+        from tasks import cancel, snapshot
+        parts = path.split('/')
+        if len(parts) == 3 and parts[2] == 'cancel' and method == 'POST':
+            return {'code': 200, 'job': cancel(parts[1])}
+        if len(parts) == 2 and method == 'GET':
+            return {'code': 200, 'job': snapshot(parts[1])}
+        raise ValueError('유효하지 않은 작업 요청입니다.')
     if path.startswith('hosts/remove/jobs/'):
         from tasks import snapshot
         return {'code': 200, 'job': snapshot(path.split('/')[-1])}
@@ -236,6 +276,11 @@ def dispatch(a, request, reporter=None):
     if path == 'disk':
         source = query.get('action', ['list'])[0]
         return a.tool('disk/disk_action.py', [{'gfs': 'gfs-list', 'detail': 'gfs-list', 'rbd': 'hci-shared-file-list'}.get(source, 'list')])
+    if path == 'disk/initialize':
+        if method == 'GET':
+            return a.success(a.tool('disk/disk_initialize.py', ['list']))
+        return a.success(a.tool('disk/disk_initialize.py', ['initialize'],
+                                stdin=json.dumps(body).encode('utf-8'), timeout=21600))
     if path == 'ssh/key':
         if method == 'GET' and action not in ('', 'status', 'download'):
             raise ValueError('SSH KEY 변경에는 실행 요청이 필요합니다.')
@@ -363,9 +408,8 @@ def dispatch(a, request, reporter=None):
                                     stdin=json.dumps(credentials).encode('utf-8'), timeout=21600))
         return checked(a, 'host/ablestack_update.py', args)
     if request['path'] == '/api/v1/version':
-        return {'code': 200, 'os_version': Path('/etc/os-release').read_text().splitlines()[0],
-                'kernel_version': a.command(['uname', '-r']).strip(),
-                'cockpit_version': a.command(['rpm', '-q', 'ablecube']).strip()}
+        from system_version import version_info
+        return version_info(a)
     if path == 'security/patch':
         args = []
         if body.get('ssh_user'):

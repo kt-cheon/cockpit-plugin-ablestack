@@ -9,6 +9,7 @@ TOOL_LABELS = {
     'ablestack_json/ablestackJson.py': '구성 상태 파일 갱신',
     'vm/host_ping_test.py': '호스트 및 가상머신 통신 상태 확인',
     'vm/reset_storage_center.py': '스토리지센터 가상머신 배포 환경 초기화',
+    'disk/disk_initialize.py': '선택한 디스크 초기화 및 상태 재조회',
     'vm/reset_cloud_center.py': '클라우드센터 가상머신 배포 환경 초기화',
     'vm/create_scvm_cloudinit.py': '스토리지센터 가상머신 초기 설정 파일 생성',
     'vm/create_ccvm_cloudinit.py': '클라우드센터 가상머신 초기 설정 파일 생성',

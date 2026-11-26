@@ -25,7 +25,7 @@ export async function requestCubeApi<T>(path: string, options: CubeApiRequestOpt
   while (Date.now() < deadline) {
     const { job } = await invoke({ path: '/api/v1/cube/_tasks/' + response.bridge_job, method: 'GET' });
     if (job.status === 'succeeded') return job.result as T;
-    if (job.status === 'failed') throw new Error(job.message || '작업에 실패했습니다.');
+    if (job.status === 'failed' || job.status === 'cancelled') throw new Error(job.message || '작업이 중단되었습니다.');
     await new Promise((resolve) => window.setTimeout(resolve, 1000));
   }
   throw new Error('작업 결과를 기다리는 시간이 초과되었습니다. 진행 로그에서 서버 작업 상태를 확인해 주세요.');

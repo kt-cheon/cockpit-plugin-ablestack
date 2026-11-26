@@ -11,7 +11,6 @@ import {
   Content,
   Form,
   FormGroup,
-  Radio,
   Checkbox,
   TextInput,
   TextArea,
@@ -34,7 +33,8 @@ import {
   initializeCCVM,
   createCCVMCloudInit,
   createCCVM,
-  startAndRegisterCCVMLicense,
+  startCCVM,
+  registerCCVMLicense,
 } from "../services/api/cloud-vm-deploy";
 import { fetchNicInventory } from "../services/api/inventory";
 import { fetchCurrentHostname } from "../services/host";
@@ -55,7 +55,7 @@ type HostsFileMode = "existing" | "new";
 type ClusterType = "powerflex" | "ablestack-hci" | "ablestack-vm" | "ablestack-standalone" | "ablestack-hci-filesystem";
 type InventoryLoadState = "idle" | "loading" | "success" | "error";
 type CloudVmDeployPhase = "idle" | "running" | "success" | "error";
-type CloudVmDeployStep = "health" | "initialize" | "cloudinit" | "xml" | "setup";
+type CloudVmDeployStep = "health" | "initialize" | "cloudinit" | "xml" | "setup" | "license";
 type CloudVmDeployStepStatus = "pending" | "running" | "succeeded" | "failed";
 
 const INITIAL_DEPLOY_STEP_STATES: Record<CloudVmDeployStep, CloudVmDeployStepStatus> = {
@@ -64,6 +64,7 @@ const INITIAL_DEPLOY_STEP_STATES: Record<CloudVmDeployStep, CloudVmDeployStepSta
   cloudinit: "pending",
   xml: "pending",
   setup: "pending",
+  license: "pending",
 };
 
 interface SelectOption {
@@ -176,7 +177,8 @@ export default function CloudVmDeployWizardModal({
     { id: "initialize", label: "클라우드센터 초기화" },
     { id: "cloudinit", label: "cloudinit.iso 생성" },
     { id: "xml", label: "클라우드센터 가상머신 생성" },
-    { id: "setup", label: "클라우드센터 가상머신 상세 설정 및 시작" },
+    { id: "setup", label: "OS 이미지 적재 및 가상머신 시작" },
+    { id: "license", label: "가상머신 초기 설정 확인 및 라이선스 등록" },
   ];
 
   const applyCurrentHostname = React.useCallback((hostname: string) => {
@@ -326,24 +328,6 @@ export default function CloudVmDeployWizardModal({
     };
   }, [hostsFileMode, isOpen]);
 
-  const updateHostCount = (nextCount: number) => {
-    const safeCount = Math.max(3, Math.min(99, nextCount));
-    setHostCount(safeCount);
-    setHosts((prev) => {
-      if (safeCount === prev.length) return prev;
-      if (safeCount < prev.length) return prev.slice(0, safeCount);
-      const extras = Array.from({ length: safeCount - prev.length }, (_, idx) => ({
-        hostName: `ablecube${prev.length + idx + 21}`,
-        hostIp: "",
-        scvmMgmtIp: "",
-        hostPnIp: "",
-        scvmPnIp: "",
-        hostCnIp: "",
-      }));
-      return [...prev, ...extras];
-    });
-  };
-
   const updateHost = (index: number, key: keyof ClusterHostRow, value: string) => {
     setHosts((prev) => prev.map((host, hostIndex) => (
       hostIndex === index ? { ...host, [key]: value } : host
@@ -480,6 +464,19 @@ export default function CloudVmDeployWizardModal({
 
   const runDeployStep = async (step: CloudVmDeployStep, operation: () => Promise<void>) => {
     updateDeployStep(step, "running");
+    const guidance: Record<CloudVmDeployStep, string> = {
+      health: "호스트와 필요한 스토리지의 연결 상태를 확인하고 있습니다.",
+      initialize: "이전 클라우드센터 가상머신 설정을 정리하고 배포를 준비하고 있습니다.",
+      cloudinit: "저장된 네트워크와 초기 설정 정보로 cloudinit.iso를 생성하고 있습니다.",
+      xml: "CPU, 메모리, 네트워크 설정으로 가상머신 정의를 생성하고 있습니다.",
+      setup: clusterType === "ablestack-vm"
+        ? "OS 이미지를 GFS2 공유 볼륨에 복사하고 가상머신을 시작합니다. 이미지 적재 진행률과 예상 남은 시간은 진행 로그에서 확인할 수 있습니다."
+        : clusterType === "ablestack-standalone"
+          ? "OS 이미지를 로컬 볼륨에 복사하고 가상머신을 시작합니다. 이미지 적재 진행률과 예상 남은 시간은 진행 로그에서 확인할 수 있습니다."
+          : "OS 이미지를 RBD로 변환하고 가상머신을 시작합니다. 이미지 적재 진행률과 예상 남은 시간은 진행 로그에서 확인할 수 있습니다.",
+      license: "가상머신 부팅과 초기 설정이 완료되기를 기다린 후 라이선스를 등록합니다. 진행 로그에서 대기 상태를 확인할 수 있습니다.",
+    };
+    setDeployMessage(guidance[step]);
     try {
       await operation();
       updateDeployStep(step, "succeeded");
@@ -526,7 +523,8 @@ export default function CloudVmDeployWizardModal({
         management_network_bridge: mgmtBridge,
         ...(svcEnabled ? { service_network_bridge: svcBridge } : {}),
       }));
-      await runDeployStep("setup", startAndRegisterCCVMLicense);
+      await runDeployStep("setup", startCCVM);
+      await runDeployStep("license", registerCCVMLicense);
       completeDeploy();
     } catch (error) {
       setDeployPhase("error");
@@ -860,77 +858,23 @@ export default function CloudVmDeployWizardModal({
             ]}
           />
 
-          <WizardStep name="추가 네트워크 정보" id="cloud-vm-additional">
+          <WizardStep name="클러스터 및 네트워크 정보" id="cloud-vm-additional">
             <div className="ct-cloud-vm-wizard__content">
-              <Content>
-                <Content component="p">
-                  클라우드센터 VM에 호스트명 등의 부가적인 네트워크 정보를 설정합니다. 아래의 항목에 값을 입력하십시오.
-                </Content>
-              </Content>
-              <Form className="ct-cloud-vm-wizard__section ct-cloud-vm-wizard__form-horizontal" isHorizontal>
-                <FormGroup label="클러스터 구성 파일" isRequired fieldId="cloud-vm-hosts-file">
-                  <div className="ct-cloud-vm-wizard__inline">
-                    <Radio
-                      id="cloud-vm-hosts-file-existing"
-                      name="cloud-vm-hosts-file"
-                      label="해당 호스트 파일 사용"
-                      isChecked
-                      isDisabled
-                    />
-                    <Radio
-                      id="cloud-vm-hosts-file-new"
-                      name="cloud-vm-hosts-file"
-                      label="신규 생성"
-                      isChecked={false}
-                      isDisabled
-                    />
-                  </div>
-                </FormGroup>
-                <FormGroup label="현재 호스트" isRequired fieldId="cloud-vm-current-host">
-                  <TextInput id="cloud-vm-current-host" value={currentHostname} readOnly />
-                </FormGroup>
-                <FormGroup label="클러스터 구성 호스트 수" isRequired fieldId="cloud-vm-host-count">
-                  <div className="ct-cloud-vm-wizard__stepper">
-                    <Button
-                      variant="control"
-                      isDisabled={hostsFileMode === "existing"}
-                      onClick={() => updateHostCount(hostCount - 1)}
-                      aria-label="Minus"
-                    >
-                      -
-                    </Button>
-                    <div className="ct-cloud-vm-wizard__stepper-value">{hostCount}</div>
-                    <Button
-                      variant="control"
-                      isDisabled={hostsFileMode === "existing"}
-                      onClick={() => updateHostCount(hostCount + 1)}
-                      aria-label="Plus"
-                    >
-                      +
-                    </Button>
-                    <span className="ct-cloud-vm-wizard__stepper-unit">대</span>
-                  </div>
-                </FormGroup>
-
-                {hostsFileMode === "existing" && (
+              <div className="ct-cloud-vm-wizard__table-wrap">
+                <div className="ct-cloud-vm-wizard__table-title">클러스터 구성 프로파일</div>
+                {(clusterConfigLoadError || !clusterConfigLoaded) && (
                   <Alert
                     isInline
                     title={
                       clusterConfigLoadError
                         ? "cluster.json 정보를 불러오지 못했습니다."
-                        : clusterConfigLoaded
-                          ? "cluster.json의 호스트 정보를 자동으로 적용했습니다."
-                          : "cluster.json 정보를 불러오는 중입니다."
+                        : "cluster.json 정보를 불러오는 중입니다."
                     }
                     variant={clusterConfigLoadError ? "warning" : "info"}
                     className="ct-cloud-vm-wizard__info"
                   />
                 )}
-              </Form>
-
-              <div className="ct-cloud-vm-wizard__table-wrap">
-                <div className="ct-cloud-vm-wizard__table-title">클러스터 구성 프로파일</div>
-                <table className="ct-cloud-vm-wizard__table">
+                <table className="ct-cloud-vm-wizard__table" aria-label="클러스터 구성 프로파일">
                   <thead>
                     <tr>
                       <th>순번</th>
@@ -1145,7 +1089,7 @@ export default function CloudVmDeployWizardModal({
                     className="ct-cloud-vm-wizard__review-header"
                     onClick={() => setReviewOpen((prev) => ({ ...prev, additional: !prev.additional }))}
                   >
-                    <span>추가 네트워크 정보</span>
+                    <span>클러스터 및 네트워크 정보</span>
                     <span className={reviewOpen.additional ? "ct-cloud-chevron ct-cloud-chevron--open" : "ct-cloud-chevron"}>
                       ▾
                     </span>
@@ -1156,7 +1100,7 @@ export default function CloudVmDeployWizardModal({
                         <DescriptionListGroup>
                           <DescriptionListTerm>클러스터 구성 준비</DescriptionListTerm>
                           <DescriptionListDescription>
-                            해당 호스트 파일 사용
+                            저장된 cluster.json 사용
                           </DescriptionListDescription>
                         </DescriptionListGroup>
                         <DescriptionListGroup>
