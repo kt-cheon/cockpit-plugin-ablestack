@@ -20,9 +20,12 @@ class ReactBridgeTests(unittest.TestCase):
     def test_version_endpoint_returns_os_despite_an_optional_rpm_query_failure(self):
         import system_version
         with patch.object(system_version, 'os_version', return_value='ABLESTACK Europa'), \
-             patch.object(bridge, 'command', side_effect=['5.14.0-fixture\n', RuntimeError('RPM query failed')]):
+             patch.object(bridge, 'command', side_effect=[
+                 '5.14.0-fixture\n', RuntimeError('RPM query failed'), '4.23.0.0\tMold.Europa.202611251209.1\n',
+             ]):
             result = self.request('/api/v1/version')
         self.assertEqual(result['os_version'], 'ABLESTACK Europa')
+        self.assertEqual(result['mold_version'], '4.23.0.0-Mold.Europa.202611251209')
         self.assertEqual(result['errors'], {'cockpit_version': 'RPM query failed'})
 
     def test_disk_initialization_uses_local_helper_and_requires_a_write_request(self):
@@ -189,6 +192,7 @@ class ReactBridgeTests(unittest.TestCase):
                      patch.object(bridge, 'tool', return_value={'code': 200, 'val': {'cluster_status': 'HEALTH_OK'}}):
                     actions = bridge.deployment_status()['data']['available_actions']
                 self.assertEqual('run_security_patch' in actions, expected)
+                self.assertEqual('configure_monitoring' in actions, ccvm == 'true' and monitoring != 'true')
 
     def test_status_queries_preserve_completed_configuration_even_when_preparation_check_fails(self):
         settings = {'bootstrap': {'scvm': 'true', 'ccvm': 'true', 'gfs_configure': 'true', 'local_configure': 'true'},

@@ -185,7 +185,9 @@ def deployment_status():
             actions.append('configure_cloud_vm')
         else:
             stage, message, order = 'ready', 'ready', 9
-            actions.extend(['open_cloud_center', 'configure_monitoring', 'configure_cloud_resource'])
+            actions.extend(['open_cloud_center', 'configure_cloud_resource'])
+            if raw['wall_monitoring_status'] != 'true':
+                actions.append('configure_monitoring')
         if has_storage and raw['scvm_bootstrap_status'] == 'true':
             actions.append('open_storage_center')
         if raw['wall_monitoring_status'] == 'true':

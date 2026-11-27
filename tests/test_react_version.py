@@ -41,12 +41,16 @@ class VersionTests(unittest.TestCase):
 
     def test_optional_rpm_failure_does_not_hide_os_or_kernel(self):
         self.primary.write_text('NAME="ABLESTACK"\nPRETTY_NAME="ABLESTACK Europa"\n')
-        adapter = SimpleNamespace(command=Mock(side_effect=['5.14.0-fixture\n', RuntimeError('package ablecube is not installed')]))
+        adapter = SimpleNamespace(command=Mock(side_effect=[
+            '5.14.0-fixture\n', RuntimeError('package ablecube is not installed'),
+            '4.23.0.0\tMold.Europa.202611251209.1\n',
+        ]))
         result = versions.version_info(adapter)
         self.assertEqual(result['code'], 200)
         self.assertEqual(result['os_version'], 'ABLESTACK Europa')
         self.assertEqual(result['kernel_version'], '5.14.0-fixture')
         self.assertEqual(result['cockpit_version'], '')
+        self.assertEqual(result['mold_version'], '4.23.0.0-Mold.Europa.202611251209')
         self.assertEqual(result['errors'], {'cockpit_version': 'package ablecube is not installed'})
         self.assertTrue(all(call.kwargs == {'timeout': 5, 'record': False} for call in adapter.command.call_args_list))
 
@@ -55,21 +59,33 @@ class VersionTests(unittest.TestCase):
             with self.subTest(contents=contents):
                 if contents is not None:
                     self.primary.write_text(contents)
-                adapter = SimpleNamespace(command=Mock(side_effect=['5.14.0-fixture\n', 'ablecube-fixture\n']))
+                adapter = SimpleNamespace(command=Mock(side_effect=[
+                    '5.14.0-fixture\n', 'ablecube-fixture\n', '4.23.0.0\tMold.Europa.202611251209\n',
+                ]))
                 result = versions.version_info(adapter)
                 self.assertEqual(result['os_version'], '')
                 self.assertTrue(result['errors']['os_version'])
                 self.assertEqual(result['kernel_version'], '5.14.0-fixture')
                 self.assertEqual(result['cockpit_version'], 'ablecube-fixture')
+                self.assertEqual(result['mold_version'], '4.23.0.0-Mold.Europa.202611251209')
 
     def test_kernel_query_failure_keeps_pretty_name_and_rpm_metadata(self):
         self.primary.write_text('PRETTY_NAME="ABLESTACK Europa v4.10.0"\n')
-        adapter = SimpleNamespace(command=Mock(side_effect=[RuntimeError('uname failed'), 'ablecube-fixture\n']))
+        adapter = SimpleNamespace(command=Mock(side_effect=[
+            RuntimeError('uname failed'), 'ablecube-fixture\n', RuntimeError('cloudstack-common is not installed'),
+        ]))
         result = versions.version_info(adapter)
         self.assertEqual(result['os_version'], 'ABLESTACK Europa v4.10.0')
         self.assertEqual(result['kernel_version'], '')
         self.assertEqual(result['cockpit_version'], 'ablecube-fixture')
-        self.assertEqual(result['errors'], {'kernel_version': 'uname failed'})
+        self.assertEqual(result['mold_version'], '')
+        self.assertEqual(result['errors'], {
+            'kernel_version': 'uname failed', 'mold_version': 'cloudstack-common is not installed',
+        })
+        adapter.command.assert_called_with(
+            ['aspkg', '-q', '--qf', '%{VERSION}\t%{RELEASE}\n', '--', 'cloudstack-common'],
+            timeout=5, record=False,
+        )
 
 
 if __name__ == '__main__':

@@ -19,11 +19,7 @@ import {
 import ClvmDiskActionModal from "./clvm-disk-action-modal";
 import type { ClvmDiskAction } from "./clvm-disk-action-modal";
 import StorageClusterHealthChecksModal from "./storage-cluster-health-checks-modal";
-import {
-  STATUS_LOADING_LABEL,
-  STATUS_UNKNOWN_LABEL,
-  StatusLoadingMessage,
-} from "./status-loading";
+import { StatusLoadingMessage } from "./status-loading";
 import WwnListModal from "./wwn-list-modal";
 import CheckedConfirmActionModal from "../components/common/CheckedConfirmActionModal";
 import ConfirmActionModal from "../components/common/ConfirmActionModal";
@@ -61,27 +57,13 @@ import {
 import { controlCloudCenterVm } from "../services/api/cloud-cluster-status";
 import {
   DotStatus,
+  clusterStatusMeta,
   InfoGrid,
   InfoItem,
   StatusCardHeading,
   StorageCapacitySummary,
 } from "./status-card-layout";
 import "./status-card.scss";
-
-const CLUSTER_STATUS_META = {
-  HEALTH_OK: {
-    label: "Health OK",
-    color: "green",
-  },
-  HEALTH_WARN: {
-    label: "Health Warn",
-    color: "orange",
-  },
-  HEALTH_ERR: {
-    label: "Health Err",
-    color: "red",
-  },
-};
 
 export default function StorageClusterStatus({ pollingEnabled = true, readOnly = false }: { pollingEnabled?: boolean; readOnly?: boolean }) {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -151,15 +133,7 @@ export default function StorageClusterStatus({ pollingEnabled = true, readOnly =
     onError: handleStatusError,
   });
 
-  const statusMeta = isCollecting
-    ? {
-      label: STATUS_LOADING_LABEL,
-      color: "orange",
-    }
-    : (CLUSTER_STATUS_META as any)[data.clusterStatus] ?? {
-      label: STATUS_UNKNOWN_LABEL,
-      color: "orange",
-    };
+  const statusMeta = clusterStatusMeta(data.clusterStatus, isCollecting);
 
   const isClusterError = data.clusterStatus === "HEALTH_ERR";
   const isClusterUnknown = data.clusterStatus === "N/A" || data.clusterStatus === "";

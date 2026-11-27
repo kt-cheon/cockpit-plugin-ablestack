@@ -629,7 +629,6 @@
     font-size: 9.5px;
     font-weight: 600;
     letter-spacing: 0.05em;
-    text-transform: uppercase;
   }
 
   strong {
@@ -752,6 +751,40 @@
   min-block-size: 0;
 }
 
+.ct-deploy-ribbon__cluster-status {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+
+  > div {
+    display: grid;
+    align-content: center;
+    gap: 6px;
+    min-inline-size: 0;
+    min-block-size: 58px;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #f8fafc;
+  }
+
+  dt {
+    font-size: 11.5px;
+    font-weight: 700;
+  }
+
+  dd {
+    margin: 0;
+  }
+}
+
+@media (min-width: 1600px) {
+  .ct-deploy-ribbon__cluster-status {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 .ct-deploy-ribbon__stage-list {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -765,14 +798,13 @@
   gap: 8px;
   padding-block-start: 10px;
   border-block-start: 1px solid #d7e3f0;
+}
 
-  > span {
-    color: #94a3b8;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-  }
+.ct-deploy-ribbon__connection-title {
+  margin: 0;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .ct-deploy-ribbon__workflow-zone {
@@ -1542,6 +1574,7 @@
 
 .ct-deploy-ribbon__utility-menu {
   position: relative;
+  grid-column: -2 / -1;
   justify-self: end;
 }
 
@@ -3217,6 +3250,10 @@
 }
 
 @media (max-width: 640px) {
+  .ct-deploy-ribbon__cluster-status {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .ct-deploy-ribbon__workflow-controls {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -3330,6 +3367,7 @@
   }
 
   .ct-deploy-ribbon__copy h1,
+  .ct-deploy-ribbon__connection-title,
   .ct-deploy-ribbon__meta strong,
   .ct-deploy-ribbon__stage > strong,
   .ct-deploy-overview__meta strong,
@@ -3367,6 +3405,7 @@
   }
 
   .ct-deploy-ribbon__meta > div,
+  .ct-deploy-ribbon__cluster-status > div,
   .ct-deploy-overview__meta > div,
   .ct-deploy-live,
   .ct-license-info-modal__content > div,
@@ -3378,9 +3417,7 @@
     background: var(--ct-able-dark-surface-soft);
   }
 
-  .ct-deploy-ribbon__meta span,
-  .ct-deploy-ribbon__connection-zone > span,
-  .ct-deploy-ribbon__workflow-zone > span {
+  .ct-deploy-ribbon__meta span {
     color: var(--ct-able-dark-subtle);
   }
 

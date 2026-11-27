@@ -1,4 +1,29 @@
 import React from "react";
+import { STATUS_LOADING_LABEL, STATUS_UNKNOWN_LABEL } from "./status-loading";
+
+const CLUSTER_STATUS: Record<string, { label: string; color: string }> = {
+  HEALTH_OK: { label: "Health OK", color: "green" },
+  HEALTH_WARN: { label: "Health Warn", color: "orange" },
+  HEALTH_ERR: { label: "Health Err", color: "red" },
+};
+
+export function clusterStatusMeta(status: string, isCollecting = false) {
+  if (isCollecting) return { label: STATUS_LOADING_LABEL, color: "orange" };
+  return CLUSTER_STATUS[status.toUpperCase()] ?? { label: STATUS_UNKNOWN_LABEL, color: "orange" };
+}
+
+export function vmStatusMeta(status: string, isCollecting = false) {
+  if (isCollecting) return { label: STATUS_LOADING_LABEL, color: "orange" };
+
+  switch (status.toLowerCase()) {
+    case "running": return { label: "Running", color: "green" };
+    case "shutoff":
+    case "shut off":
+    case "stopped": return { label: "Stopped", color: "orange" };
+    case "health_err": return CLUSTER_STATUS.HEALTH_ERR;
+    default: return { label: STATUS_UNKNOWN_LABEL, color: "orange" };
+  }
+}
 
 interface StatusCardHeadingProps {
   icon: React.ReactNode;

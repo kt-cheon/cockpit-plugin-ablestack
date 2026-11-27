@@ -11,11 +11,7 @@ import {
   DropdownItem,
   MenuToggle,
 } from "@patternfly/react-core";
-import {
-  STATUS_LOADING_LABEL,
-  STATUS_UNKNOWN_LABEL,
-  StatusLoadingMessage,
-} from "./status-loading";
+import { StatusLoadingMessage } from "./status-loading";
 import ConfirmActionModal from "../components/common/ConfirmActionModal";
 import VmResourceUpdateModal from "../components/common/VmResourceUpdateModal";
 import ActionProgressModal from "../components/common/ActionProgressModal";
@@ -33,6 +29,7 @@ import {
   CardDivider,
   compactDiskUsage,
   DotStatus,
+  vmStatusMeta,
   InfoGrid,
   InfoItem,
   NicGroup,
@@ -43,21 +40,6 @@ import {
   UsageProgress,
 } from "./status-card-layout";
 import "./status-card.scss";
-
-const VM_STATUS_META = {
-  running: {
-    label: "Running",
-    color: "green",
-  },
-  shutOff: {
-    label: "Stopped",
-    color: "orange",
-  },
-  HEALTH_ERR: {
-    label: "Health Err",
-    color: "red",
-  },
-};
 
 type StorageVmAction = "start" | "stop" | "delete";
 
@@ -100,15 +82,7 @@ export default function StorageVmStatus({ pollingEnabled = true, readOnly = fals
     onError: handleStatusError,
   });
 
-  const statusMeta = isCollecting
-    ? {
-      label: STATUS_LOADING_LABEL,
-      color: "orange",
-    }
-    : (VM_STATUS_META as any)[data.vmStatus] ?? {
-      label: STATUS_UNKNOWN_LABEL,
-      color: "orange",
-    };
+  const statusMeta = vmStatusMeta(data.vmStatus, isCollecting);
 
   const isVmError = data.vmStatus === "HEALTH_ERR";
   const isVmUnknown = data.vmStatus === "N/A" || data.vmStatus === "";

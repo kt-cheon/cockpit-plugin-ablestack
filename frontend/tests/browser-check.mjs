@@ -64,7 +64,8 @@ try {
     responses['/api/v1/cube/glue/catalog'] = { code: 200, services: catalog };
     responses['/api/v1/cube/deploy/jobs'] = { code: 200, jobs: [] };
     responses['/api/v1/cube/deploy/run'] = {code: 202, job_id: 'fixture-scvm-defaults', status: 'queued'};
-    responses['/api/v1/version'] = { code: 200, os_version: 'ABLESTACK Europa v4.10.0', kernel_version:'5.14.0-741.24.1' };
+    responses['/api/v1/version'] = { code: 200, os_version: 'ABLESTACK Europa v4.10.0', kernel_version:'5.14.0-741.24.1',
+      mold_version: '4.23.0.0-Mold.Europa.202611251209' };
     responses['/api/v1/cube/system/config'] = { code: 200, val: { bootstrap: { ccvm: 'true', scvm: 'true' }, ui: { scvm_lun_passthrough: false } } };
     for (const suffix of ['/api/v1/cube/nics?action=detail', '/api/v1/cube/disk?action=list', '/api/v1/cube/disk?action=gfs', '/api/v1/cube/cluster/config']) {
       responses[suffix] = preview.getPreviewCubeApiResponse(suffix);
@@ -129,12 +130,37 @@ try {
     await licenseDialog.getByRole('button', { name: '완료', exact: true }).click();
     await licenseDialog.waitFor({ state: 'hidden' });
     if (product !== 'scvm') {
-      if (!await page.locator('.ct-deploy-details').evaluate(node=>node.open)) {
-        await page.locator('.ct-deploy-details > summary').click();
-      }
-      const securityPatch = page.locator('.ct-deploy-ribbon__workflow-zone').getByRole('button', {name:'취약점 조치',exact:true});
+      await page.getByRole('heading', {name: /^ABLESTACK Cube /}).waitFor();
+      const overview = page.locator('.ct-deploy-details');
+      const overviewToggle = overview.locator('summary');
+      const menuTrigger = overview.getByRole('button', {name: '관리 도구', exact: true});
+      const managementMenu = page.locator('.ct-deploy-management-menu');
+      const securityPatch = managementMenu.getByRole('menuitem', {name: '취약점 조치', exact: true});
+      const ensureOverviewOpen = async () => {
+        if (!await overview.evaluate((node) => node.open)) await overviewToggle.click();
+      };
+      await overviewToggle.filter({hasText: 'ABLESTACK 클러스터 요약'}).waitFor();
+      await ensureOverviewOpen();
+      await overview.getByRole('heading', {name: 'ABLESTACK 개요', exact: true}).waitFor();
+      assert.equal(await overview.locator('.ct-deploy-ribbon__title-row').count(), 0);
+      assert.equal(await overview.locator('.ct-deploy-ribbon__copy p').count(), 0);
+      await overview.getByRole('heading', {name: '관리 페이지 바로가기', exact: true}).waitFor();
+      const shortcuts = overview.locator('.ct-deploy-ribbon__actions--connection');
+      assert.deepEqual(await shortcuts.getByRole('button').allTextContents(),
+        ['hci', 'filesystem'].includes(product) ? ['스토리지센터', '클라우드센터', '모니터링센터'] :
+          ['클라우드센터', '모니터링센터']);
+      const clusterStatus = overview.locator('.ct-deploy-ribbon__cluster-status');
+      assert.deepEqual(await clusterStatus.locator('dd').allTextContents(),
+        ['hci', 'filesystem'].includes(product) ? ['Health OK', 'Health OK', 'Running', 'Running'] :
+          product === 'standalone' ? ['Running'] : ['Health OK', 'Running']);
+      assert.equal(await overview.locator('.ct-deploy-ribbon__stage-list').count(), 0);
+      assert.equal(await overview.getByText('실행 가능한 작업', {exact: true}).count(), 0);
+      assert.equal(await page.locator('option[value="configure_monitoring"]').count(), 0);
+      assert.equal(await page.locator('option[value="run_security_patch"]').count(), 0);
+      await menuTrigger.click();
       await securityPatch.waitFor();
-      await page.getByText('실행 가능한 작업',{exact:true}).waitFor();
+      await page.keyboard.press('Escape');
+      await managementMenu.waitFor({state: 'hidden'});
       for (const missing of ['wall_monitoring_status', 'ccvm_bootstrap_status']) {
         await page.evaluate(missing=>{
           const status=window.__responses['/api/v1/cube/deploy/status'];
@@ -143,8 +169,14 @@ try {
           if (!status.data.available_actions.includes('run_security_patch')) status.data.available_actions.push('run_security_patch');
         },missing);
         await page.getByRole('button',{name:'상태 새로고침',exact:true}).click();
-        await securityPatch.waitFor({state:'hidden'});
-        assert.equal(await page.locator('option[value="run_security_patch"]').count(),0,'security menu waits for all configuration through monitoring');
+        await overviewToggle.filter({hasText: '구성 및 배포 단계'}).waitFor();
+        await overview.getByText('ABLESTACK 설치 및 구성 단계', {exact: true}).waitFor();
+        await overview.getByText('배포·구성 상태', {exact: true}).waitFor();
+        await menuTrigger.click();
+        await managementMenu.waitFor();
+        assert.equal(await securityPatch.count(), 0, 'security action waits for both configuration flags');
+        await page.keyboard.press('Escape');
+        await managementMenu.waitFor({state: 'hidden'});
         if (product === 'hci' && missing === 'wall_monitoring_status') {
           const current = page.locator('.ct-deploy-ribbon__stage--current').filter({hasText: '모니터링센터 구성'});
           await current.waitFor();
@@ -171,20 +203,54 @@ try {
         }
         await page.evaluate(missing=>{window.__responses['/api/v1/cube/deploy/status'].data.raw[missing]='true';},missing);
         await page.getByRole('button',{name:'상태 새로고침',exact:true}).click();
-        await page.locator('option[value="run_security_patch"]').waitFor({state:'attached'});
-        if (!await page.locator('.ct-deploy-details').evaluate(node=>node.open)) {
-          await page.locator('.ct-deploy-details > summary').click();
-        }
+        await overviewToggle.filter({hasText: 'ABLESTACK 클러스터 요약'}).waitFor();
+        await ensureOverviewOpen();
+        await menuTrigger.click();
         await securityPatch.waitFor();
-        assert.equal(await page.locator('option[value="run_security_patch"]').count(),1,'security action appears after all configuration is complete');
+        await page.keyboard.press('Escape');
+        await managementMenu.waitFor({state:'hidden'});
       }
-      await page.locator('.ct-deploy-details > summary').click();
+      if (product === 'hci') {
+        await page.evaluate(() => {
+          const raw = window.__responses['/api/v1/cube/deploy/status'].data.raw;
+          Object.assign(raw, {sc_status: 'HEALTH_WARN', cc_status: 'HEALTH_ERR', scvm_status: 'shut off'});
+        });
+        await page.getByRole('button', {name: '상태 새로고침', exact: true}).click();
+        await overviewToggle.filter({hasText: 'ABLESTACK 클러스터 요약'}).waitFor();
+        await ensureOverviewOpen();
+        await clusterStatus.getByText('Stopped', {exact: true}).waitFor();
+        assert.deepEqual(await clusterStatus.locator('dd').allTextContents(), ['Health Warn', 'Health Err', 'Stopped', 'Running']);
+        await page.evaluate(() => {
+          const raw = window.__responses['/api/v1/cube/deploy/status'].data.raw;
+          Object.assign(raw, {sc_status: 'HEALTH_OK', cc_status: 'HEALTH_OK', scvm_status: 'running'});
+        });
+        await page.getByRole('button', {name: '상태 새로고침', exact: true}).click();
+        await overviewToggle.filter({hasText: 'ABLESTACK 클러스터 요약'}).waitFor();
+        await ensureOverviewOpen();
+        await clusterStatus.getByText('Health OK', {exact: true}).first().waitFor();
+        await page.screenshot({path: path.join(captures, 'cluster-summary.png'), fullPage: true});
+        await page.setViewportSize({width: 2234, height: 960});
+        await page.evaluate(() => document.documentElement.classList.add('pf-v6-theme-dark'));
+        assert.equal(await clusterStatus.evaluate((grid) =>
+          new Set([...grid.children].map((item) => item.getBoundingClientRect().x)).size), 4);
+        await assertReadable(clusterStatus.locator('dt'), 'dark cluster summary labels');
+        await page.screenshot({path: path.join(captures, 'cluster-summary-dark.png'), fullPage: true});
+        await page.evaluate(() => document.documentElement.classList.remove('pf-v6-theme-dark'));
+        await page.setViewportSize({width: 390, height: 844});
+        assert.equal(await clusterStatus.evaluate((grid) =>
+          new Set([...grid.children].map((item) => item.getBoundingClientRect().x)).size), 1);
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+        await page.setViewportSize({width: 1440, height: 1100});
+      }
+      await overviewToggle.click();
     }
     if (product === 'hci') {
-      const osLabel = page.locator('.ct-deploy-ribbon__meta > div').filter({has:page.getByText('OS 버전',{exact:true})}).locator('strong');
-      await page.evaluate(()=>{window.__responses['/api/v1/version']={code:200,os_version:'ABLESTACK Europa v4.10.0',kernel_version:'5.14.0-741.24.1',errors:{cockpit_version:'RPM query failed'}};});
+      const osLabel = page.locator('.ct-deploy-ribbon__meta > div').filter({has:page.getByText('Cube 버전',{exact:true})}).locator('strong');
+      const moldLabel = page.locator('.ct-deploy-ribbon__meta > div').filter({has:page.getByText('Mold 버전',{exact:true})}).locator('strong');
+      await page.evaluate(()=>{window.__responses['/api/v1/version']={code:200,os_version:'ABLESTACK Europa v4.10.0',kernel_version:'5.14.0-741.24.1',mold_version:'4.23.0.0-Mold.Europa.202611251209',errors:{cockpit_version:'RPM query failed'}};});
       await page.getByRole('button',{name:'상태 새로고침',exact:true}).click();
       await osLabel.filter({hasText:'ABLESTACK Europa'}).waitFor({state:'attached'});
+      assert.equal(await moldLabel.textContent(), '4.23.0.0-Mold.Europa.202611251209');
       assert.equal(await osLabel.getAttribute('title'), null, 'an optional RPM failure does not hide or mark the OS version');
       const kernelLabel=osLabel.locator('small');
       assert.equal(await kernelLabel.textContent().then(text=>text.trim()),'(5.14.0-741.24.1)');
@@ -798,7 +864,7 @@ try {
           code: 500, bridge_error: true, message: message.replace('\n', ' <br>'),
         };
       }, connectionError);
-      const connect = page.getByRole('button', {name: '클라우드센터 연결', exact: true});
+      const connect = page.getByRole('button', {name: '클라우드센터', exact: true});
       await connect.click();
       const connectionNotice = page.locator('.ct-status-action-notice');
       await connectionNotice.getByText('클라우드센터에 정상적으로 연결되지 않습니다.', {exact: false}).waitFor();

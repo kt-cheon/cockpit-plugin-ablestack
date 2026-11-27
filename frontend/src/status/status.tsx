@@ -81,6 +81,7 @@ export default function StatusPage() {
     const [centerLink, setCenterLink] = React.useState<{ url: string; title: string } | null>(null);
     const actionRequest = React.useRef(0);
     const [statusRefreshKey, setStatusRefreshKey] = React.useState(0);
+    const deploymentComplete = isDeploymentComplete(deployStatus);
 
     const refreshDeployOverview = React.useCallback(() => {
         setStatusRefreshKey((current) => current + 1);
@@ -323,7 +324,7 @@ export default function StatusPage() {
         <>
             <PageSection>
                 <Flex alignItems={{ default: 'alignItemsCenter' }}>
-                    <FlexItem flex={{ default: 'flex_1' }}><Title headingLevel="h1">ABLESTACK <small>{hostname}</small></Title></FlexItem>
+                    <FlexItem flex={{ default: 'flex_1' }}><Title headingLevel="h1">ABLESTACK Cube <small>{hostname}</small></Title></FlexItem>
                     <Button variant="link" onClick={() => setIsLicenseManagementOpen(true)}>라이선스 관리</Button>
                     <Button variant="secondary" onClick={refreshDeployOverview}>상태 새로고침</Button>
                     <Button variant="link" onClick={() => setBackupOpen(true)}>백업·복원</Button>
@@ -341,9 +342,8 @@ export default function StatusPage() {
                             <option value="deploy_cloud_vm">클라우드센터 가상머신 배포</option>
                             <option value="configure_cloud_vm">클라우드센터 구성</option>
                             <option value="configure_cloud_resource">클라우드 리소스 구성</option>
-                            <option value="configure_monitoring">모니터링센터 구성</option>
-                            {isDeploymentComplete(deployStatus) && (
-                                <option value="run_security_patch">보안 업데이트</option>
+                            {deployStatus.raw.monitoringStatus.toLowerCase() !== "true" && (
+                                <option value="configure_monitoring">모니터링센터 구성</option>
                             )}
                             <option value="security_evidence">보안 증적 자료</option>
                             <option value="ablestack_update">ABLESTACK 업데이트</option>
@@ -356,8 +356,8 @@ export default function StatusPage() {
               variant={PageSectionVariants.default}
               className="ct-status-deploy-overview"
             >
-                <details className="ct-deploy-details" open={!isDeploymentComplete(deployStatus)}>
-                <summary>구성 및 배포 단계</summary>
+                <details className="ct-deploy-details" open={!deploymentComplete}>
+                <summary>{deploymentComplete ? "ABLESTACK 클러스터 요약" : "구성 및 배포 단계"}</summary>
                 <DeploymentOverview
                   key={`deploy-overview-${statusRefreshKey}`}
                   mode="ribbon"

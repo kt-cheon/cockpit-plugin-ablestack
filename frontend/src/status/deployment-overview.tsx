@@ -24,6 +24,7 @@ import {
     InfoCircleIcon,
 } from "@patternfly/react-icons";
 
+import { clusterStatusMeta, DotStatus, vmStatusMeta } from "../cards/status-card-layout";
 import { useStatusPolling } from "../hooks/useStatusPolling.ts";
 import {
     DEPLOY_STATUS_FALLBACK,
@@ -71,6 +72,14 @@ const STORAGE_CENTER_PRODUCT_TYPES = new Set([
     "ablestack-hci",
     "ablestack-hci-filesystem",
 ]);
+const CONFIGURATION_COMPLETION_STAGES = new Set([
+    STORAGE_CENTER_CONFIGURE_STAGE,
+    HCI_SHARED_FILE_CONFIGURE_STAGE,
+    "gfs_storage_configure",
+    "local_storage_configure",
+    CLOUD_CENTER_CONFIGURE_STAGE,
+    MONITORING_CENTER_CONFIGURE_STAGE,
+]);
 const CONNECTION_ACTIONS = new Set([
     "open_storage_center",
     "open_cloud_center",
@@ -84,6 +93,7 @@ const MANAGEMENT_ACTIONS = new Set([
     ...ALWAYS_AVAILABLE_ACTIONS,
     VERSION_UPDATE_ACTION,
     SECURITY_EVIDENCE_ACTION,
+    "run_security_patch",
 ]);
 
 const PRODUCT_LABELS: Record<string, string> = {
@@ -145,7 +155,7 @@ const ACTION_LABELS: Record<string, string> = {
     prepare_cluster_config: "클러스터 구성 준비",
     deploy_storage_vm: "스토리지센터 가상머신 배포",
     configure_storage_vm: "스토리지센터 구성",
-    open_storage_center: "스토리지센터 연결",
+    open_storage_center: "스토리지센터",
     configure_storage_cluster: "스토리지 클러스터 상세 구성",
     configure_hci_shared_file: "RBD/GFS 구성",
     configure_gfs_storage: "GFS 스토리지 구성",
@@ -155,8 +165,8 @@ const ACTION_LABELS: Record<string, string> = {
     configure_cloud_cluster: "클라우드 PCS 구성",
     configure_cloud_resource: "클라우드 리소스 구성",
     configure_monitoring: "모니터링센터 구성",
-    open_cloud_center: "클라우드센터 연결",
-    open_monitoring_center: "모니터링센터 연결",
+    open_cloud_center: "클라우드센터",
+    open_monitoring_center: "모니터링센터",
     run_security_patch: "취약점 조치",
     [SECURITY_EVIDENCE_ACTION]: "보안 증적",
     [VERSION_UPDATE_ACTION]: "ABLESTACK 업데이트",
@@ -399,8 +409,8 @@ function isStageDone(stage: string, status: DeployStatusData): boolean {
 }
 
 export function isDeploymentComplete(status: DeployStatusData): boolean {
-    const stages = stageItemsFor(status.osType);
-    return stages.length > 0 && stages.every((item) => isStageDone(item.id, status));
+    const requiredStages = stageItemsFor(status.osType).filter(({ id }) => CONFIGURATION_COMPLETION_STAGES.has(id));
+    return requiredStages.length > 0 && requiredStages.every(({ id }) => isStageDone(id, status));
 }
 
 export function effectiveCurrentStage(status: DeployStatusData): string {
@@ -611,9 +621,9 @@ function securityPatchAction(status: DeployStatusData, isFlowComplete: boolean):
     return [];
 }
 
-function managementActionsFor(isFlowComplete: boolean): string[] {
+function managementActionsFor(status: DeployStatusData, isFlowComplete: boolean): string[] {
     return isFlowComplete
-        ? [...ALWAYS_AVAILABLE_ACTIONS, SECURITY_EVIDENCE_ACTION, VERSION_UPDATE_ACTION]
+        ? [...ALWAYS_AVAILABLE_ACTIONS, ...securityPatchAction(status, isFlowComplete), SECURITY_EVIDENCE_ACTION, VERSION_UPDATE_ACTION]
         : ALWAYS_AVAILABLE_ACTIONS;
 }
 
@@ -708,20 +718,34 @@ function actionClassName(action: string): string {
     return "ct-deploy-ribbon__action ct-deploy-ribbon__action--workflow";
 }
 
-function ribbonMessage(isFlowComplete: boolean, currentStageLabel: string, data: DeployStatusData): string {
-    if (isFlowComplete && data.warnings.length === 0) {
-        return "ABLESTACK 클라우드센터 VM 배포되었으며 모니터링센터 구성이 완료되었습니다. 가상어플라이언스 상태가 정상입니다.";
-    }
-
-    if (isFlowComplete) {
-        return "ABLESTACK 가상어플라이언스 구성이 완료되었으며 추가 확인이 필요한 운영 항목이 있습니다.";
-    }
-
-    if (!data.osType && currentStageLabel !== STAGE_LABELS[LICENSE_STAGE]) {
+function ribbonMessage(currentStageLabel: string, osType: string): string {
+    if (!osType && currentStageLabel !== STAGE_LABELS[LICENSE_STAGE]) {
         return "제품 타입을 선택하면 제품별 설치 흐름과 다음 단계가 표시됩니다.";
     }
 
     return `${currentStageLabel} 단계 확인이 필요합니다.`;
+}
+
+function ClusterStatusSummary({ status }: { status: DeployStatusData }) {
+    const { raw, osType } = status;
+    const hasStorageCenter = STORAGE_CENTER_PRODUCT_TYPES.has(osType);
+    const rows = [
+        ...(hasStorageCenter ? [{ title: "스토리지 클러스터 상태", ...clusterStatusMeta(raw.storageClusterStatus) }] : []),
+        ...(osType !== "ablestack-standalone" ? [{ title: "호스트 클러스터 상태", ...clusterStatusMeta(raw.cloudClusterStatus) }] : []),
+        ...(hasStorageCenter ? [{ title: "스토리지센터 가상머신 상태", ...vmStatusMeta(raw.storageVmStatus) }] : []),
+        { title: "클라우드센터 가상머신 상태", ...vmStatusMeta(raw.cloudVmStatus) },
+    ];
+
+    return (
+        <dl className="ct-deploy-ribbon__cluster-status" aria-label="ABLESTACK 클러스터 상태">
+            {rows.map(({ title, label, color }) => (
+                <div key={title}>
+                    <dt>{title}</dt>
+                    <dd><DotStatus tone={color}>{label}</DotStatus></dd>
+                </div>
+            ))}
+        </dl>
+    );
 }
 
 function LiveStatusBadge() {
@@ -806,6 +830,8 @@ export default function DeploymentOverview({
     const [osVersionError, setOsVersionError] = React.useState("");
     const [kernelVersion, setKernelVersion] = React.useState("");
     const [kernelVersionError, setKernelVersionError] = React.useState("");
+    const [moldVersion, setMoldVersion] = React.useState("확인 중");
+    const [moldVersionError, setMoldVersionError] = React.useState("");
     const [isManagementActionsOpen, setIsManagementActionsOpen] = React.useState(false);
     const [isLicenseInfoOpen, setIsLicenseInfoOpen] = React.useState(false);
     const [licenseInfo, setLicenseInfo] = React.useState<LicenseStatus>({ kind: "loading" });
@@ -858,6 +884,8 @@ export default function DeploymentOverview({
                         setOsVersionError(version.osVersion ? "" : version.osVersionError || "OS 버전 정보가 비어 있습니다.");
                         setKernelVersion(version.kernelVersion);
                         setKernelVersionError(version.kernelVersion ? "" : version.kernelVersionError || "커널 버전 정보가 비어 있습니다.");
+                        setMoldVersion(version.moldVersion || "확인 불가");
+                        setMoldVersionError(version.moldVersion ? "" : version.moldVersionError || "Mold 버전 정보가 비어 있습니다.");
                     })
                     .catch((error) => {
                         if (!isMounted) return;
@@ -865,6 +893,8 @@ export default function DeploymentOverview({
                         setOsVersionError(error instanceof Error ? error.message : "OS 버전 조회에 실패했습니다.");
                         setKernelVersion("");
                         setKernelVersionError("");
+                        setMoldVersion("확인 불가");
+                        setMoldVersionError(error instanceof Error ? error.message : "Mold 버전 조회에 실패했습니다.");
                     });
         };
 
@@ -920,11 +950,7 @@ export default function DeploymentOverview({
         ? (isInitialStatusLoading
             ? "현재 배포 상태를 불러오는 중입니다. 확인된 상태를 받기 전까지 이전 단계로 이동하지 않습니다."
             : "배포 상태를 확인할 수 없습니다. 호스트 연결 상태를 확인해 주세요.")
-        : ribbonMessage(
-            isFlowComplete,
-            currentStageLabel,
-            { ...data, warnings: blockingWarnings }
-        );
+        : ribbonMessage(currentStageLabel, data.osType);
     const productLabel = useStatusPlaceholder
         ? "확인 중"
         : PRODUCT_LABELS[data.osType] ?? (data.osType || "클러스터 타입 미정");
@@ -934,22 +960,18 @@ export default function DeploymentOverview({
             ...connectionActions(data),
             ...visibleActions(data, currentStage).filter((action) =>
                 !CONNECTION_ACTIONS.has(action) && !MANAGEMENT_ACTIONS.has(action)),
-            ...securityPatchAction(data, isFlowComplete),
-            ...managementActionsFor(isFlowComplete),
+            ...managementActionsFor(data, isFlowComplete),
         ]));
     const ribbonConnectionActions = useStatusPlaceholder ? [] : connectionActions(data);
-    const ribbonPrimaryActions = useStatusPlaceholder
+    const ribbonPrimaryActions = useStatusPlaceholder || isFlowComplete
         ? []
-        : Array.from(new Set([
-            ...visibleActions(data, currentStage).filter((action) =>
-                !CONNECTION_ACTIONS.has(action) && !MANAGEMENT_ACTIONS.has(action)),
-            ...securityPatchAction(data, isFlowComplete),
-        ]));
-    const ribbonManagementActions = managementActionsFor(isFlowComplete);
+        : visibleActions(data, currentStage).filter((action) =>
+            !CONNECTION_ACTIONS.has(action) && !MANAGEMENT_ACTIONS.has(action));
+    const ribbonManagementActions = managementActionsFor(data, isFlowComplete);
     const checkedAtLabel = useStatusPlaceholder ? "확인 중" : formatDateTime(data.checkedAt);
     const osVersionLabel = useStatusPlaceholder ? "확인 중" : osVersion;
     const licenseLabel = useStatusPlaceholder ? "확인 중" : licenseStatusLabel(data.raw.licenseStatus);
-    const isPreProductFlow = !useStatusPlaceholder && (!data.osType ||
+    const isPreProductFlow = !useStatusPlaceholder && !isFlowComplete && (!data.osType ||
         currentStage === LICENSE_STAGE ||
         currentStage === "cluster_prepare" ||
         currentStage === PRODUCT_FLOW_PENDING_STAGE);
@@ -1041,13 +1063,15 @@ export default function DeploymentOverview({
                     <div className="ct-deploy-ribbon__layout">
                         <div className="ct-deploy-ribbon__main">
                             <div className="ct-deploy-ribbon__copy">
-                                <div className="ct-deploy-ribbon__title-row">
-                                    <InfoCircleIcon aria-hidden="true" />
-                                    <strong>ABLESTACK 가상어플라이언스 상태</strong>
-                                    {isCollecting && <LiveStatusBadge />}
-                                </div>
-                                <h1>{currentStageLabel}</h1>
-                                <Content component="p">{summaryMessage}</Content>
+                                {!isFlowComplete && (
+                                    <div className="ct-deploy-ribbon__title-row">
+                                        <InfoCircleIcon aria-hidden="true" />
+                                        <strong>배포·구성 상태</strong>
+                                        {isCollecting && <LiveStatusBadge />}
+                                    </div>
+                                )}
+                                <h1>{isFlowComplete ? "ABLESTACK 개요" : currentStageLabel}</h1>
+                                {!isFlowComplete && <Content component="p">{summaryMessage}</Content>}
                             </div>
 
                             <div className="ct-deploy-ribbon__meta">
@@ -1056,7 +1080,7 @@ export default function DeploymentOverview({
                                     <strong>{productLabel}</strong>
                                 </div>
                                 <div>
-                                    <span>OS 버전</span>
+                                    <span>Cube 버전</span>
                                     <strong title={useStatusPlaceholder ? undefined : osVersionError || undefined}>
                                         {osVersionLabel}
                                         {!useStatusPlaceholder && (kernelVersion || kernelVersionError) && (
@@ -1080,8 +1104,8 @@ export default function DeploymentOverview({
                                     </div>
                                 </div>
                                 <div>
-                                    <span>확인 시각</span>
-                                    <strong>{checkedAtLabel}</strong>
+                                    <span>Mold 버전</span>
+                                    <strong title={moldVersionError || undefined}>{moldVersion}</strong>
                                 </div>
                             </div>
 
@@ -1094,7 +1118,7 @@ export default function DeploymentOverview({
 
                             {ribbonConnectionActions.length > 0 && (
                                 <div className="ct-deploy-ribbon__connection-zone ct-deploy-ribbon__connection-zone--main">
-                                    <span>관리 콘솔</span>
+                                    <h2 className="ct-deploy-ribbon__connection-title">관리 페이지 바로가기</h2>
                                     <div className="ct-deploy-ribbon__actions ct-deploy-ribbon__actions--connection">
                                         {ribbonConnectionActions.map((action) => (
                                             <Button
@@ -1112,7 +1136,9 @@ export default function DeploymentOverview({
                         </div>
 
                         <div className="ct-deploy-ribbon__flow-panel">
-                            <div className="ct-deploy-overview__section-title">ABLESTACK 설치 및 구성 단계</div>
+                            <div className="ct-deploy-overview__section-title">
+                                {isFlowComplete ? "ABLESTACK 클러스터 상태" : "ABLESTACK 설치 및 구성 단계"}
+                            </div>
                             <div className="ct-deploy-ribbon__flow-content">
                                 {useStatusPlaceholder
                                     ? (
@@ -1121,21 +1147,15 @@ export default function DeploymentOverview({
                                           message={summaryMessage}
                                         />
                                     )
-                                    : renderStageList("ribbon")}
+                                    : isFlowComplete
+                                        ? <ClusterStatusSummary status={data} />
+                                        : renderStageList("ribbon")}
                             </div>
                             <div className="ct-deploy-ribbon__workflow-zone">
-                                <span>실행 가능한 작업</span>
                                 <div className="ct-deploy-ribbon__workflow-controls">
-                                    <div className="ct-deploy-ribbon__actions ct-deploy-ribbon__actions--primary">
-                                        {ribbonPrimaryActions.length === 0 && ribbonManagementActions.length === 0
-                                            ? (
-                                                <span className="ct-deploy-overview__muted">
-                                                    {useStatusPlaceholder
-                                                        ? "상태 확인 후 가능한 작업이 표시됩니다."
-                                                        : "현재 실행 가능한 작업이 없습니다."}
-                                                </span>
-                                            )
-                                            : ribbonPrimaryActions.map((action) => (
+                                    {ribbonPrimaryActions.length > 0 && (
+                                        <div className="ct-deploy-ribbon__actions ct-deploy-ribbon__actions--primary">
+                                            {ribbonPrimaryActions.map((action) => (
                                                 <Button
                                                   key={action}
                                                   variant="secondary"
@@ -1145,18 +1165,8 @@ export default function DeploymentOverview({
                                                     {ACTION_LABELS[action] ?? action}
                                                 </Button>
                                             ))}
-                                        {/* 다중 호스트 사전 구성 검증 정비 전까지 올인원 버튼 숨김.
-                                        {showDeployRunControl && (
-                                            <Button
-                                              variant="secondary"
-                                              className="ct-deploy-ribbon__action ct-deploy-ribbon__action--workflow"
-                                              onClick={onOpenDeployRun}
-                                            >
-                                                올인원 제어
-                                            </Button>
-                                        )}
-                                        */}
-                                    </div>
+                                        </div>
+                                    )}
                                     {ribbonManagementActions.length > 0 && (
                                         <div className="ct-deploy-ribbon__utility-menu">
                                             <Dropdown

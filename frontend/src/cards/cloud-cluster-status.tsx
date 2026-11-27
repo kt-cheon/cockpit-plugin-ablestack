@@ -13,11 +13,7 @@ import {
 } from "@patternfly/react-core";
 import CloudClusterMigrationModal from "./cloud-cluster-migration-modal";
 import SshPortChangeModal from "./ssh-port-change-modal";
-import {
-  STATUS_LOADING_LABEL,
-  STATUS_UNKNOWN_LABEL,
-  StatusLoadingMessage,
-} from "./status-loading";
+import { StatusLoadingMessage } from "./status-loading";
 import ActionProgressModal from "../components/common/ActionProgressModal";
 import type { ActionProgressPhase } from "../components/common/ActionProgressModal";
 import ConfirmActionModal from "../components/common/ConfirmActionModal";
@@ -32,26 +28,12 @@ import {
 import { runSecurityPatch } from "../services/api/security-patch";
 import {
   DotStatus,
+  clusterStatusMeta,
   InfoGrid,
   InfoItem,
   StatusCardHeading,
 } from "./status-card-layout";
 import "./status-card.scss";
-
-const CLUSTER_STATUS_META = {
-  HEALTH_OK: {
-    label: "Health OK",
-    color: "green",
-  },
-  HEALTH_WARN: {
-    label: "Health Warn",
-    color: "orange",
-  },
-  HEALTH_ERR: {
-    label: "Health Err",
-    color: "red",
-  },
-};
 
 type CloudClusterConfirmAction =
   | "start"
@@ -103,15 +85,7 @@ export default function CloudClusterStatus({ pollingEnabled = true, readOnly = f
     onError: handleStatusError,
   });
 
-  const statusMeta = isCollecting
-    ? {
-      label: STATUS_LOADING_LABEL,
-      color: "orange",
-    }
-    : (CLUSTER_STATUS_META as any)[data.clusterStatus] ?? {
-      label: STATUS_UNKNOWN_LABEL,
-      color: "orange",
-    };
+  const statusMeta = clusterStatusMeta(data.clusterStatus, isCollecting);
 
   const isClusterError = data.clusterStatus === "HEALTH_ERR";
   const isClusterUnknown = data.clusterStatus === "N/A" || data.clusterStatus === "";

@@ -8,7 +8,7 @@ interface VersionResponse {
   mold_version?: string;
   glue_version?: string;
   message?: string;
-  errors?: { os_version?: string; kernel_version?: string };
+  errors?: { os_version?: string; kernel_version?: string; mold_version?: string };
 }
 
 export interface VersionInfo {
@@ -18,6 +18,7 @@ export interface VersionInfo {
   kernelVersionError?: string;
   cockpitVersion: string;
   moldVersion: string;
+  moldVersionError?: string;
   glueVersion: string;
 }
 
@@ -45,6 +46,7 @@ export async function fetchVersionInfo(): Promise<VersionInfo> {
         kernelVersionError: normalizeString(parsed.errors?.kernel_version),
         cockpitVersion: normalizeString(parsed.cockpit_version),
         moldVersion: normalizeString(parsed.mold_version),
+        moldVersionError: normalizeString(parsed.errors?.mold_version),
         glueVersion: normalizeString(parsed.glue_version),
     };
 }
