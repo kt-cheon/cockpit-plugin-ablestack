@@ -78,6 +78,8 @@ export default function StatusPage() {
     const [cloudCenterConfigureError, setCloudCenterConfigureError] = React.useState("");
     const [deployStatus, setDeployStatus] = React.useState<DeployStatusData>(DEPLOY_STATUS_FALLBACK);
     const [actionNotice, setActionNotice] = React.useState("");
+    const [centerLink, setCenterLink] = React.useState<{ url: string; title: string } | null>(null);
+    const actionRequest = React.useRef(0);
     const [statusRefreshKey, setStatusRefreshKey] = React.useState(0);
 
     const refreshDeployOverview = React.useCallback(() => {
@@ -95,23 +97,23 @@ export default function StatusPage() {
     }, [deployStatus.raw.licenseStatus]);
 
     const openCenterUrl = async (option: DeployUrlOption, title: string) => {
-        setActionNotice("");
-        const centerWindow = window.open("about:blank", "_blank");
-
-        if (!centerWindow) {
-            setActionNotice("브라우저 팝업 차단을 해제한 후 다시 시도해주세요.");
-            return;
-        }
+        const request = actionRequest.current;
+        setActionNotice(`${title} 상태를 확인하고 있습니다.`);
 
         try {
-            centerWindow.document.title = title;
-
             const targetUrl = await fetchDeployUrl(option);
+            if (request !== actionRequest.current) return;
 
-            centerWindow.opener = null;
-            centerWindow.location.href = targetUrl;
+            const centerWindow = window.open(targetUrl, "_blank");
+            if (centerWindow) {
+                centerWindow.opener = null;
+                setActionNotice("");
+            } else {
+                setActionNotice("브라우저에서 새 탭을 자동으로 열지 못했습니다. 아래 링크로 연결할 수 있습니다.");
+                setCenterLink({ url: targetUrl, title });
+            }
         } catch (error) {
-            centerWindow.close();
+            if (request !== actionRequest.current) return;
             setActionNotice(
                 error instanceof Error ? error.message : `${title} 주소 조회에 실패했습니다.`
             );
@@ -144,7 +146,9 @@ export default function StatusPage() {
     };
 
     const handleDeployAction = (action: string) => {
+        actionRequest.current += 1;
         setActionNotice("");
+        setCenterLink(null);
 
         switch (action) {
         // 다중 호스트의 사전 구성 검증 정비 후 올인원 진입 경로를 복원합니다.
@@ -369,7 +373,17 @@ export default function StatusPage() {
                   variant={PageSectionVariants.default}
                   className="ct-status-notice-section"
                 >
-                    <div className="ct-status-action-notice">{actionNotice}</div>
+                    <div className="ct-status-action-notice" role="status">
+                        {actionNotice}
+                        {centerLink && (
+                            <div>
+                                <Button component="a" variant="link" isInline href={centerLink.url}
+                                  target="_blank" rel="noopener noreferrer">
+                                    {centerLink.title} 열기
+                                </Button>
+                            </div>
+                        )}
+                    </div>
                 </PageSection>
             )}
 

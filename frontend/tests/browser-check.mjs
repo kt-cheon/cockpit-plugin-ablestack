@@ -766,14 +766,33 @@ try {
       await page.locator('.ct-license-management-modal').waitFor({state: 'hidden'});
       const connectionError = '클라우드센터에 정상적으로 연결되지 않습니다.\n클라우드센터 서비스 상태를 확인하거나, 잠시 후에 다시 시도해주십시오.';
       await page.evaluate((message) => {
+        window.__centerPopupUrls = [];
+        window.open = (url) => {
+          window.__centerPopupUrls.push(url);
+          return window.__blockCenterPopup ? null : { opener: window };
+        };
         window.__responses['/api/v1/cube/url?option=cloudCenter'] = {
           code: 500, bridge_error: true, message: message.replace('\n', ' <br>'),
         };
       }, connectionError);
-      await page.getByRole('button', {name: '클라우드센터 연결', exact: true}).click();
+      const connect = page.getByRole('button', {name: '클라우드센터 연결', exact: true});
+      await connect.click();
       const connectionNotice = page.locator('.ct-status-action-notice');
-      await connectionNotice.waitFor();
+      await connectionNotice.getByText('클라우드센터에 정상적으로 연결되지 않습니다.', {exact: false}).waitFor();
       assert.equal(await connectionNotice.innerText(), connectionError, 'the connection error renders on two lines');
+      assert.deepEqual(await page.evaluate(() => window.__centerPopupUrls), [], 'unavailable services do not open a popup');
+      const cloudCenterUrl = 'http://192.0.2.30:8080/';
+      await page.evaluate((url) => {
+        window.__responses['/api/v1/cube/url?option=cloudCenter'] = {code: 200, val: {cloudCenter: url}};
+      }, cloudCenterUrl);
+      await connect.click();
+      await page.waitForFunction(() => window.__centerPopupUrls.length === 1);
+      assert.deepEqual(await page.evaluate(() => window.__centerPopupUrls), [cloudCenterUrl], 'successful connections open the resolved address directly');
+      await page.evaluate(() => { window.__blockCenterPopup = true; });
+      await connect.click();
+      const fallback = connectionNotice.getByRole('link', {name: '클라우드센터 연결 열기'});
+      await fallback.waitFor();
+      assert.equal(await fallback.getAttribute('href'), cloudCenterUrl, 'popup blocking leaves a direct link');
       await page.evaluate(() => { window.__permission.allowed = false; window.__permission.callbacks.forEach((callback) => callback()); });
       await page.getByText('Cockpit에서 관리자 접근을 활성화해 주세요.').waitFor();
       assert.equal(await page.locator('.ct-status-card').count(), 0, 'revoked access removes all status cards');

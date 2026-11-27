@@ -53,11 +53,11 @@ def cloudCenter(action, H=False):
         try:
             # 클라우드센터
             value = "http://"+ip+":8080"
-            request = requests.get(value)
+            with requests.get(value, timeout=3, stream=True) as response:
+                response.raise_for_status()
 
-        except:
-             # http 접속되지않는 경우
-            return createReturn(code=500, val="클라우드센터에 정상적으로 연결되지 않습니다. <br>클라우드센터 서비스 상태를 확인하거나, 잠시 후에 다시 시도해주십시오.")
+        except requests.RequestException:
+            return createReturn(code=500, val="클라우드센터 웹 서비스에 연결할 수 없습니다.\n클라우드센터 서비스 상태를 확인하거나 잠시 후 다시 시도해 주세요.")
 
     if H:
         return json.dumps(json.loads(createReturn(code=200, val=value, retname=action)), indent=4)
