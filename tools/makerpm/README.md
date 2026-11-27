@@ -3,6 +3,10 @@
 `tools/makerpm/rpmbuild.sh`는 기본적으로 스크립트가 위치한 저장소를 빌드합니다.
 다른 소스 디렉터리를 빌드할 때는 세 번째 인자로 저장소 루트를 지정합니다.
 기존 빌드와 같이 Linux의 `rpm-build` 패키지와 `node_modules`가 필요합니다.
+React 브랜치는 빌드 서버에 Node.js 22 이상과 npm도 필요합니다. 빌드 스크립트가
+`frontend/package-lock.json`을 기준으로 의존성을 설치하고 React 정적 파일을 생성합니다.
+`frontend/node_modules`는 패키지에서 제외하며, 설치 대상 호스트에는 Node.js가 필요하지 않습니다.
+`--source-only`도 React 빌드를 수행합니다. [React UI 안내](../../frontend/README.md)를 참고합니다.
 
 ```sh
 ./tools/makerpm/rpmbuild.sh v4.5.1 261028

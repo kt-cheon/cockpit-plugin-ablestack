@@ -8,9 +8,11 @@ import logging
 import os
 from pathlib import Path
 import selectors
+import select
 import signal
 import socket
 import socketserver
+import ssl
 import subprocess
 import tempfile
 import threading
@@ -221,6 +223,20 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(json.dumps(value).encode() + b"\n")
         self.wfile.flush()
 
+    def command_disconnected(self):
+        # No more request data is expected while streaming a command. Detect EOF even
+        # when the command is silent, so closing the task's client stops remote work.
+        if not select.select([self.connection], [], [], 0)[0]:
+            return False
+        previous_timeout = self.connection.gettimeout()
+        try:
+            self.connection.setblocking(False)
+            return self.connection.recv(1) == b''
+        except (BlockingIOError, ssl.SSLWantReadError, ssl.SSLWantWriteError):
+            return False
+        finally:
+            self.connection.settimeout(previous_timeout)
+
     def execute(self, spec):
         argv, directory, environ, timeout, stdin = spec
         with contextlib.ExitStack() as stack:
@@ -232,15 +248,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
             process = stack.enter_context(subprocess.Popen(
                 argv, cwd=directory, env=environ, stdin=command_input,
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True))
-            self.send_response(200)
-            self.send_header("Content-Type", "application/x-ndjson")
-            self.end_headers()
             deadline = time.monotonic() + timeout
             try:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/x-ndjson")
+                self.end_headers()
                 with selectors.DefaultSelector() as selector:
                     selector.register(process.stdout, selectors.EVENT_READ, "stdout")
                     selector.register(process.stderr, selectors.EVENT_READ, "stderr")
                     while selector.get_map():
+                        if self.command_disconnected():
+                            raise ConnectionAbortedError('Command client disconnected')
                         if time.monotonic() >= deadline:
                             raise subprocess.TimeoutExpired(argv, timeout)
                         for key, _ in selector.select(timeout=0.5):
@@ -249,6 +267,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
                                 self.event({"channel": key.data, "data": base64.b64encode(chunk).decode()})
                             else:
                                 selector.unregister(key.fileobj)
+                        # Descendants may keep the pipes open after a failed shell exits.
+                        if process.poll() not in (None, 0):
+                            try:
+                                os.killpg(process.pid, signal.SIGKILL)
+                            except ProcessLookupError:
+                                pass
                 code = process.wait(timeout=max(0.01, deadline - time.monotonic()))
                 self.event({"exit_code": code})
             except (OSError, subprocess.TimeoutExpired):

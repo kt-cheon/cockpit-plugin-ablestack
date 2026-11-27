@@ -13,6 +13,7 @@ BuildRequires: /bin/bash
 BuildRequires: /usr/bin/python3
 Requires: /bin/bash
 Requires: /usr/bin/python3
+Requires: python3-cryptography
 Requires(pre): /usr/bin/python3
 Requires(post): /usr/bin/python3
 Requires: ablecube-agent = %{version}-%{release}
@@ -48,7 +49,7 @@ Mutually authenticated HTTPS transport for ABLESTACK hosts and management VMs.
 rm -rf "$RPM_BUILD_ROOT"
 mkdir -p "$RPM_BUILD_ROOT/usr/share/cockpit/ablestack"
 
-cp -a {README.md,node_modules,images,main.html,manifest.json,sample,shell,src,tools,python,index.html,index.js,main-glue.html,main-glue-no-permission.html} \
+cp -a {README.md,node_modules,images,main.html,manifest.json,sample,shell,src,tools,python,index.html,index.js,react.html,main-glue.html,main-glue-no-permission.html} \
     "$RPM_BUILD_ROOT/usr/share/cockpit/ablestack"
 
 # 디렉터리에는 탐색 권한을 주고, 설정 파일은 실행 파일로 설치하지 않는다.

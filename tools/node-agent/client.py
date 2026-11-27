@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
+import time
 from urllib.parse import urlencode
 
 from config import load_config, resolve_target, tls_context
@@ -42,6 +43,7 @@ class Client:
 
     def execute(self, target, argv, options=None, stdout=None, stderr=None, timeout=600, stdin=None):
         connection = self.connection(target)
+        response = None
         output = bytearray()
         errors = bytearray()
         try:
@@ -53,10 +55,16 @@ class Client:
             body = json.dumps(request).encode()
             connection.request("POST", "/v1/exec", body, {"Content-Type": "application/json"})
             # TLS connection establishment has a short deadline; execution can take longer.
-            connection.sock.settimeout(timeout + 10)
+            execution_socket = connection.sock
+            execution_socket.settimeout(timeout + 10)
+            deadline = time.monotonic() + timeout + 10
             response = connection.getresponse()
             self.check(response)
             while True:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError('Remote command execution deadline exceeded')
+                execution_socket.settimeout(remaining)
                 line = response.readline(128 * 1024)
                 if not line:
                     raise RuntimeError("Remote command disconnected without an exit status")
@@ -77,6 +85,8 @@ class Client:
                         raise RuntimeError("Remote output exceeds the capture limit")
                     buffer.extend(data)
         finally:
+            if response is not None:
+                response.close()
             connection.close()
 
     def download(self, target, remote_path, destination):

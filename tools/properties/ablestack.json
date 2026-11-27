@@ -17,7 +17,9 @@
         "status": "false"
     },
     "ui": {
-        "scvm_lun_passthrough": false
+        "scvm_lun_passthrough": false,
+        "cluster_type_powerflex": false,
+        "cluster_type_hci_filesystem": false
     },
     "gfs": {
         "journal_size_mb": 512,

@@ -10,6 +10,7 @@ import stat
 import sys
 import tempfile
 import threading
+import time
 import unittest
 from unittest.mock import patch
 
@@ -137,6 +138,34 @@ class NodeAgentTests(unittest.TestCase):
         result = self.admin.execute("server", [sys.executable, "-c", "import time; time.sleep(20)"],
             options={"directory": str(self.root)}, timeout=1)
         self.assertEqual(result.returncode, 124)
+
+    def test_disconnected_client_stops_silent_remote_command(self):
+        marker = self.root / 'disconnected-command-must-not-finish'
+        connection = self.admin.connection('server')
+        script = 'import time; from pathlib import Path; print("ready", flush=True); time.sleep(1.5); Path(' + repr(str(marker)) + ').touch()'
+        connection.request('POST', '/v1/exec', json.dumps({'argv': [sys.executable, '-c', script],
+            'options': {'directory': str(self.root)}, 'timeout': 30}), {'Content-Type': 'application/json'})
+        response = connection.getresponse()
+        try:
+            self.assertEqual(response.status, 200)
+            self.assertIn('data', json.loads(response.readline()))
+        finally:
+            response.close()
+            connection.close()
+        time.sleep(2)
+        self.assertFalse(marker.exists(), 'Disconnected tasks must not continue remote mutations')
+
+    def test_failed_parent_does_not_wait_for_descendants_holding_its_output_pipes(self):
+        marker = self.root / 'orphan-command-must-not-finish'
+        child = 'import time; from pathlib import Path; time.sleep(1.5); Path(' + repr(str(marker)) + ').touch()'
+        script = 'import subprocess,sys; subprocess.Popen([sys.executable,"-c",sys.argv[1]]); sys.exit(9)'
+        started = time.monotonic()
+        result = self.admin.execute('server', [sys.executable, '-c', script, child],
+            options={'directory': str(self.root)}, timeout=10)
+        self.assertEqual(result.returncode, 9)
+        self.assertLess(time.monotonic() - started, 3)
+        time.sleep(2)
+        self.assertFalse(marker.exists())
 
     def test_binary_file_transfer_is_atomic_and_preserves_mode(self):
         source, remote, downloaded = [self.root / name for name in ("source.bin", "remote.bin", "downloaded.bin")]

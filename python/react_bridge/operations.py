@@ -1,0 +1,515 @@
+"""React contracts mapped to the existing Europa command entry points."""
+import base64
+import fcntl
+import hashlib
+import io
+import json
+import os
+from pathlib import Path
+import re
+import socket
+import tempfile
+import zipfile
+from urllib.parse import parse_qs, urlsplit
+from progress import run, tool_label
+
+PATHS = {
+    'nics', 'disk', 'disk/initialize', 'ssh/key', 'downloads', 'cluster/health', 'cluster/apply-local',
+    'scvm/lifecycle', 'scvm/bootstrap', 'ccvm/lifecycle', 'ccvm/edit', 'ccvm/create',
+    'ccvm/bootstrap', 'ccvm/secondary/resize', 'ccvm/service/control', 'ccvm/snap', 'db/dump',
+    'cloudinit/ccvm/generate', 'license/apply', 'pcs/control', 'gluecluster/update',
+    'gluecluster/config', 'gluecluster/url', 'gfs/manage', 'clvm/manage', 'hba/manage',
+    'multipath/sync', 'auto-shutdown', 'ccvm/monitoring/config', 'version/update',
+    'security/patch', 'security/evidence', 'security/evidence/download', 'url',
+    'deploy/jobs', 'deploy/run', 'hosts/remove', 'system/config', 'cluster/registration',
+    'local/manage', 'rbd/manage', 'glue/config/update', '_tasks', 'backup/manage',
+    'powerflex/status', 'powerflex/manage', 'glue/catalog', 'glue/service', 'system/context',
+}
+SSH_CONTEXT = b'ablestack-api:ssh-key-bundle:v1'
+SSH_SECRET = b'ablestack-api-ssh-key-bundle-default-secret-v1'
+SSH_KEY_DIR = Path('/root/.ssh')
+
+
+def split_request(request):
+    url = urlsplit(request.get('path', ''))
+    return url.path.removeprefix('/api/v1/cube/'), parse_qs(url.query)
+
+
+def handles(request):
+    path, _ = split_request(request)
+    return (path in PATHS or path.startswith('_tasks/') or path.startswith('hosts/remove/jobs/') or
+            request.get('path', '').startswith('/api/v1/mold/') or
+            request.get('path') == '/api/v1/version')
+
+
+def should_queue(request):
+    path, _ = split_request(request)
+    if request.get('path', '').startswith('/api/v1/mold/'):
+        return False
+    if path == 'glue/service':
+        from glue_catalog import operation
+        body = request.get('body', {})
+        return operation(body['service'], body.get('action', 'list'))['method'] != 'GET'
+    action = (request.get('body') or {}).get('action', '')
+    if path == 'gfs/manage' and action in ('get-gfs-settings', 'set-gfs-settings'):
+        return False
+    # The updater detaches itself. Never persist its credential-bearing request in request.json.
+    if path == 'version/update':
+        return False
+    if str(action).startswith(('list', 'check')) or action in ('info', 'status', 'overview'):
+        return False
+    return (request.get('method', 'GET') == 'POST' and path not in {
+        'ssh/key', 'downloads', 'cluster/registration', 'deploy/run', 'system/config',
+        'hosts/remove',
+    } and not path.startswith('_tasks/'))
+
+
+def atom(value):
+    value = str(value)
+    if not value or not re.fullmatch(r'[A-Za-z0-9_./:@,+%=-]+', value) or value.startswith('-'):
+        raise ValueError('장치·주소·이름의 형식을 확인해 주세요.')
+    return value
+
+
+def number(value, minimum=1, maximum=1048576):
+    value = int(value)
+    if not minimum <= value <= maximum:
+        raise ValueError('입력한 수치가 허용 범위를 벗어났습니다.')
+    return str(value)
+
+
+def choice(value, choices):
+    if value not in choices:
+        raise ValueError('지원하지 않는 작업입니다: ' + str(value))
+    return value
+
+
+def hosts(a):
+    return [row['hostname'] for row in a.cluster().get('hosts', [])]
+
+
+def host_list(a):
+    return ' '.join(map(atom, hosts(a)))
+
+
+def checked(a, name, args=(), target=None, timeout=3600):
+    operation = lambda: a.success(a.tool(name, args, target=target, timeout=timeout))
+    label = tool_label(name, args)
+    return run(a, label, operation) if label else operation()
+
+
+def flag(a, section, key, value='true', all_hosts=False):
+    targets = hosts(a) if all_hosts else [None]
+    def update():
+        for target in targets:
+            a.success(a.tool('ablestack_json/ablestackJson.py',
+                      ['update', '--depth1', section, '--depth2', key, '--value', str(value)],
+                      target=target, timeout=3600))
+        return {'code': 200}
+    return run(a, '클러스터 호스트의 구성 상태 저장' if all_hosts else '현재 호스트의 구성 상태 저장', update)
+
+
+def authorize_ssh_key(root, public_key):
+    identity = public_key.encode().split()[:2]
+    if len(identity) != 2:
+        raise ValueError('SSH 공개키를 확인할 수 없습니다.')
+
+    path = root / 'authorized_keys'
+    with os.fdopen(os.open(path, os.O_RDWR | os.O_APPEND | os.O_CREAT, 0o600), 'a+b') as authorized:
+        fcntl.flock(authorized, fcntl.LOCK_EX)
+        os.fchmod(authorized.fileno(), 0o600)
+        authorized.seek(0)
+        existing = authorized.read()
+        for line in existing.splitlines():
+            fields = line.split()
+            # Keep an existing entry for the same key, including any restrictions on it.
+            if fields and not fields[0].startswith(b'#') and any(
+                    fields[index:index + 2] == identity for index in range(len(fields) - 1)):
+                return
+        if existing and not existing.endswith(b'\n'):
+            authorized.write(b'\n')
+        authorized.write(b' '.join(identity) + b'\n')
+
+
+def ssh_keys(a, body):
+    root = SSH_KEY_DIR
+    private, public = root / 'id_rsa', root / 'id_rsa.pub'
+    action = body.get('action', 'status')
+    if action == 'generate':
+        root.mkdir(mode=0o700, exist_ok=True)
+        root.chmod(0o700)
+        if not private.exists():
+            a.command(['ssh-keygen', '-q', '-t', 'rsa', '-b', '3072', '-N', '', '-f', str(private)])
+        private.chmod(0o600)
+        derived = a.command(['ssh-keygen', '-y', '-P', '', '-f', str(private)]).strip()
+        existing = public.read_text().strip() if public.exists() else ''
+        if len(existing.splitlines()) != 1 or existing.split()[:2] != derived.split()[:2]:
+            public.write_text(derived + '\n')
+        public.chmod(0o644)
+        authorize_ssh_key(root, derived)
+        return {'code': 200}
+    if action == 'upload':
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+        incoming = base64.b64decode(body['content'], validate=True)
+        if not incoming.startswith(b'ASK1') or len(incoming) < 32:
+            raise ValueError('SSH KEY 파일 형식을 확인해 주세요.')
+        key = hashlib.sha256(SSH_CONTEXT + b'\0' + SSH_SECRET).digest()
+        archive = AESGCM(key).decrypt(incoming[4:16], incoming[16:], SSH_CONTEXT)
+        with zipfile.ZipFile(io.BytesIO(archive)) as bundle:
+            contents = {name: bundle.read(name) for name in ('id_rsa', 'id_rsa.pub')}
+        public_key = contents['id_rsa.pub'].decode('utf-8').strip()
+        if (not contents['id_rsa'].startswith(b'-----BEGIN ') or not public_key.startswith('ssh-') or
+                len(public_key.splitlines()) != 1):
+            raise ValueError('SSH KEY 내용이 올바르지 않습니다.')
+        root.mkdir(mode=0o700, exist_ok=True)
+        root.chmod(0o700)
+        # Validate the pair before replacing the currently installed keys.
+        with tempfile.TemporaryDirectory(dir=root) as work:
+            staged_private = Path(work) / 'id_rsa'
+            staged_private.write_bytes(contents['id_rsa'])
+            staged_private.chmod(0o600)
+            derived = a.command(['ssh-keygen', '-y', '-P', '', '-f', str(staged_private)])
+            if derived.split()[:2] != public_key.split()[:2]:
+                raise ValueError('개인키와 공개키가 일치하지 않습니다.')
+            staged_public = Path(work) / 'id_rsa.pub'
+            staged_public.write_text(public_key + '\n')
+            staged_public.chmod(0o644)
+            staged_private.replace(private)
+            staged_public.replace(public)
+        authorize_ssh_key(root, derived)
+        return {'code': 200}
+    if action == 'download':
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_STORED) as bundle:
+            bundle.writestr('id_rsa', private.read_bytes())
+            bundle.writestr('id_rsa.pub', public.read_bytes())
+        key = hashlib.sha256(SSH_CONTEXT + b'\0' + SSH_SECRET).digest()
+        nonce = os.urandom(12)
+        content = b'ASK1' + nonce + AESGCM(key).encrypt(nonce, buffer.getvalue(), SSH_CONTEXT)
+        return {'code': 200, 'content': base64.b64encode(content).decode(),
+                'private_key': private.read_text(), 'public_key': public.read_text(), 'filename': 'ssh-key.dat'}
+    return {'code': 200, 'val': {'private_key': private.read_text(), 'public_key': public.read_text()}}
+
+
+def download(a, body):
+    kind = body.get('kind')
+    if kind == 'registrations':
+        result = a.parse_output(a.command(['python3', '/usr/libexec/ablestack/node-agent/cluster_enrollment.py', 'list-exports']))
+        exports = []
+        for item in result['exports']:
+            name = item if isinstance(item, str) else item.get('host') or item.get('hostname')
+            value = a.parse_output(a.command(['python3', '/usr/libexec/ablestack/node-agent/cluster_enrollment.py',
+                                            'export', '--host', atom(name)]))
+            exports.append({'filename': name + '.cube-agent.json', 'content': json.dumps(value, ensure_ascii=False, indent=2)})
+        return {'code': 200, 'files': exports}
+    files = {'private': Path('/root/.ssh/id_rsa'), 'public': Path('/root/.ssh/id_rsa.pub'),
+             'cluster': a.PROPERTIES / 'cluster.json'}
+    path = files[choice(kind, files)]
+    return {'code': 200, 'filename': path.name, 'content': base64.b64encode(path.read_bytes()).decode()}
+
+
+def dispatch(a, request, reporter=None):
+    if request.get('path', '').startswith('/api/v1/mold/'):
+        from mold import handle
+        return handle(a, request, reporter)
+    path, query = split_request(request)
+    body = request.get('body') or {}
+    method = request.get('method', 'GET')
+    if not isinstance(body, dict) or method not in ('GET', 'POST'):
+        raise ValueError('유효하지 않은 요청입니다.')
+    action = body.get('action', '')
+    if method == 'GET' and not (path in {'_tasks', 'deploy/jobs', 'nics', 'disk', 'disk/initialize', 'ssh/key', 'cluster/health',
+           'system/config', 'security/evidence', 'security/evidence/download', 'url', 'gluecluster/url', 'powerflex/status',
+           'system/context', 'glue/catalog'} or
+           path.startswith(('_tasks/', 'hosts/remove/jobs/')) or request['path'] == '/api/v1/version'):
+        raise ValueError('이 작업에는 실행 요청이 필요합니다.')
+    if path == '_tasks':
+        from tasks import list_tasks
+        return {'code': 200, 'jobs': list_tasks()}
+    if path == 'system/context':
+        identity = a.read_json('/etc/ablestack/node-agent/agent.json').get('node_id', '')
+        hostname = socket.gethostname()
+        role = 'scvm' if str(identity).startswith('scvm') or 'scvm' in hostname.lower() else 'host'
+        return {'code': 200, 'role': role, 'hostname': hostname}
+    if path == 'glue/catalog':
+        from glue_catalog import catalog
+        return {'code': 200, 'services': catalog()}
+    if path == 'glue/service':
+        from glue_service import execute
+        return execute(a, body)
+    if path.startswith('_tasks/'):
+        from tasks import cancel, snapshot
+        parts = path.split('/')
+        if len(parts) == 3 and parts[2] == 'cancel' and method == 'POST':
+            return {'code': 200, 'job': cancel(parts[1])}
+        if len(parts) == 2 and method == 'GET':
+            return {'code': 200, 'job': snapshot(parts[1])}
+        raise ValueError('유효하지 않은 작업 요청입니다.')
+    if path.startswith('hosts/remove/jobs/'):
+        from tasks import snapshot
+        return {'code': 200, 'job': snapshot(path.split('/')[-1])}
+    if path == 'deploy/jobs':
+        from tasks import list_tasks
+        return {'code': 200, 'jobs': list_tasks('deploy')}
+    if path == 'deploy/run':
+        from tasks import start
+        state = start(request, 'deploy')
+        return {'code': 202, 'job_id': state['job_id'], 'status': state['status'], 'steps': state['steps']}
+    if path == 'nics':
+        return a.tool('nic/network_action.py', ['list'])
+    if path == 'powerflex/status':
+        return a.tool('powerflex_status/powerflex_status.py', ['detail'])
+    if path == 'powerflex/manage':
+        if action == 'deploy':
+            from workflows import pfmp_deploy
+            return pfmp_deploy(a, body)
+        if action == 'add-user':
+            return checked(a, 'powerflex_status/powerflex_user_add.py',
+                           ['add', '--username', body['username'], '--password', body['password']])
+        if action == 'install':
+            checked(a, 'pfmp/pfmp_install.py', ['pre_install'])
+        result = checked(a, 'pfmp/pfmp_install.py', [choice(action, ('install', 'remove', 'reset', 'test'))])
+        if action == 'install':
+            flag(a, 'bootstrap', 'pfmp', all_hosts=True)
+        return result
+    if path == 'disk':
+        source = query.get('action', ['list'])[0]
+        return a.tool('disk/disk_action.py', [{'gfs': 'gfs-list', 'detail': 'gfs-list', 'rbd': 'hci-shared-file-list'}.get(source, 'list')])
+    if path == 'disk/initialize':
+        if method == 'GET':
+            return a.success(a.tool('disk/disk_initialize.py', ['list']))
+        return a.success(a.tool('disk/disk_initialize.py', ['initialize'],
+                                stdin=json.dumps(body).encode('utf-8'), timeout=21600))
+    if path == 'ssh/key':
+        if method == 'GET' and action not in ('', 'status', 'download'):
+            raise ValueError('SSH KEY 변경에는 실행 요청이 필요합니다.')
+        return ssh_keys(a, body)
+    if path == 'downloads':
+        return download(a, body)
+    if path == 'cluster/registration':
+        profile = body['cluster']
+        return a.parse_output(a.command(['python3', '/usr/libexec/ablestack/node-agent/cluster_enrollment.py',
+                                        'prepare', '--source', choice(body.get('source', 'existing'), ('new', 'existing'))],
+                                       stdin=json.dumps({'cluster': profile, 'registration': body.get('registration')}).encode(),
+                                       timeout=300))
+    if path == 'cluster/health':
+        from workflows import check_health
+        return check_health(a, query.get('option', ['host'])[0])
+    if path == 'system/config':
+        if method == 'GET':
+            return {'code': 200, 'val': a.props()}
+        if action == 'update' and body.get('depth1') == 'license' and body.get('depth2') == 'status':
+            return a.sync_license_flags()
+        if action == 'gfs-configure':
+            return flag(a, 'bootstrap', 'gfs_configure', all_hosts=True)
+        raise ValueError('지원하지 않는 설정 변경입니다.')
+    if path == 'scvm/lifecycle':
+        args = [choice(action, ('start', 'stop', 'delete', 'resource'))]
+        if action == 'resource':
+            args += ['--cpu', number(body['cpu']), '--memory', number(body['memory'])]
+        return checked(a, 'scvm_status/scvm_status_update.py', args)
+    if path in ('scvm/bootstrap', 'ccvm/bootstrap'):
+        from workflows import bootstrap
+        return bootstrap(a, path[:4])
+    if path == 'cloudinit/ccvm/generate':
+        from workflows import cloudinit
+        return cloudinit(a, 'ccvm', body)
+    if path == 'ccvm/create':
+        from workflows import ccvm_create
+        return ccvm_create(a, body)
+    if path == 'ccvm/lifecycle':
+        from workflows import ccvm_lifecycle
+        return ccvm_lifecycle(a, action)
+    if path == 'ccvm/edit':
+        return checked(a, 'host/virshedit.py', ['edit', '--cpu', number(body['cpu']), '--memory', number(body['memory'])],
+                       target=a.pcs_target() if a.cluster().get('type') != 'ablestack-standalone' else None)
+    if path == 'ccvm/secondary/resize':
+        return checked(a, 'vm/ccvm_secondary_resize.py', ['--add-size', number(body['add_size'])])
+    if path == 'ccvm/service/control':
+        return checked(a, 'ccvm_service/ccvm_service_control.py',
+                       [choice(action, ('start', 'stop', 'restart', 'status')), '--service-name',
+                        choice(body['service_name'], ('mold.service', 'mysqld'))])
+    if path == 'ccvm/snap':
+        args = [choice(action, ('backup', 'rollback', 'list'))]
+        if body.get('snap_name'):
+            args += ['--snap-name', atom(body['snap_name'])]
+        return checked(a, 'ccvm_snap/ccvm_snap_action.py', args)
+    if path == 'db/dump':
+        body = dict({'path': '/home/db_backup', 'repeat': 'daily', 'timeone': '02:00',
+                     'timetwo': '0', 'delete': '30', 'checkOption': 'r'}, **body)
+        args = [choice(action, ('instantBackup', 'regularBackup', 'deleteOldBackup', 'checkBackup', 'deactiveBackup'))]
+        for key in ('path', 'repeat', 'timeone', 'timetwo', 'delete', 'checkOption'):
+            if body.get(key):
+                args += ['--' + key, atom(body[key])]
+        return checked(a, 'vm/dump_ccvm.py', args)
+    if path == 'backup/manage':
+        args = [choice(action, ('backup', 'status', 'list', 'restore', 'overview', 'sync', 'schedule',
+                               'unschedule', 'schedule-delete', 'unschedule-delete'))]
+        for key in ('repeat', 'time', 'target_dir', 'target_file', 'mode'):
+            if body.get(key):
+                args += ['--' + key.replace('_', '-'), atom(body[key])]
+        for key in ('day', 'month', 'retain_months'):
+            if body.get(key):
+                args += ['--' + key.replace('_', '-'), number(body[key])]
+        return checked(a, 'backup/ccvm_backup.py', args, timeout=43200)
+    if path == 'license/apply':
+        from workflows import apply_license
+        return apply_license(a, body.get('roles', ['ccvm']))
+    if path == 'pcs/control':
+        args = [choice(action, ('move', 'cleanup')), '--resource', 'cloudcenter_res']
+        if action == 'move':
+            args += ['--target', atom(body['target'])]
+        return checked(a, 'pcs/main.py', args, target=a.pcs_target())
+    if path == 'gluecluster/update':
+        return checked(a, 'scc_status/scc_status_update.py', [choice(action, ('set_noout', 'unset_noout'))])
+    if path in ('gluecluster/config', 'glue/config/update'):
+        return checked(a, 'glue/update_glue_config.py', ['update'], target='scvm')
+    if path in ('url', 'gluecluster/url'):
+        option = query.get('option', ['storageCenter' if path.startswith('glue') else 'cloudCenter'])[0]
+        result = checked(a, 'url/create_address.py', [choice(option, ('storageCenter', 'cloudCenter', 'wallCenter', 'cloudCenterVm', 'storageCenterVm'))])
+        value = result.get('val')
+        if isinstance(value, str):
+            return {'code': 200, 'val': {option: value}}
+        return result
+    if path in ('clvm/manage', 'hba/manage', 'gfs/manage'):
+        return storage_action(a, path, body)
+    if path == 'local/manage':
+        return checked(a, 'local/local_manage.py',
+                       ['--' + choice(action, ('create-local-disk', 'local-disk-status', 'reset'))] +
+                       (['--disks', ','.join(map(atom, body['disks']))] if body.get('disks') else []))
+    if path == 'rbd/manage':
+        args = ['--' + choice(action, ('create-rbd-image', 'delete-rbd-image')), '--list-ip', host_list(a)]
+        for key in ('size', 'image_name'):
+            if key in body:
+                args += ['--' + key.replace('_', '-'), atom(body[key])]
+        return checked(a, 'rbd/rbd_manage.py', args)
+    if path == 'multipath/sync':
+        run(a, '외부 스토리지 연결 정보 동기화' if action == 'sync' else '외부 스토리지 디스크 재검색',
+            lambda: a.command(['bash', str(a.ROOT / 'shell/host/multipath_sync.sh'),
+                               choice(action, ('sync', 'rescan'))], timeout=900))
+        return {'code': 200, 'action': action, 'message': '외부 스토리지 작업이 완료되었습니다.', 'results': []}
+    if path == 'auto-shutdown':
+        return checked(a, 'host/auto-shutdown.py', [choice(action, ('check_mount', 'stop_scvms', 'shutdown_hosts'))])
+    if path == 'cluster/apply-local' and action == 'reset':
+        return checked(a, 'cluster/remove_cube_host.py', ['remove'])
+    if path == 'ccvm/monitoring/config':
+        from workflows import monitoring
+        return monitoring(a, body)
+    if path == 'version/update':
+        update_type = choice(body.get('update_type', 'all'), ('all', 'mold', 'packages', 'tools'))
+        args = [choice(action, ('info', 'run', 'log')), '--mount-path',
+                atom(body.get('mount_path', '/') if action == 'log' else body['mount_path']), '--update-type', update_type]
+        if action == 'run' and update_type != 'tools':
+            credentials = body.get('mold_credentials')
+            if not isinstance(credentials, dict):
+                raise ValueError('Mold 관리자 ID와 비밀번호를 입력하세요.')
+            return a.success(a.tool('host/ablestack_update.py', args + ['--credentials-stdin'],
+                                    stdin=json.dumps(credentials).encode('utf-8'), timeout=21600))
+        return checked(a, 'host/ablestack_update.py', args)
+    if request['path'] == '/api/v1/version':
+        from system_version import version_info
+        return version_info(a)
+    if path == 'security/patch':
+        args = []
+        if body.get('ssh_user'):
+            args += ['--ssh-user', atom(body['ssh_user'])]
+        for key in ('add_host', 'port_change', 'update_json_file', 'local', 'dry_run'):
+            if body.get(key):
+                args.append('--' + key.replace('_', '-'))
+        if body.get('new_port'):
+            args += ['--new-port', number(body['new_port'], 1, 65535)]
+        if body.get('ssh_port'):
+            args += ['--ssh-port', number(body['ssh_port'], 1, 65535)]
+        if body.get('targets'):
+            args += ['--targets', *[choice(item, ('ccvm', 'ablecube', 'scvm', 'all')) for item in body['targets']]]
+        if body.get('dry_run') or body.get('update_json_file'):
+            return checked(a, 'security_patch/security_patch.py', args)
+        maintenance = a.cluster().get('type') != 'ablestack-standalone'
+        if maintenance:
+            checked(a, 'gfs/gfs_manage.py', ['--check-stonith', '--control', 'security-disable'])
+        try:
+            result = checked(a, 'security_patch/security_patch.py', args)
+            if not body.get('port_change'):
+                checked(a, 'security_patch/security_patch.py', ['--update-json-file'] + (['--local'] if body.get('add_host') else []))
+            if body.get('new_port') and not body.get('add_host') and a.cluster().get('type') in ('ablestack-hci', 'ablestack-hci-filesystem'):
+                checked(a, 'security_patch/security_patch.py', ['--ceph-ssh-change', '--new-port', number(body['new_port'], 1, 65535)])
+            return result
+        finally:
+            if maintenance:
+                checked(a, 'gfs/gfs_manage.py', ['--check-stonith', '--control', 'security-enable'])
+    if path.startswith('security/evidence'):
+        if path.endswith('/download'):
+            response = checked(a, 'security_evidence/security_evidence_package.py', ['latest'])
+            info = response.get('val', {})
+            archive = Path(info.get('zip_path') or info.get('path', ''))
+            if not archive.resolve().is_relative_to(Path('/var/lib/ablestack/security-evidence')):
+                raise ValueError('증적 파일 경로를 확인하지 못했습니다.')
+            return {'code': 200, 'content': base64.b64encode(archive.read_bytes()).decode()}
+        args = ['generate'] if method == 'POST' else ['latest']
+        if method == 'POST':
+            args += ['--targets', *[choice(item, ('ccvm', 'ablecube', 'scvm', 'all')) for item in body.get('targets', ['all'])]]
+            for key in ('items', 'ssh_port', 'timeout', 'max_output_lines'):
+                if body.get(key):
+                    args += ['--' + key.replace('_', '-'), atom(body[key])]
+            for host in body.get('hosts', []):
+                args += ['--host', atom(host)]
+        return a.tool('security_evidence/security_evidence_package.py', args, timeout=14400)
+    if path == 'hosts/remove':
+        if reporter is None:
+            from tasks import start
+            state = start(request, 'hosts-remove')
+            return {'code': 202, 'job_id': state['job_id']}
+        from workflows import remove_host
+        return remove_host(a, atom(body['hostname']), reporter)
+    raise ValueError('연결되지 않은 작업입니다: ' + path)
+
+
+def storage_action(a, path, body):
+    action = body.get('action', 'list-hba-wwn' if path == 'hba/manage' else '')
+    if path == 'gfs/manage' and action in ('get-gfs-settings', 'set-gfs-settings'):
+        args = ['--' + action]
+        if action == 'set-gfs-settings':
+            args += ['--stripe-size-kib', choice(str(body.get('stripe_size_kib')), ('64', '128', '256', '512'))]
+        return checked(a, 'gfs/gfs_manage.py', args)
+    gfs_actions = {'init-pcs-cluster', 'create-gfs', 'configure-stonith', 'check-ipmi', 'set-alert',
+                   'check-host', 'check-stonith', 'remove-host', 'create-ccvm-cluster'}
+    clvm_actions = {'list-hba-wwn', 'list-clvm', 'create-clvm', 'delete-clvm', 'delete-gfs', 'extend', 'add-extend', 'rescan', 'scan', 'list-gfs'}
+    choice(action, gfs_actions | clvm_actions)
+    module = 'gfs/gfs_manage.py' if action in gfs_actions else 'clvm/disk_manage.py'
+    args = ['--' + action]
+    if action in ('configure-stonith', 'check-ipmi'):
+        devices = body.get('stonith', [])
+        if not devices:
+            raise ValueError('IPMI 설정이 필요합니다.')
+        values = []
+        for device in devices:
+            fields = [str(device[key]) if key != 'ipport' else str(device.get(key) or '623')
+                      for key in ('ipaddr', 'ipport', 'login', 'passwd')]
+            if any(',' in field or ';' in field for field in fields):
+                raise ValueError('IPMI 계정 정보에는 쉼표와 세미콜론을 사용할 수 없습니다.')
+            values.append(','.join(fields))
+        args += (['--stonith'] if action == 'check-ipmi' else []) + [';'.join(values)]
+    list_keys = ('disks', 'vg_names', 'lv_names', 'pv_names')
+    for key in list_keys:
+        if body.get(key):
+            values = body[key] if isinstance(body[key], list) else str(body[key]).split(',')
+            args += ['--' + key.replace('_', '-'), ','.join(map(atom, values))]
+    for key in ('vg_name', 'lv_name', 'gfs_name', 'mount_point', 'cluster_name', 'non_stop_check', 'target_ip', 'hostname', 'control'):
+        if body.get(key) is not None:
+            option = key + 's' if module.startswith('clvm/') and key in ('vg_name', 'lv_name') else key
+            args += ['--' + option.replace('_', '-'), atom(body[key])]
+    if body.get('stonith'):
+        for device in body['stonith']:
+            atom(device['ipaddr'])
+            if device.get('hostname'):
+                atom(device['hostname'])
+        if action not in ('configure-stonith', 'check-ipmi'):
+            args += ['--stonith', json.dumps(body['stonith'])]
+    if module.startswith('gfs/'):
+        args += ['--list-ip', host_list(a)]
+        if action == 'create-gfs':
+            args += ['--journal-nums', str(len(hosts(a)) + 1)]
+            if body.get('stripe_size_kib') is not None:
+                args += ['--stripe-size-kib', choice(str(body['stripe_size_kib']), ('64', '128', '256', '512'))]
+    return checked(a, module, args)

@@ -12,7 +12,9 @@ import os
 import json
 import stat
 import tempfile
-
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'common'))
+from deployment_progress import copy_image, progress, run_step
 from ablestack import *
 
 json_file_path = pluginpath+"/tools/properties/cluster.json"
@@ -517,41 +519,39 @@ def create_gfs(disks, vg_name, lv_name, gfs_name, mount_point, cluster_name, num
 
 def create_ccvm_cluster(gfs_name, mount_point, cluster_name, list_ips):
     try:
-        gfs_mount_check = os.system("mount | grep -w 'glue-gfs' > /dev/null 2>&1")
+        progress('CCVM 이미지를 GFS2 공유 볼륨에 적재합니다. 복사 후 디스크 크기 설정, 고가용성 리소스 등록, VM 시작을 진행합니다.')
+        for attempt in range(7):
+            mounted = subprocess.run(['findmnt', '--noheadings', '--mountpoint', mount_point, '--output', 'FSTYPE'],
+                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=10)
+            if mounted.returncode == 0 and mounted.stdout.strip() == 'gfs2':
+                break
+            if attempt == 6:
+                raise RuntimeError('GFS2 공유 볼륨이 마운트되지 않아 이미지 복사를 시작하지 않았습니다: ' + mount_point)
+            progress('GFS2 공유 볼륨 마운트를 기다립니다. 5초 후 다시 확인합니다. (' + str(attempt + 1) + '/6)')
+            time.sleep(5)
 
-        if gfs_mount_check != 0:
-            time.sleep(30)
-            file_check = os.system("ls /mnt/glue-gfs/ccvm.qcow2 > /dev/null 2>&1")
-            run_command("cp "+ pluginpath + f"/tools/vmconfig/ccvm/ccvm.xml {mount_point}/ccvm.xml")
-            if file_check != 0:
-                run_command(f"cp /var/lib/libvirt/images/ablestack-template.qcow2 {mount_point}/ccvm.qcow2")
-                time.sleep(2)
-                run_command(f"qemu-img resize {mount_point}/ccvm.qcow2 +350G")
+        run_step('CCVM 가상머신 설정 파일을 공유 볼륨에 저장합니다.',
+                 ['cp', pluginpath + '/tools/vmconfig/ccvm/ccvm.xml', mount_point + '/ccvm.xml'])
+        image_path = mount_point + '/ccvm.qcow2'
+        if not os.path.isfile(image_path):
+            copy_image('/var/lib/libvirt/images/ablestack-template.qcow2', image_path, 'CCVM 이미지 GFS2 복사')
+            run_step('CCVM 가상디스크 크기를 350 GiB 확장합니다.', ['qemu-img', 'resize', image_path, '+350G'])
         else:
-            file_check = os.system("ls /mnt/glue-gfs/ccvm.qcow2 > /dev/null 2>&1")
-            run_command("cp "+ pluginpath + f"/tools/vmconfig/ccvm/ccvm.xml {mount_point}/ccvm.xml")
-            if file_check != 0:
-                run_command(f"cp /var/lib/libvirt/images/ablestack-template.qcow2 {mount_point}/ccvm.qcow2")
-                time.sleep(2)
-                run_command(f"qemu-img resize {mount_point}/ccvm.qcow2 +350G")
-
+            progress('공유 볼륨에 기존 CCVM 이미지가 있어 복사를 건너뜁니다. 고가용성 리소스 등록을 진행합니다.')
         config_path = f"{mount_point}/ccvm.xml"
-
-        pcs_resource_command = (
-            f"pcs resource create {cluster_name} VirtualDomain hypervisor=qemu:///system config={config_path} "
-            "migration_transport=ssh meta allow-migrate=true priority=100 "
-            "op start timeout=120s op stop timeout=120s op monitor timeout=120s interval=10s"
-        )
-        run_command(pcs_resource_command)
-
-        # Set PCS constraints
-        run_command(f"pcs constraint order start {gfs_name}-clone then {cluster_name}")
+        run_step('고가용성 리소스에 CCVM을 등록하고 가상머신 시작을 요청합니다.',
+                 ['pcs', 'resource', 'create', cluster_name, 'VirtualDomain', 'hypervisor=qemu:///system',
+                  'config=' + config_path, 'migration_transport=ssh', 'meta', 'allow-migrate=true', 'priority=100',
+                  'op', 'start', 'timeout=120s', 'op', 'stop', 'timeout=120s', 'op', 'monitor', 'timeout=120s', 'interval=10s'])
+        run_step('공유 볼륨 준비 후 가상머신이 시작되도록 순서를 설정합니다.',
+                 ['pcs', 'constraint', 'order', 'start', gfs_name + '-clone', 'then', cluster_name])
+        progress('CCVM 이미지 적재 및 시작 요청이 완료되었습니다. 다음으로 VM 초기 설정 완료를 확인하고 라이선스를 등록합니다.')
 
         ret = createReturn(code=200, val="Create CCVM Cluster Success")
         return print(json.dumps(json.loads(ret), indent=4))
 
-    except Exception:
-        ret = createReturn(code=500, val="Create CCVM Cluster Failure")
+    except Exception as error:
+        ret = createReturn(code=500, val="Create CCVM Cluster Failure: " + str(error))
         return print(json.dumps(json.loads(ret), indent=4))
 
 def extend_pcs_cluster(username,password,stonith_info,mount_point,iscsi_check,list_ips):

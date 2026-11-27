@@ -124,7 +124,7 @@ def listDiskInterface(H=False, classify=None, action=None):
     elif action == 'hci-shared-file-list':
         item = json.loads(lsblk_cmd(J=True, o="name,kname,path,state,size,type"))
     else:
-        item = json.loads(lsblk_cmd(J=True, o="name,kname,path,rota,model,size,state,group,type,tran,subsystems,vendor,wwn"))
+        item = json.loads(lsblk_cmd(J=True, o="name,kname,path,rota,model,size,state,group,type,tran,subsystems,vendor,wwn,fstype,mountpoints,ro"))
 
     bd = item['blockdevices']
     newbd = []
