@@ -13,6 +13,7 @@ BuildRequires: /bin/bash
 BuildRequires: /usr/bin/python3
 Requires: /bin/bash
 Requires: /usr/bin/python3
+Requires: python3-cryptography
 Requires(pre): /usr/bin/python3
 Requires(post): /usr/bin/python3
 Requires: ablecube-agent = %{version}-%{release}

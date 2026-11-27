@@ -1,7 +1,8 @@
 import React from "react";
-import {Alert, Button, Checkbox, Content, FormGroup, Modal, ModalBody, ModalFooter, ModalHeader, Spinner, TextInput} from "@patternfly/react-core";
+import {Alert, Button, Checkbox, Content, FormGroup, Modal, ModalBody, ModalFooter, ModalHeader, Spinner, TextInput, Title} from "@patternfly/react-core";
 import {DISK_ERASE_CONFIRMATION, fetchDiskInitializationInventory, initializeDisks,
   type DiskInitializationTarget, type DiskInitializationResult} from "../../services/api/disk-initialize";
+import UnavailableStorageDisk from "./UnavailableStorageDisk";
 
 export interface DiskPreparationHandle { confirm:()=>void }
 interface Props {
@@ -73,12 +74,16 @@ const StorageDiskPreparation = React.forwardRef<DiskPreparationHandle,Props>(({i
     <Alert isInline variant="warning" title="선택한 디스크의 모든 데이터가 삭제됩니다.">운영체제·마운트된 파일시스템·실행 중인 가상머신이 사용하는 디스크는 초기화할 수 없습니다.</Alert>
     {loading?<Spinner aria-label="디스크 초기화 목록 조회 중" />:
       <div className="ct-storage-vm-wizard__disk-list" aria-label="초기화할 디스크">
-        {disks.map(disk=><div key={disk.path} className="ct-storage-vm-wizard__disk-item">
-          <Checkbox id={"disk-initialize-"+disk.path.replace(/[^a-zA-Z0-9]/g,"-")} label={disk.label}
-            isDisabled={!disk.can_initialize||busy} isChecked={selected.includes(disk.path)}
-            onChange={(_event,checked)=>setSelected(current=>checked?[...current,disk.path]:current.filter(path=>path!==disk.path))} />
-          <small className="ct-storage-vm-wizard__disk-reason">{disk.can_initialize?disk.state:"초기화 불가 · "+disk.reason}</small>
-        </div>)}
+        {disks.map(disk => {
+          const id = "disk-initialize-" + disk.path.replace(/[^a-zA-Z0-9]/g, "-");
+          return <div key={disk.path} className="ct-storage-vm-wizard__disk-item">
+            {disk.can_initialize ? <>
+              <Checkbox id={id} label={disk.label} isDisabled={busy} isChecked={selected.includes(disk.path)}
+                onChange={(_event,checked)=>setSelected(current=>checked?[...current,disk.path]:current.filter(path=>path!==disk.path))} />
+              <small className="ct-storage-vm-wizard__disk-state">{disk.state}</small>
+            </> : <UnavailableStorageDisk id={id} label={disk.label} reason={disk.reason} />}
+          </div>;
+        })}
         {!disks.length&&!error&&<Content component="p">초기화할 디스크가 없습니다.</Content>}
       </div>}
     {error&&<Alert isInline variant="danger" title={error} />}
@@ -89,9 +94,14 @@ const StorageDiskPreparation = React.forwardRef<DiskPreparationHandle,Props>(({i
       <ModalHeader title="디스크 초기화 확인" />
       <ModalBody>
         <Alert isInline variant="danger" title="이 작업은 되돌릴 수 없습니다.">선택한 디스크의 파티션, LVM 및 모든 데이터가 삭제됩니다.</Alert>
-        <Content component="p">현재 호스트: {hostname}</Content>
-        <ul>{targets.map(disk=><li key={disk.path}>{disk.label}</li>)}</ul>
-        <FormGroup label={`계속하려면 ‘${DISK_ERASE_CONFIRMATION}’를 정확히 입력하세요.`} fieldId="disk-erase-confirmation">
+        <div className="ct-storage-vm-wizard__erase-summary">
+          <Title headingLevel="h3" size="md" id="disk-erase-list-title">초기화 디스크 목록</Title>
+          <Content component="p">현재 호스트: <strong>{hostname}</strong></Content>
+          <ul aria-labelledby="disk-erase-list-title">{targets.map(disk=><li key={disk.path}>{disk.label}</li>)}</ul>
+        </div>
+        <FormGroup className="ct-storage-vm-wizard__erase-confirmation"
+          label={<>계속하려면 <strong>‘{DISK_ERASE_CONFIRMATION}’</strong>를 정확히 입력하세요.</>}
+          fieldId="disk-erase-confirmation">
           <TextInput id="disk-erase-confirmation" value={confirmation} isDisabled={busy} autoComplete="off"
             onChange={(_event,value)=>setConfirmation(value)} aria-label="디스크 초기화 확인 문구" />
         </FormGroup>

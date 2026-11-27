@@ -2,18 +2,30 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import json
-import sys
-import os
-import shutil
-import uuid
-from datetime import datetime
-from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
-from cryptography.hazmat.backends import default_backend
 import base64
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import unpad
-import Crypto
+import json
+import os
+import sys
+from datetime import datetime
+
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
+from cryptography.hazmat.primitives.padding import PKCS7
+
+
+def decrypt_license(content):
+    # Keep the scrypt parameters, AES-CBC mode and padding of existing licenses.
+    parameters = dict(salt=b"salt", n=16384, r=8, p=1, backend=default_backend())
+    key = Scrypt(length=32, **parameters).derive(b"password")
+    iv = Scrypt(length=16, **parameters).derive(b"password")
+    algorithm = algorithms.AES(key)
+    decryptor = Cipher(algorithm, modes.CBC(iv), backend=default_backend()).decryptor()
+    padded = decryptor.update(base64.b64decode(content)) + decryptor.finalize()
+    unpadder = PKCS7(algorithm.block_size).unpadder()
+    decoded = unpadder.update(padded) + unpadder.finalize()
+    return json.loads(decoded.decode('utf-8'))
+
 
 def get_license_status():
     """현재 등록된 라이선스 상태 확인"""
@@ -46,41 +58,7 @@ def get_license_status():
             with open(license_file, 'r') as f:
                 license_content = f.read()
 
-            # 복호화 로직
-            password = b"password"
-            salt = b"salt"
-
-            # 32바이트 길이의 키 생성
-            scrypt_kdf = Scrypt(
-                salt=salt,
-                length=32,
-                n=16384,
-                r=8,
-                p=1,
-                backend=default_backend()
-            )
-            key = scrypt_kdf.derive(password)
-
-            # IV 생성
-            iv_scrypt_kdf = Scrypt(
-                salt=salt,
-                length=16,
-                n=16384,
-                r=8,
-                p=1,
-                backend=default_backend()
-            )
-            iv = iv_scrypt_kdf.derive(password)
-
-            # base64로 인코딩된 데이터를 디코딩
-            encrypted_content_bytes = base64.b64decode(license_content)
-
-            # AES 복호화
-            cipher = AES.new(key, AES.MODE_CBC, iv)
-            decrypted_content = unpad(cipher.decrypt(encrypted_content_bytes), AES.block_size)
-
-            # 복호화된 내용에서 만료일 파싱
-            license_info = json.loads(decrypted_content.decode('utf-8'))
+            license_info = decrypt_license(license_content)
             expired = license_info.get('expired')
             issued = license_info.get('issued')
             oem = license_info.get('oem')
@@ -140,41 +118,7 @@ def process_license_content(content=None, original_filename=None):
             os.makedirs(license_dir, mode=0o700)
 
         try:
-            # 파일내용 복호화
-            password = b"password"
-            salt = b"salt"
-
-            # 32바이트 길이의 키 생성
-            scrypt_kdf = Scrypt(
-                salt=salt,
-                length=32,
-                n=16384,
-                r=8,
-                p=1,
-                backend=default_backend()
-            )
-            key = scrypt_kdf.derive(password)
-
-            # IV 생성
-            iv_scrypt_kdf = Scrypt(
-                salt=salt,
-                length=16,
-                n=16384,
-                r=8,
-                p=1,
-                backend=default_backend()
-            )
-            iv = iv_scrypt_kdf.derive(password)
-
-            # base64로 인코딩된 데이터를 디코딩
-            encrypted_content_bytes = base64.b64decode(license_content)
-
-            # AES 복호화
-            cipher = AES.new(key, AES.MODE_CBC, iv)
-            decrypted_content = unpad(cipher.decrypt(encrypted_content_bytes), AES.block_size)
-
-            # 복호화된 내용에서 만료일 파싱
-            license_info = json.loads(decrypted_content.decode('utf-8'))
+            license_info = decrypt_license(license_content)
             expired = license_info.get('expired')
             issued = license_info.get('issued')
 
@@ -227,5 +171,3 @@ if __name__ == '__main__':
 
     print(json.dumps(result))
     sys.exit(0)
-
-print(Crypto.__version__)

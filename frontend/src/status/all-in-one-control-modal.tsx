@@ -31,7 +31,7 @@ import {
     type DeployRunStepResult,
     type DeployStatusData,
 } from "../services/api/deploy-status.ts";
-import { fetchDiskInventory, fetchNicInventory, type DiskInventoryOption, type InventorySelectOption } from "../services/api/inventory";
+import { fetchDiskInventory, fetchNicInventory, managementBridgeSelection, type DiskInventoryOption, type InventorySelectOption } from "../services/api/inventory";
 import { useUiFeatures } from "../hooks/useUiFeatures";
 import { isClusterTypeVisible } from "../services/api/system-config";
 import ClusterManagementNetworkHelp from "../components/common/ClusterManagementNetworkHelp";
@@ -573,12 +573,8 @@ export default function AllInOneControlModal({
                     const nextBridgeOptions = inventory.bridges.length > 0 ? inventory.bridges : EMPTY_BRIDGE_OPTIONS;
 
                     setBridgeOptions(nextBridgeOptions);
-                    setScvmMgmtBridge((prev) => (
-                        nextBridgeOptions.some((option) => option.value === prev) ? prev : optionValueAt(nextBridgeOptions, 0)
-                    ));
-                    setCcvmMgmtBridge((prev) => (
-                        nextBridgeOptions.some((option) => option.value === prev) ? prev : optionValueAt(nextBridgeOptions, 0)
-                    ));
+                    setScvmMgmtBridge((prev) => managementBridgeSelection(nextBridgeOptions, prev));
+                    setCcvmMgmtBridge((prev) => managementBridgeSelection(nextBridgeOptions, prev));
                     setScvmServerBridge((prev) => (
                         nextBridgeOptions.some((option) => option.value === prev) ? prev : optionValueAt(nextBridgeOptions, 1)
                     ));

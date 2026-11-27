@@ -77,7 +77,7 @@ class DiskInitializeTests(unittest.TestCase):
 
     def test_warning_phrase_must_match_exactly(self):
         request=self.request('/dev/sdb')
-        for value in ['',True,'확인했습니다',' 확인했습니다.','확인했습니다. ']:
+        for value in ['',True,'확인했습니다.',' 확인했습니다','확인했습니다 ']:
             with self.subTest(value=value),self.assertRaises(ValueError):
                 disk.initialize(dict(request,confirmation=value))
         self.assertEqual(self.zaps(),[])

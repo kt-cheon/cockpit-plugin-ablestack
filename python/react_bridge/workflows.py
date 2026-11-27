@@ -90,13 +90,16 @@ def apply_license(a, roles):
     info = checked(a, 'license/register_license.py', ['--status']).get('val', {})
     if info.get('status') != 'active':
         raise ValueError('등록된 라이선스가 유효하지 않습니다.')
-    content = base64.b64encode(Path(info['file_path']).read_bytes()).decode()
+    license_file = Path(info['file_path'])
+    content = base64.b64encode(license_file.read_bytes()).decode()
+    # The VM image may contain an older copy of the registration script.
+    script = (a.ROOT / 'python/license/register_license.py').read_bytes()
+    argv = ['python3', '-', '--license-content', content, '--original-filename', license_file.name]
     for role in roles:
-        target = choice(role, ('ccvm', 'scvm'))
-        run(a, '가상머신 초기 설정 완료 확인', lambda: wait_ready(a, target + '-mngt'))
-        checked(a, 'license/register_license.py',
-                ['--license-content', content, '--original-filename', Path(info['file_path']).name],
-                target=target + '-mngt')
+        target = choice(role, ('ccvm', 'scvm')) + '-mngt'
+        run(a, '가상머신 초기 설정 완료 확인', lambda: wait_ready(a, target))
+        run(a, '가상머신 라이선스 등록', lambda: a.success(a.parse_output(
+            a.command(argv, target=target, timeout=3600, stdin=script))))
     return {'code': 200}
 
 

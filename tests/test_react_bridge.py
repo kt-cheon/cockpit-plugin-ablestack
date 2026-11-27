@@ -30,7 +30,7 @@ class ReactBridgeTests(unittest.TestCase):
         with patch.object(bridge,'tool',return_value={'code':200,'disks':[]}) as tool:
             self.request('/api/v1/cube/disk/initialize')
         tool.assert_called_once_with('disk/disk_initialize.py',['list'])
-        body={'confirmation':'확인했습니다.','devices':[{'path':'/dev/sdb','identity':'fixture'}]}
+        body={'confirmation':'확인했습니다','devices':[{'path':'/dev/sdb','identity':'fixture'}]}
         with patch.object(bridge,'tool',return_value={'code':200,'success':True,'results':[]}) as tool:
             dispatch(bridge,{'path':'/api/v1/cube/disk/initialize','body':body,'method':'POST'})
         self.assertEqual(tool.call_args.args,('disk/disk_initialize.py',['initialize']))

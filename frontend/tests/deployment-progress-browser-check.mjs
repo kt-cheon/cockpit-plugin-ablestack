@@ -69,10 +69,20 @@ for(const kind of ['ablestack-hci','ablestack-vm','ablestack-standalone']){
   await license.getByText('진행 중',{exact:true}).waitFor();
   await dialog.getByText(/가상머신 부팅과 초기 설정이 완료되기를 기다린 후 라이선스를 등록합니다/).waitFor();
   await page.screenshot({path:path.join(output,kind+'-guest-initialization.png'),fullPage:true});
+  await page.evaluate(()=>{
+    const task=window.__jobs['b'.repeat(32)];
+    task.status='failed';
+    task.message='라이선스 등록 실패';
+  });
+  await license.getByText('실패',{exact:true}).waitFor();
+  await dialog.getByRole('button',{name:'라이선스 다시 등록',exact:true}).click();
+  await page.waitForFunction(()=>window.__requests.filter(request=>request.path==='/api/v1/cube/license/apply').length===2);
+  await setup.getByText('완료',{exact:true}).waitFor();
+  assert.equal(await page.evaluate(()=>window.__requests.filter(request=>request.path==='/api/v1/cube/ccvm/lifecycle'&&['initialize','start'].includes(request.body.action)).length),2,'retry keeps the existing VM');
   await page.evaluate(()=>{const task=window.__jobs['b'.repeat(32)];task.status='succeeded';task.result={code:200};});
   await license.getByText('완료',{exact:true}).waitFor();
   await dialog.getByText('클라우드센터 가상머신 배포가 완료되었습니다.',{exact:true}).waitFor();
-  console.log(kind+': transfer percentage, guidance and separate guest-registration step passed');
+  console.log(kind+': image transfer, guest registration and license-only retry passed');
 }
 assert.deepEqual(errors,[]);
 console.log('Screenshots: '+output);

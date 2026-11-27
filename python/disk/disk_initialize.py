@@ -15,7 +15,7 @@ import subprocess
 import sys
 import xml.etree.ElementTree as ET
 
-CONFIRMATION = '확인했습니다.'
+CONFIRMATION = '확인했습니다'
 DEVICE = re.compile(r'^/dev/[A-Za-z0-9._-]+$')
 LSBLK = ['lsblk', '--json', '--bytes', '--paths', '--output',
          'NAME,KNAME,PATH,MAJ:MIN,TYPE,SIZE,MODEL,SERIAL,WWN,FSTYPE,MOUNTPOINTS,RO,RM']

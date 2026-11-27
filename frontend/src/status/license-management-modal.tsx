@@ -238,16 +238,24 @@ export default function LicenseManagementModal({
                 {renderRegisterMessage()}
             </ModalBody>
             <ModalFooter>
-                <Button
-                  variant="primary"
-                  isDisabled={!licenseFile || registerStatus === "registering"}
-                  onClick={registerLicense}
-                >
-                    실행
-                </Button>
-                <Button variant="link" onClick={closeModal}>
-                    취소
-                </Button>
+                {registerStatus === "success" ? (
+                    <Button variant="primary" onClick={closeModal}>
+                        완료
+                    </Button>
+                ) : (
+                    <>
+                        <Button
+                          variant="primary"
+                          isDisabled={!licenseFile || registerStatus === "registering"}
+                          onClick={registerLicense}
+                        >
+                            실행
+                        </Button>
+                        <Button variant="link" onClick={closeModal}>
+                            취소
+                        </Button>
+                    </>
+                )}
             </ModalFooter>
         </Modal>
     );

@@ -1,6 +1,6 @@
 import { requestCubeApi } from "./client";
 
-export const DISK_ERASE_CONFIRMATION = "확인했습니다.";
+export const DISK_ERASE_CONFIRMATION = "확인했습니다";
 export interface DiskInitializationTarget {
   path: string;
   identity: string;

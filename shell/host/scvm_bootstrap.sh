@@ -52,6 +52,7 @@ cephadm --image "$image" bootstrap \
         --ssh-public-key /root/.ssh/id_rsa.pub \
         --no-minimize-config \
         --skip-pull \
+        --skip-monitoring-stack \
         --allow-overwrite \
         --mon-ip "$(cluster_host_lines | awk '{for (i=2; i<=NF; i++) if ($i == "scvm") {print $1; exit}}')" \
         --cluster-network "$(cluster_host_lines | awk '{for (i=2; i<=NF; i++) if ($i == "cn-scvm") {print $1; exit}}' | cut -d '.' -f 1-3).0/24" \
@@ -137,7 +138,19 @@ ceph mgr module enable dashboard
 
 ceph config set mon mon_warn_on_insecure_global_id_reclaim_allowed false
 
-progress '모니터링 및 스토리지 API 서비스를 시작합니다.'
+for service in ceph-exporter node-exporter
+do
+  progress "Glue 모니터링 서비스 배포를 요청합니다: $service"
+  ceph orch apply "$service"
+done
+
+for service in prometheus grafana alertmanager
+do
+  progress "Glue 모니터링 서비스를 scvm1에 배포하도록 요청합니다: $service"
+  ceph orch apply "$service" --placement="1 scvm1"
+done
+
+progress '호스트 모니터링 및 스토리지 API 서비스를 시작합니다.'
 for host in $hosts
 do
   /usr/libexec/ablestack/node-remote -o StrictHostKeyChecking=no $host /usr/bin/mv -f /usr/share/ablestack/ablestack-wall/process-exporter/scvm_process.yml /usr/share/ablestack/ablestack-wall/process-exporter/process.yml

@@ -13,6 +13,13 @@ export interface NicInventory {
   refreshTime: string;
 }
 
+export function managementBridgeSelection(bridges: InventorySelectOption[], currentValue: string): string {
+  if (currentValue && bridges.some(({ value }) => value === currentValue)) return currentValue;
+
+  const candidates = bridges.filter(({ value }) => value);
+  return candidates.length === 1 && candidates[0].value === "bridge0" ? "bridge0" : "";
+}
+
 export interface DiskInventoryOption {
   id: string;
   value: string;

@@ -122,9 +122,12 @@ try {
     await page.getByText('라이선스가 등록되어 있습니다.', { exact: true }).waitFor();
     await page.locator('input[type=file]').setInputFiles({ name: 'license.dat', mimeType: 'text/plain', buffer: Buffer.from('fixture license') });
     await page.getByRole('button', { name: '실행', exact: true }).click();
-    await page.getByText('라이선스가 성공적으로 등록되었습니다.', { exact: true }).waitFor();
-    await page.getByRole('button', { name: '취소', exact: true }).click();
-    await page.locator('.ct-license-management-modal').waitFor({ state: 'hidden' });
+    const licenseDialog = page.getByRole('dialog', { name: '라이선스 관리', exact: true });
+    await licenseDialog.getByText('라이선스가 성공적으로 등록되었습니다.', { exact: true }).waitFor();
+    assert.equal(await licenseDialog.getByRole('button', { name: '실행', exact: true }).count(), 0);
+    assert.equal(await licenseDialog.getByRole('button', { name: '취소', exact: true }).count(), 0);
+    await licenseDialog.getByRole('button', { name: '완료', exact: true }).click();
+    await licenseDialog.waitFor({ state: 'hidden' });
     if (product !== 'scvm') {
       if (!await page.locator('.ct-deploy-details').evaluate(node=>node.open)) {
         await page.locator('.ct-deploy-details > summary').click();
@@ -274,7 +277,8 @@ try {
           const clusterFile = dialog.locator('.ct-file-attach').filter({has: page.locator('#hosts-file')});
           assert.equal(await registration.getByRole('button', {name: '초기화', exact: true}).isDisabled(), true);
           await dialog.locator('#host-registration').setInputFiles({name: 'ablecube1.cube-agent.json', mimeType: 'application/json',
-            buffer: Buffer.from(JSON.stringify({format: 'ablestack-cube-enrollment-v1', host: 'ablecube1', bundles: {}}))});
+            buffer: Buffer.from(JSON.stringify({format: 'ablestack-cube-enrollment-v1', host: 'ablecube1', digest: 'a'.repeat(64),
+              bundles: {ablecube1: {'agent.json': '{}', 'ca.crt': 'fixture CA', 'node.crt': 'fixture certificate', 'node.key': 'fixture key'}}}))});
           await registration.locator('strong').filter({hasText: 'ablecube1.cube-agent.json'}).waitFor();
           await dialog.locator('#hosts-file').setInputFiles({name: 'cluster.json', mimeType: 'application/json',
             buffer: Buffer.from(JSON.stringify(responses['/api/v1/cube/cluster/config']))});
@@ -300,7 +304,7 @@ try {
           await registration.getByRole('button', {name: '초기화', exact: true}).click();
           await registration.locator('strong').filter({hasText: '선택된 호스트 등록 파일 없음'}).waitFor();
           assert.equal(await registration.getByRole('button', {name: '초기화', exact: true}).isDisabled(), true);
-          await dialog.locator('#host-registration').setInputFiles({name: 'wrong.json', mimeType: 'application/json', buffer: Buffer.from('{"format":"wrong"}')});
+          await dialog.locator('#host-registration').setInputFiles({name: 'ablecube1.cube-agent.json', mimeType: 'application/json', buffer: Buffer.from('{"format":"wrong"}')});
           await dialog.locator('.pf-v6-c-alert__title').filter({hasText: '호스트 통신 등록 파일 형식을 확인해 주세요.'}).waitFor();
           await registration.getByRole('button', {name: '초기화', exact: true}).click();
           assert.equal(await dialog.locator('.pf-v6-c-alert__title').filter({hasText: '호스트 통신 등록 파일 형식을 확인해 주세요.'}).count(), 0);
@@ -501,6 +505,25 @@ try {
           await cancel.waitFor({ state: 'hidden' });
         }
         await dialog.waitFor({ state: 'hidden' });
+        if (action === 'deploy_cloud_vm') {
+          const nicPath = '/api/v1/cube/nics?action=detail';
+          await page.evaluate((path) => {
+            window.__responses[path] = {code: 200, val: {bridges: [
+              {DEVICE: 'bridge0', TYPE: 'bridge', STATE: 'connected'},
+              {DEVICE: 'virbr0', TYPE: 'bridge', STATE: 'connected'},
+            ]}};
+          }, nicPath);
+          await page.getByLabel('배포·운영 작업', {exact: true}).selectOption(action);
+          await dialog.waitFor();
+          await next.click();
+          await next.click();
+          await page.waitForFunction(() => document.getElementById('cloud-vm-mgmt-bridge')?.value === 'bridge0');
+          assert.equal(await dialog.locator('#cloud-vm-svc-bridge').inputValue(), '');
+          await dialog.getByRole('button', {name: 'Close', exact: true}).click();
+          await page.getByRole('dialog', {name: /배포 취소 확인/}).getByRole('button', {name: '실행', exact: true}).click();
+          await dialog.waitFor({state: 'hidden'});
+          await page.evaluate(([path, response]) => { window.__responses[path] = response; }, [nicPath, responses[nicPath]]);
+        }
         if (action === 'deploy_storage_vm') {
           await page.getByLabel('배포·운영 작업', {exact: true}).selectOption(action);
           await dialog.waitFor();

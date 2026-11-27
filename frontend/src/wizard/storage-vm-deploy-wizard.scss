@@ -137,20 +137,92 @@
   padding: 4px 0;
 }
 
-.ct-storage-vm-wizard__disk-reason {
+.ct-storage-vm-wizard__disk-state {
   display: block;
   margin: 6px 0 0 12px;
   overflow-wrap: anywhere;
   color: var(--pf-t--global--text--color--subtle);
 }
 
-.ct-storage-vm-wizard__disk-item--unavailable .pf-v6-c-check {
-  cursor: not-allowed;
-  border-style: dashed;
+.ct-storage-vm-wizard__disk-unavailable {
+  display: inline-block;
+  max-inline-size: 100%;
+  border-radius: 999px;
+
+  .pf-v6-c-check,
+  .pf-v6-c-check:hover {
+    cursor: not-allowed;
+    border-style: dashed;
+    box-shadow: none;
+  }
+
+  .pf-v6-c-check__label {
+    cursor: not-allowed;
+  }
+
+  .pf-v6-c-check .pf-v6-c-check__input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 
-.ct-storage-vm-wizard__disk-item--unavailable .pf-v6-c-check__label {
-  cursor: not-allowed;
+.ct-storage-vm-wizard__disk-unavailable-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  overflow-wrap: anywhere;
+}
+
+.ct-storage-vm-wizard__disk-unavailable-icon {
+  flex: 0 0 16px;
+  block-size: 16px;
+  color: #c9190b;
+}
+
+.pf-v6-theme-dark .ct-storage-vm-wizard__disk-unavailable-icon {
+  color: #ff7474;
+}
+
+.ct-storage-vm-wizard__erase-summary {
+  display: grid;
+  gap: 8px;
+  margin-block: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--pf-t--global--border--color--default);
+  border-radius: 8px;
+  background: var(--pf-t--global--background--color--secondary--default);
+
+  p, ul {
+    margin: 0;
+  }
+
+  ul {
+    display: grid;
+    gap: 4px;
+    padding-inline-start: 20px;
+    list-style: disc;
+  }
+}
+
+.ct-storage-vm-wizard__erase-confirmation {
+  text-align: center;
+
+  .pf-v6-c-form__group-label {
+    justify-content: center;
+  }
+
+  .pf-v6-c-form__label-text {
+    font-weight: 600;
+  }
+
+  .pf-v6-c-form__label-text strong {
+    font-weight: 750;
+  }
+
+  input {
+    text-align: center;
+  }
 }
 
 .ct-storage-vm-wizard__inline-field {

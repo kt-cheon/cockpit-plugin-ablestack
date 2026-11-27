@@ -25,7 +25,7 @@ import {
 import { CheckCircleIcon, InfoCircleIcon } from "@patternfly/react-icons";
 
 import ValidationErrorModal from "../components/common/ValidationErrorModal";
-import RegistrationInput from "../components/common/RegistrationInput";
+import RegistrationInput, { type RegistrationSelection } from "../components/common/RegistrationInput";
 import FileAttachControl, { type FileAttachControlProps } from "../components/common/FileAttachControl";
 import ClusterManagementNetworkHelp from "../components/common/ClusterManagementNetworkHelp";
 import RegistrationDownloads from "../components/common/RegistrationDownloads";
@@ -331,18 +331,22 @@ async function parseSSHKeyBundle(buffer: ArrayBuffer): Promise<Pick<SSHKeyPrevie
 
 function parseClusterConfigFile(text: string) {
   const parsed = JSON.parse(text) as unknown;
-  const root = isRecord(parsed) ? parsed : {};
+  if (!isRecord(parsed)) throw new Error("Invalid cluster configuration");
+  const root = parsed;
   const clusterConfig = isRecord(root.clusterConfig)
     ? root.clusterConfig
     : root;
-
-  if (!isRecord(clusterConfig)) {
-    throw new Error("clusterConfig block not found");
+  const clusterType = typeof clusterConfig.type === "string" ? normalizeClusterType(clusterConfig.type) : null;
+  const rawHosts = clusterConfig.hosts;
+  if (!clusterType || !Array.isArray(rawHosts) || rawHosts.length === 0 || !rawHosts.every((host) => (
+    isRecord(host) && typeof host.hostname === "string" && host.hostname.trim() &&
+    typeof host.ablecube === "string" && host.ablecube.trim()
+  ))) {
+    throw new Error("Invalid cluster type or hosts");
   }
 
   const rootSecurity = isRecord(root.security) ? root.security : {};
   const clusterSecurity = isRecord(clusterConfig.security) ? clusterConfig.security : {};
-  const rawHosts = Array.isArray(clusterConfig.hosts) ? clusterConfig.hosts.filter(isRecord) : [];
   const hostRows: ClusterHostRow[] = rawHosts.map((host) => {
     const ablecubePn = outputText(host.ablecubePn);
 
@@ -385,7 +389,7 @@ function parseClusterConfigFile(text: string) {
     : "ablecubePn";
 
   return {
-    clusterType: normalizeClusterType(clusterConfig.type),
+    clusterType,
     hostRows,
     pcsNodeIpSource,
     ccvmMgmtIp: outputText(ccvm.ip),
@@ -441,7 +445,7 @@ export default function ClusterConfigPrepareWizardModal({
   onCompleted,
 }: ClusterConfigPrepareWizardModalProps) {
   const uiFeatures = useUiFeatures(isOpen);
-  const [registration, setRegistration] = React.useState<Record<string, unknown> | null>(null);
+  const [registrationSelection, setRegistrationSelection] = React.useState<RegistrationSelection | null>(null);
   const [clusterType, setClusterType] = React.useState<ClusterType>("ablestack-hci");
   const [sshKeyMode, setSshKeyMode] = React.useState<RadioValue>("new");
   const [clusterHostMode, setClusterHostMode] = React.useState<HostMode>("new");
@@ -465,6 +469,7 @@ export default function ClusterConfigPrepareWizardModal({
   const [sshKeyBundleHref, setSshKeyBundleHref] = React.useState("");
   const [sshKeyBundleBuffer, setSshKeyBundleBuffer] = React.useState<ArrayBuffer | null>(null);
   const [hostsFilename, setHostsFilename] = React.useState("");
+  const [hostsFileError, setHostsFileError] = React.useState("");
   const [hostRole, setHostRole] = React.useState<HostRole>("master");
   const [externalTimeServer, setExternalTimeServer] = React.useState("");
   const [timeServer1, setTimeServer1] = React.useState("");
@@ -487,6 +492,7 @@ export default function ClusterConfigPrepareWizardModal({
   const [clusterJsonDownloadError, setClusterJsonDownloadError] = React.useState("");
   const sshKeyFileInputRef = React.useRef<HTMLInputElement>(null);
   const clusterConfigFileInputRef = React.useRef<HTMLInputElement>(null);
+  const clusterConfigFileReadVersion = React.useRef(0);
   const deployNextStepRef = React.useRef<(() => void) | null>(null);
 
   const applyCurrentHostname = React.useCallback((hostname: string) => {
@@ -501,7 +507,8 @@ export default function ClusterConfigPrepareWizardModal({
   }, []);
 
   const resetState = React.useCallback(() => {
-    setRegistration(null);
+    clusterConfigFileReadVersion.current += 1;
+    setRegistrationSelection(null);
     setClusterType("ablestack-hci");
     setSshKeyMode("new");
     setClusterHostMode("new");
@@ -525,6 +532,7 @@ export default function ClusterConfigPrepareWizardModal({
     setSshKeyBundleHref("");
     setSshKeyBundleBuffer(null);
     setHostsFilename("");
+    setHostsFileError("");
     setHostRole("master");
     setExternalTimeServer("");
     setTimeServer1("");
@@ -553,7 +561,10 @@ export default function ClusterConfigPrepareWizardModal({
   };
 
   React.useEffect(() => {
-    if (hostsFileMode !== "existing") setRegistration(null);
+    if (hostsFileMode !== "existing") {
+      clusterConfigFileReadVersion.current += 1;
+      setRegistrationSelection(null);
+    }
   }, [hostsFileMode]);
 
   React.useEffect(() => {
@@ -644,10 +655,13 @@ export default function ClusterConfigPrepareWizardModal({
   const clearClusterConfigFile = React.useCallback(() => {
     const defaultCount = clusterType === "powerflex" || clusterType === "ablestack-hci" || clusterType === "ablestack-hci-filesystem" ? 3 : 1;
 
+    clusterConfigFileReadVersion.current += 1;
     setHostsFilename("");
+    setHostsFileError("");
     setHostsFileText("");
     setHosts(DEFAULT_HOSTS.slice(0, defaultCount));
     setHostCount(defaultCount);
+    setExistingHostCount(0);
     setCcvmMgmtIp("");
     setMgmtCidr("");
     setMgmtGateway("");
@@ -707,29 +721,37 @@ export default function ClusterConfigPrepareWizardModal({
     reader.readAsArrayBuffer(file);
   };
 
-  const applyClusterConfigFileText = React.useCallback((text: string) => {
-    try {
-      const fileConfig = parseClusterConfigFile(text);
+  const readClusterConfigFile = async (file: File) => {
+    clearClusterConfigFile();
+    const version = clusterConfigFileReadVersion.current;
+    setHostsFilename(file.name);
+    const filenameError = requireClusterJsonFileName(file.name);
+    if (filenameError) {
+      setHostsFileError(filenameError);
+      return;
+    }
 
-      if (fileConfig.clusterType) {
-        setClusterType(fileConfig.clusterType);
-      }
-      if (fileConfig.hostRows.length > 0) {
-		const rows = clusterHostMode === "add"
-		  ? [...fileConfig.hostRows, {
-		      hostName: currentHostname,
-		      hostIp: currentHostIp,
-		      storageIp: "",
-		      scvmMgmtIp: "",
-		      hostPnIp: "",
-		      scvmPnIp: "",
-		      scvmCnIp: "",
-		    }]
-		  : fileConfig.hostRows;
-		setExistingHostCount(clusterHostMode === "add" ? fileConfig.hostRows.length : 0);
-		setHosts(rows);
-		setHostCount(rows.length);
-      }
+    try {
+      const text = await file.text();
+      if (version !== clusterConfigFileReadVersion.current) return;
+      const fileConfig = parseClusterConfigFile(text);
+      const rows = clusterHostMode === "add"
+        ? [...fileConfig.hostRows, {
+          hostName: currentHostname,
+          hostIp: currentHostIp,
+          storageIp: "",
+          scvmMgmtIp: "",
+          hostPnIp: "",
+          scvmPnIp: "",
+          scvmCnIp: "",
+        }]
+        : fileConfig.hostRows;
+
+      setHostsFileText(text);
+      setClusterType(fileConfig.clusterType);
+      setExistingHostCount(clusterHostMode === "add" ? fileConfig.hostRows.length : 0);
+      setHosts(rows);
+      setHostCount(rows.length);
       setPcsNodeIpSource(fileConfig.pcsNodeIpSource);
       setCcvmMgmtIp(fileConfig.ccvmMgmtIp);
       setMgmtCidr(fileConfig.mgmtCidr);
@@ -739,23 +761,12 @@ export default function ClusterConfigPrepareWizardModal({
       setExternalTimeServer(fileConfig.externalTimeServer);
       setTimeServer1(fileConfig.timeServer1 || currentHostIp);
       setTimeServer2(fileConfig.timeServer2);
-      setSecurityInternalToken(fileConfig.internalToken || "");
-      setValidationMessage("");
+      setSecurityInternalToken(fileConfig.internalToken);
     } catch {
-      setValidationMessage("클러스터 구성 파일을 읽을 수 없습니다. cluster.json 형식을 확인해주세요.");
+      if (version === clusterConfigFileReadVersion.current) {
+        setHostsFileError("클러스터 구성 파일을 읽을 수 없습니다. cluster.json 형식을 확인해 주세요.");
+      }
     }
-	}, [clusterHostMode, currentHostIp, currentHostname]);
-
-  const readClusterConfigFile = (file: File) => {
-    setHostsFilename(file.name);
-    const reader = new FileReader();
-    reader.onload = () => {
-      const text = typeof reader.result === "string" ? reader.result : "";
-
-      setHostsFileText(text);
-      applyClusterConfigFileText(text);
-    };
-    reader.readAsText(file);
   };
 
   const renderClusterTypeCard = (
@@ -831,6 +842,15 @@ export default function ClusterConfigPrepareWizardModal({
   const isAddHost = clusterHostMode === "add";
 	const isHciAddHost = isHciCluster && isAddHost;
   const canUseAddHost = !isStandalone;
+  const registration = registrationSelection?.status === "valid" ? registrationSelection.value : null;
+  const uploadValidationMessage = hostsFileMode === "existing" ? firstError(
+    registrationSelection?.status === "invalid" ? registrationSelection.message : "",
+    registrationSelection?.status === "reading" ? "호스트 통신 등록 파일을 확인하고 있습니다." : "",
+    registration && registration.host !== currentHostname ? "현재 호스트용 통신 등록 파일을 다시 선택해 주세요." : "",
+    hostsFileError,
+    requireClusterJsonFileName(hostsFilename),
+    requireValue(hostsFileText, "클러스터 구성 파일을 확인하고 있습니다.")
+  ) : "";
   const visibleHosts = hosts.slice(0, hostCount);
   const pcsNodeAddress = (host: ClusterHostRow) => (
     pcsNodeIpSource === "ablecube" ? host.hostIp : host.hostPnIp
@@ -969,13 +989,7 @@ export default function ClusterConfigPrepareWizardModal({
       if (keyFileMessage) return keyFileMessage;
     }
 
-    if (hostsFileMode === "existing") {
-      const hostsFileMessage = firstError(
-        requireClusterJsonFileName(hostsFilename),
-        requireValue(hostsFileText, "클러스터 구성 프로파일 정보를 확인해 주세요.")
-      );
-      if (hostsFileMessage) return hostsFileMessage;
-    }
+    if (uploadValidationMessage) return uploadValidationMessage;
 
     if (!clusterType) return "OS Type을 선택해주세요.";
     if (!isIntegerInRange(hostCount, isVmLikeCluster || isStandalone ? 1 : 3, isStandalone ? 1 : 99)) {
@@ -1363,6 +1377,7 @@ export default function ClusterConfigPrepareWizardModal({
         {!isFinish && (
           <Button
             variant="primary"
+            isDisabled={stepId === "cluster-config-ip-info" && Boolean(uploadValidationMessage)}
             onClick={() => {
               if (isReview) {
                 const message = validateClusterConfigPrepare();
@@ -1704,7 +1719,9 @@ export default function ClusterConfigPrepareWizardModal({
                 </div>
               </FormGroup>
 
-              {hostsFileMode === "existing" && <RegistrationInput onChange={setRegistration} />}
+              {hostsFileMode === "existing" && (
+                <RegistrationInput hostname={currentHostname} selection={registrationSelection} onChange={setRegistrationSelection} />
+              )}
               {hostsFileMode === "existing" && (
                 <FormGroup label="클러스터 구성 파일 (cluster.json)" fieldId="hosts-file">
                   {renderFileAttachControl({
@@ -1713,9 +1730,11 @@ export default function ClusterConfigPrepareWizardModal({
                     filename: hostsFilename,
                     placeholder: "선택된 cluster.json 파일 없음",
                     accept: ".json,application/json",
+                    isInvalid: Boolean(hostsFileError),
                     onFileSelect: readClusterConfigFile,
                     onClear: clearClusterConfigFile,
                   })}
+                  {hostsFileError && <Alert isInline variant="danger" title={hostsFileError} />}
                 </FormGroup>
               )}
 

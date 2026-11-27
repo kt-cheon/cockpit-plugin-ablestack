@@ -36,7 +36,7 @@ import {
   startCCVM,
   registerCCVMLicense,
 } from "../services/api/cloud-vm-deploy";
-import { fetchNicInventory } from "../services/api/inventory";
+import { fetchNicInventory, managementBridgeSelection } from "../services/api/inventory";
 import { fetchCurrentHostname } from "../services/host";
 import { selectionPrompt } from "../utils/selection";
 import "./cloud-vm-deploy-wizard.scss";
@@ -256,6 +256,7 @@ export default function CloudVmDeployWizardModal({
       .then((inventory) => {
         if (!isActive) return;
         setBridgeOptions(inventory.bridges.length > 0 ? inventory.bridges : EMPTY_BRIDGE_OPTIONS);
+        setMgmtBridge((previous) => managementBridgeSelection(inventory.bridges, previous));
         setNicLoadState("success");
       })
       .catch((error) => {
@@ -486,12 +487,14 @@ export default function CloudVmDeployWizardModal({
     }
   };
 
-  const startCloudVmDeploy = async () => {
-    const validationError = validateCloudVmDeploy();
-    if (validationError) {
-      setValidationMessage(validationError);
-      setShowDeployConfirm(false);
-      return;
+  const startCloudVmDeploy = async (retryLicenseOnly = false) => {
+    if (!retryLicenseOnly) {
+      const validationError = validateCloudVmDeploy();
+      if (validationError) {
+        setValidationMessage(validationError);
+        setShowDeployConfirm(false);
+        return;
+      }
     }
 
     setValidationMessage("");
@@ -499,31 +502,35 @@ export default function CloudVmDeployWizardModal({
     setIsDeployStarted(true);
     setDisableNav(true);
     setDeployPhase("running");
-    setDeployMessage("클라우드센터 가상머신 배포를 시작하고 있습니다.");
-    setDeployStepStates(INITIAL_DEPLOY_STEP_STATES);
-    deployNextStepRef.current?.();
+    if (!retryLicenseOnly) {
+      setDeployMessage("클라우드센터 가상머신 배포를 시작하고 있습니다.");
+      setDeployStepStates(INITIAL_DEPLOY_STEP_STATES);
+      deployNextStepRef.current?.();
+    }
 
     try {
-      await runDeployStep("health", () => checkClusterHealth(isHciClusterType ? "host,scvm" : "host"));
-      await runDeployStep("initialize", initializeCCVM);
-      await runDeployStep("cloudinit", () => createCCVMCloudInit({
-        mgmt_ip: mgmtIp, mgmt_gw: mgmtGateway, dns: mgmtDns,
-        ...(svcEnabled ? {
-            sn_nic: svcBridge,
-            sn_ip: getIpFromCidr(svcIp),
-            sn_prefix: Number(svcIp.split("/")[1]),
-            sn_gw: svcGateway,
-            ...(svcDns ? { sn_dns: svcDns } : {}),
-          } : {}),
-      }));
-      await runDeployStep("xml", () => createCCVM({
-        cpu: Number(cpu),
-        memory: Number(memory),
-        ...(isVmClusterType ? { gfs_mount_point: "/mnt/glue-gfs" } : {}),
-        management_network_bridge: mgmtBridge,
-        ...(svcEnabled ? { service_network_bridge: svcBridge } : {}),
-      }));
-      await runDeployStep("setup", startCCVM);
+      if (!retryLicenseOnly) {
+        await runDeployStep("health", () => checkClusterHealth(isHciClusterType ? "host,scvm" : "host"));
+        await runDeployStep("initialize", initializeCCVM);
+        await runDeployStep("cloudinit", () => createCCVMCloudInit({
+          mgmt_ip: mgmtIp, mgmt_gw: mgmtGateway, dns: mgmtDns,
+          ...(svcEnabled ? {
+              sn_nic: svcBridge,
+              sn_ip: getIpFromCidr(svcIp),
+              sn_prefix: Number(svcIp.split("/")[1]),
+              sn_gw: svcGateway,
+              ...(svcDns ? { sn_dns: svcDns } : {}),
+            } : {}),
+        }));
+        await runDeployStep("xml", () => createCCVM({
+          cpu: Number(cpu),
+          memory: Number(memory),
+          ...(isVmClusterType ? { gfs_mount_point: "/mnt/glue-gfs" } : {}),
+          management_network_bridge: mgmtBridge,
+          ...(svcEnabled ? { service_network_bridge: svcBridge } : {}),
+        }));
+        await runDeployStep("setup", startCCVM);
+      }
       await runDeployStep("license", registerCCVMLicense);
       completeDeploy();
     } catch (error) {
@@ -547,6 +554,8 @@ export default function CloudVmDeployWizardModal({
     const isFinish = stepId === "cloud-vm-finish";
 
     if (isDeploy) {
+      const retryLicenseOnly = deployStepStates.setup === "succeeded" && deployStepStates.license === "failed";
+      const deployButtonLabel = retryLicenseOnly ? "라이선스 다시 등록" : "다시 구성";
       return (
         <div className="ct-cloud-vm-wizard__footer">
           <Button
@@ -554,14 +563,14 @@ export default function CloudVmDeployWizardModal({
             isDisabled={deployPhase === "idle" || deployPhase === "running"}
             onClick={() => {
               if (deployPhase === "error") {
-                void startCloudVmDeploy();
+                void startCloudVmDeploy(retryLicenseOnly);
                 return;
               }
               setIsDeployFinished(true);
               goToNextStep();
             }}
           >
-            {deployPhase === "error" ? "다시 구성" : "완료"}
+            {deployPhase === "error" ? deployButtonLabel : "완료"}
           </Button>
         </div>
       );

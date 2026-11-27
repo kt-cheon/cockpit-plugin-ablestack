@@ -14,7 +14,7 @@ before(async () => {
     export * from './src/services/api/license.ts';
     export { fetchCloudClusterStatus } from './src/services/api/cloud-cluster-status.ts';
     export { fetchDeployStatus } from './src/services/api/deploy-status.ts';
-    export { fetchNicInventory, fetchStorageVmDiskInventory } from './src/services/api/inventory.ts';
+    export { fetchNicInventory, fetchStorageVmDiskInventory, managementBridgeSelection } from './src/services/api/inventory.ts';
     export { fetchUiFeatures, isClusterTypeVisible } from './src/services/api/system-config.ts';
     export { fetchVersionUpdateInfo, runVersionUpdate, fetchVersionUpdateLog } from './src/services/api/version-update.ts';
     export { fetchGfsStripeSize, saveGfsStripeSize, createGfsStorage } from './src/services/api/gfs-manage.ts';
@@ -115,16 +115,16 @@ test('GFS stripe choice loads, saves numerically and follows the selected disks 
 test('disk initialization sends each selected identity and requires the exact warning phrase', async () => {
   const devices=[{path:'/dev/sdb',identity:'one',label:'disk one'},{path:'/dev/sdc',identity:'two',label:'disk two'}];
   const before=fixture.calls.length;
-  await assert.rejects(services.initializeDisks(devices,'확인했습니다'),/정확히/);
+  await assert.rejects(services.initializeDisks(devices,'확인했습니다.'),/정확히/);
   assert.equal(fixture.calls.length,before);
   handler=request=>{
     assert.equal(request.path,'/api/v1/cube/disk/initialize');
     assert.equal(request.method,'POST');
-    assert.deepEqual(request.body,{confirmation:'확인했습니다.',devices:[{path:'/dev/sdb',identity:'one'},{path:'/dev/sdc',identity:'two'}]});
+    assert.deepEqual(request.body,{confirmation:'확인했습니다',devices:[{path:'/dev/sdb',identity:'one'},{path:'/dev/sdc',identity:'two'}]});
     return {code:200,success:false,results:[{path:'/dev/sdb',status:'completed',message:'done'},
       {path:'/dev/sdc',status:'failed',message:'busy'}]};
   };
-  const response=await services.initializeDisks(devices,'확인했습니다.');
+  const response=await services.initializeDisks(devices,'확인했습니다');
   assert.equal(response.success,false);
   assert.equal(response.results[1].status,'failed');
 });
@@ -259,6 +259,11 @@ test('every wizard receives only user bridges and preserves carrier state', asyn
   const inventory = await services.fetchNicInventory();
   assert.deepEqual(inventory.bridges.map((item) => item.value), ['', 'bridge0']);
   assert.match(inventory.passthroughNics[0].label, /connected/);
+  assert.equal(services.managementBridgeSelection(inventory.bridges, ''), 'bridge0');
+  const otherBridge = { value: 'bridge1', label: 'bridge1' };
+  assert.equal(services.managementBridgeSelection([inventory.bridges[0], otherBridge], ''), '');
+  assert.equal(services.managementBridgeSelection([...inventory.bridges, otherBridge], ''), '');
+  assert.equal(services.managementBridgeSelection([...inventory.bridges, otherBridge], 'bridge1'), 'bridge1');
 });
 
 test('disk passthrough lists whole disks with capacity, hardware details and stable deployment paths', async () => {

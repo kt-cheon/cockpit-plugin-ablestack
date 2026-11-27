@@ -88,7 +88,7 @@ export const requireFileName = (
 
 export const requireClusterJsonFileName = (filename: string) => {
   if (isBlank(filename)) return "cluster.json 파일을 선택해주세요.";
-  return normalize(filename).toLowerCase() === "cluster.json"
+  return filename === "cluster.json"
     ? ""
     : "'cluster.json' 파일만 업로드할 수 있습니다.";
 };

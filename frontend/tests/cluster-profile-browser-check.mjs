@@ -15,6 +15,10 @@ const profile = {clusterConfig:{type:'ablestack-hci',hostType:'new',ccvm:{ip:'19
     hostname:'ablecube'+i,ablecube:'192.0.2.'+i,scvmMngt:'192.0.2.'+(10+i),
     ablecubePn:'198.51.100.'+i,scvm:'198.51.100.'+(10+i),scvmCn:'203.0.113.'+(10+i)}))},
   custom:{site:'기존 프로파일'}};
+const registration = (host) => ({format:'ablestack-cube-enrollment-v1', host, digest:'a'.repeat(64),
+  bundles:{[host]:{'agent.json':'{}', 'ca.crt':'fixture CA', 'node.crt':'fixture certificate', 'node.key':'fixture key'}}});
+const upload = (field, name, value) => field.setInputFiles({name, mimeType:'application/json',
+  buffer:Buffer.from(JSON.stringify(value))});
 await build({absWorkingDir:frontend,stdin:{contents:`
   import React from 'react';import {createRoot} from 'react-dom/client';
   import '@patternfly/patternfly/patternfly.css';import './src/status/status.scss';
@@ -73,14 +77,39 @@ try {
     assert.equal(await dialog.locator('#host-registration').count(),0);
     assert.equal(await dialog.locator('#hosts-file').count(),0);
     await dialog.locator('#hosts-file-existing').check();
-    await dialog.locator('#hosts-file').setInputFiles({name:'cluster.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(profile))});
+    const registrationField = dialog.locator('#host-registration');
+    const profileField = dialog.locator('#hosts-file');
+    const uploadNotice = (message) => dialog.locator('.pf-v6-c-alert__title').filter({hasText:message});
+    if (scenario === 'saved') {
+      await upload(profileField, 'ablecube3.cube-agent.json', registration('ablecube3'));
+      await uploadNotice("'cluster.json' 파일만 업로드할 수 있습니다.").waitFor();
+      assert.equal(await next.isDisabled(), true);
+      assert.equal(await profileField.getAttribute('aria-invalid'), 'true');
+      await upload(profileField, 'cluster.json', registration('ablecube3'));
+      await uploadNotice('클러스터 구성 파일을 읽을 수 없습니다. cluster.json 형식을 확인해 주세요.').waitFor();
+      assert.equal(await next.isDisabled(), true);
+    }
+    await upload(profileField, 'cluster.json', profile);
     await dialog.locator('.ct-file-attach strong').filter({hasText:'cluster.json'}).waitFor();
+    if (scenario === 'saved') {
+      await upload(registrationField, 'ablecube2.cube-agent.json', registration('ablecube2'));
+      await uploadNotice("현재 호스트용 'ablecube1.cube-agent.json' 파일을 선택해 주세요.").waitFor();
+      assert.equal(await next.isDisabled(), true);
+      assert.equal(await registrationField.getAttribute('aria-invalid'), 'true');
+      await upload(registrationField, 'ablecube1.cube-agent.json', registration('ablecube2'));
+      await uploadNotice('파일에 기록된 호스트가 현재 호스트(ablecube1)와 다릅니다').waitFor();
+      assert.equal(await next.isDisabled(), true);
+      await upload(registrationField, 'ablecube1.cube-agent.json', registration('ablecube1'));
+      await uploadNotice('파일에 기록된 호스트가 현재 호스트').waitFor({state:'hidden'});
+    }
     await next.click();
     await next.click();
     await dialog.getByRole('button',{name:'구성',exact:true}).click();
     await dialog.getByText('ABLESTACK 클러스터 구성을 위한 모든 설정이 완료되었습니다.',{exact:true}).waitFor();
     const download=dialog.locator('a[download="cluster.json"]');
     if(scenario==='saved') {
+      const request = await page.evaluate(() => window.__requests.find(item => item.path === '/api/v1/cube/deploy/run'));
+      assert.equal(request.body.enrollment.registration.host, 'ablecube1');
       await download.waitFor();
       const href=await download.getAttribute('href');
       const document=JSON.parse(decodeURIComponent(href.slice(href.indexOf(',')+1)));

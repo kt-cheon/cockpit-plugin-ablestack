@@ -28,9 +28,10 @@ import { InfoCircleIcon } from "@patternfly/react-icons";
 
 import ValidationErrorModal from "../components/common/ValidationErrorModal";
 import StorageDiskPreparation, {type DiskPreparationHandle} from "../components/common/StorageDiskPreparation";
+import UnavailableStorageDisk from "../components/common/UnavailableStorageDisk";
 import WizardStepStatusLabel, { wizardStatusRowClass } from "../components/common/WizardStepStatus";
 import { fetchClusterConfigProfile } from "../services/api/cluster-config";
-import { fetchNicInventory, fetchStorageVmDiskInventory } from "../services/api/inventory";
+import { fetchNicInventory, fetchStorageVmDiskInventory, managementBridgeSelection } from "../services/api/inventory";
 import { fetchCurrentHostname } from "../services/host";
 import { selectionPrompt } from "../utils/selection";
 import {
@@ -269,6 +270,7 @@ export default function StorageVmDeployWizardModal({
         if (!isActive) return;
 
         setBridgeOptions(inventory.bridges.length > 0 ? inventory.bridges : EMPTY_BRIDGE_OPTIONS);
+        setMgmtBridge((previous) => managementBridgeSelection(inventory.bridges, previous));
         setNicOptions(inventory.passthroughNics);
         setNicLoadState("success");
       })
@@ -925,18 +927,15 @@ export default function StorageVmDeployWizardModal({
 	                      </Alert>
 	                    ) : (
 	                      <div className="ct-storage-vm-wizard__disk-list">
-	                        {currentDiskOptions.map((disk) => (
-	                          <div key={disk.value} className={`ct-storage-vm-wizard__disk-item ${disk.isDisabled ? "ct-storage-vm-wizard__disk-item--unavailable" : ""}`} title={disk.disabledReason}>
-	                            <Checkbox
-	                              id={`storage-vm-disk-${disk.value.replace(/[^a-zA-Z0-9_-]/g, "-")}`}
-	                              label={disk.label}
-	                              isChecked={selectedDisks.includes(disk.value)}
-	                              isDisabled={disk.isDisabled}
-	                              onChange={(_event, checked) => toggleSelectedDisk(disk.value, checked)}
-	                            />
-                            {disk.isDisabled && <small className="ct-storage-vm-wizard__disk-reason">사용 불가 · {disk.disabledReason}</small>}
-	                          </div>
-	                        ))}
+	                        {currentDiskOptions.map((disk) => {
+	                          const id = `storage-vm-disk-${disk.value.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+	                          return <div key={disk.value} className="ct-storage-vm-wizard__disk-item">
+	                            {disk.isDisabled ? <UnavailableStorageDisk id={id} label={disk.label} reason={disk.disabledReason} /> : (
+	                              <Checkbox id={id} label={disk.label} isChecked={selectedDisks.includes(disk.value)}
+	                                onChange={(_event, checked) => toggleSelectedDisk(disk.value, checked)} />
+	                            )}
+	                          </div>;
+	                        })}
 	                      </div>
 	                    )}
 	                  </FormGroup>

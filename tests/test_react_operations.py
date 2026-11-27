@@ -226,6 +226,22 @@ class OperationTests(unittest.TestCase):
         workflows.ccvm_lifecycle(a, 'setup')
         self.assertEqual(a.tool.call_args.args[0], 'vm/setup_pcs_cluster.py')
 
+    def test_ccvm_license_registration_uses_current_host_script_on_the_guest(self):
+        a = adapter()
+        a.parse_output.side_effect = json.loads
+        a.command.return_value = '{"code":"200"}'
+        with tempfile.TemporaryDirectory() as directory:
+            license_file = Path(directory) / 'license'
+            license_file.write_bytes(b'fixture')
+            a.tool.return_value = {'code': '200', 'val': {'status': 'active', 'file_path': str(license_file)}}
+            with patch.object(workflows, 'wait_ready') as wait:
+                self.assertEqual(workflows.apply_license(a, ['ccvm']), {'code': 200})
+        wait.assert_called_once_with(a, 'ccvm-mngt')
+        a.tool.assert_called_once_with('license/register_license.py', ['--status'], target=None, timeout=3600)
+        a.command.assert_called_once_with(
+            ['python3', '-', '--license-content', 'Zml4dHVyZQ==', '--original-filename', 'license'],
+            target='ccvm-mngt', timeout=3600, stdin=(ROOT / 'python/license/register_license.py').read_bytes())
+
     def test_internal_time_servers_never_point_to_the_current_host(self):
         result = workflows.chrony_settings('server old.pool iburst\nrtcsync\n', ['10.0.0.1', '10.0.0.2', '10.0.0.2'], ['10.0.0.1'], 'master')
         self.assertNotIn('server 10.0.0.1', result)
