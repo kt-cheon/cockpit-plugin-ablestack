@@ -116,6 +116,7 @@ esac
                      "tools/properties/cluster.json.rpmorig", "rpmbuild/SOURCES/ablecube-1.0/stale",
                      "tools/properties/cube2.cube-agent.json", "tools/properties/cube2.cube-agent.json.bak",
                      "tools/properties/.cube-setup-private", "frontend/node_modules/cached-package/private-data")
+
         artifacts += ("tools/properties/.properties-merge-private", "tools/makerpm/property-defaults/stale.json")
         for filename in artifacts:
             path = self.source / filename

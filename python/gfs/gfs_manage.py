@@ -13,10 +13,8 @@ import json
 import stat
 import tempfile
 from pathlib import Path
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'common'))
 from deployment_progress import copy_image, progress, run_step
-
 from ablestack import *
 
 json_file_path = pluginpath+"/tools/properties/cluster.json"
